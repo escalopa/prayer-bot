@@ -15,5 +15,6 @@ COPY go.mod go.sum ./
 RUN go build -o /go/bin/gopray ./telegram/cmd
 
 FROM alpine:latest AS production
+RUN apk add --no-cache tzdata
 COPY --from=builder /go/bin/gopray /go/bin/gopray
 ENTRYPOINT ["/go/bin/gopray"]

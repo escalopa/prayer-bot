@@ -9,12 +9,12 @@ graph LR
 A[User] --> |Get Prayers Time| B((Bot))
 A[User] --> |Subscribe To Bot| B((Bot))
 A[User] --> |Chane Bot Language| B((Bot))
-A[User] --> |Send Feedback Messages \nOr Bug Reports| B((Bot))
+A[User] --> |Send Feedback Messages\nOr Bug Reports| B((Bot))
 B((Bot)) --> |Store Prayers Time| C[[Database]]
 B((Bot)) --> |Store User ID For Subscribtion| C[[Database]]
 ```
 
-## Bot Options 
+## Bot Options
   
 | Command | Description |
 | --- | --- |
@@ -31,3 +31,10 @@ B((Bot)) --> |Store User ID For Subscribtion| C[[Database]]
 
 - [Telegram API (Telego)](https://github.com/SakoDroid/telego)
 - [Prayer Times Site](http://dumrt.ru/ru/help-info/prayertime/)
+
+
+## Upcoming Features
+
+- [x] Support date format for prayersByDate command with leading zeros and with delimiters (. / -)
+- [ ] Add more languages support (AR, RU)
+- [ ] Implement subscriptions & notifications

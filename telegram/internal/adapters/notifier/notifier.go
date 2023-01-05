@@ -134,11 +134,18 @@ func (n *Notifier) getPrayerTime(t time.Time) (prayer.PrayerTimes, error) {
 	return p, nil
 }
 
+// calculateLeftTime calculates the time left until the prayer starts
+// @param t uint - the time left in minutes until the prayer starts
+// @return upcomingAt time.Duration - the time left in minutes until the prayer starts subtracted from the user reminder time `UPCOMING_REMINDER`
+// @return startsAt time.Duration - the time left in minutes until the prayer starts, equals to `t`
 func (n *Notifier) calculateLeftTime(t uint) (upcomingAt, startsAt time.Duration) {
 	upcomingAt = time.Duration((t - n.ur))
 	// If the prayer is close, wait for 1 minute then notify.
 	if upcomingAt <= 0 {
 		upcomingAt = 1
+	}
+	if t == 0 {
+		t = 1
 	}
 	startsAt = time.Duration(t)
 	upcomingAt, startsAt = upcomingAt*time.Minute, startsAt*time.Minute

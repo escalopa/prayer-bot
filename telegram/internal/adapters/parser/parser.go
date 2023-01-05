@@ -77,7 +77,7 @@ func (p *Parser) ParseSchedule() error {
 		isha, err := convertToTime(record[6], day, month)
 		gpe.CheckError(err)
 
-		prayers := prayer.NewPrayerTimes(record[0],
+		prayers := prayer.New(record[0],
 			fajr, sunrise, dhuhr, asr, maghrib, isha,
 		)
 		schedule = append(schedule, prayers)

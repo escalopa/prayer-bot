@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"log"
 	"strconv"
 
 	"github.com/escalopa/gopray/telegram/internal/handler"
@@ -37,6 +38,7 @@ func main() {
 	pr := redis.NewPrayerRepository(r)
 	sr := redis.NewSubscriberRepository(r)
 	lr := redis.NewLanguageRepository(r)
+	log.Println("Connected to Cache...")
 
 	// Create schedule parser & parse the schedule.
 	p := parser.New(c.Get("DATA_PATH"), pr)
@@ -48,6 +50,7 @@ func main() {
 	urInt, err := strconv.Atoi(ur)
 	gpe.CheckError(err, "UPCOMING_REMINDER must be an integer")
 	n := notifier.New(pr, sr, lr, uint(urInt))
+	log.Println("Notifier created...")
 
 	a := application.New(n, pr, lr)
 	run(bot, a, ctx)
@@ -62,6 +65,7 @@ func run(b *bt.Bot, a *application.UseCase, ctx context.Context) {
 
 	// Notify subscriber about the prayer times.
 	go h.NotifyPrayers()
+	log.Println("Bot started...")
 
 	//Monitors any other update.
 	for {

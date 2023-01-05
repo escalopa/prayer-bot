@@ -29,7 +29,7 @@ func (uc *UseCase) GetPrayers() (prayer.PrayerTimes, error) {
 	return p, nil
 }
 
-func (uc *UseCase) GetPrayersByDate(date string) (prayer.PrayerTimes, error) {
+func (uc *UseCase) Getprayersdate(date string) (prayer.PrayerTimes, error) {
 	p, err := uc.pr.GetPrayer(date)
 	if err != nil {
 		return prayer.PrayerTimes{}, errors.Wrap(err, "failed to get prayer by date")

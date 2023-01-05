@@ -29,27 +29,31 @@ func (h *Handler) Register() {
 	h.b.AddHandler("/subscribe", h.Subscribe, "all")
 	h.b.AddHandler("/unsubscribe", h.Unsubscribe, "all")
 	h.b.AddHandler("/prayers", h.GetPrayers, "all")
-	h.b.AddHandler("/prayersByDate", h.GetPrayersByDate, "all")
+	h.b.AddHandler("/prayersdate", h.Getprayersdate, "all")
 	h.b.AddHandler("/lang", h.SetLang, "all")
 	h.b.AddHandler("/feedback", h.Feedback, "all")
 	h.b.AddHandler("/bug", h.Bug, "all")
 }
 
 func (h *Handler) Help(u *objs.Update) {
-	h.simpleSend(u.Message.Chat.Id, `
-	Asalamu alaykum, I am a prayers time bot that sends you daily prayers times 🙏 to always pray on time.
+	h.b.SendMessage(u.Message.Chat.Id, `
+	Asalamu alaykum, I am a kazan prayers time, I can help you know prayers time anytime to always pray on time 🙏.
 	
 	Available commands are below: 👇	
-	/help - Show this message 📖   
+
+	<b>Prayers</b>
 	/prayers - Get prayers for today ⏰
-	/prayersByDate - Get prayers for a specific date 📅
+	/prayersdate - Get prayers for a specific date 📅
 	/subscribe - Subscribe to daily prayers notification 🔔
 	/unsubscribe - Unsubscribe from daily prayers notification 🔕
+
+	<b>Support</b>
+	/help - Show this message 📖   
 	/lang - Set bot language  🌐
-	/feedback - Send feedback to the bot developers 📩
+	/feedback - Send feedback or idea to the bot developers 📩
 	/bug - Report a bug to the bot developers 🐞
 
-	`, 0)
+	`, "HTML", 0, false, false)
 }
 
 // SimpleSend sends a simple message

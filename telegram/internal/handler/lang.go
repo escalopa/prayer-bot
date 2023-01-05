@@ -10,7 +10,7 @@ func (h *Handler) SetLang(u *objs.Update) {
 	}
 	err := h.ac.SetLang(u.Message.Chat.Id, u.Message.Text)
 	if err != nil {
-		h.simpleSend(u.Message.Chat.Id, "An unexpected error occurred while setting language. Please try again later.", 0)
+		h.simpleSend(u.Message.Chat.Id, "An error occurred while setting language. Please try again later.", 0)
 		return
 	}
 	h.simpleSend(u.Message.Chat.Id, "Language set successfully.", 0)

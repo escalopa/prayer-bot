@@ -20,7 +20,7 @@ B((Bot)) --> |Store User ID For Subscribtion| C[[Database]]
 | --- | --- |
 | /help | Get help message showing all possible commands |
 | /prayers | Get prayers time |
-| /prayersByDate | Get prayers time by date |
+| /prayersdate | Get prayers time by date |
 | /subscribe | Subscribe to get notified on the prayers time |
 | /unsubscribe | Unsubscribe to not get notified on the prayers time |
 | /lang | Change the bot language (Default English) |
@@ -35,6 +35,7 @@ B((Bot)) --> |Store User ID For Subscribtion| C[[Database]]
 
 ## Upcoming Features
 
-- [x] Support date format for prayersByDate command with leading zeros and with delimiters (. / -)
+- [x] Support date format for prayersdate command with leading zeros and with delimiters (. / -)
+- [x] Implement subscriptions & notifications
+- [x] Update text messages to be more user friendly
 - [ ] Add more languages support (AR, RU)
-- [ ] Implement subscriptions & notifications

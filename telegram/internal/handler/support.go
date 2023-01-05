@@ -34,7 +34,7 @@ func (h *Handler) Feedback(u *objs.Update) {
 	`, u.Message.Chat.Id, u.Message.Chat.Username, u.Message.Chat.FirstName, u.Message.Chat.LastName, text)
 	_, err = h.b.SendMessage(botOwnerID, message, "HTML", 0, false, false)
 	if err != nil {
-		h.simpleSend(u.Message.Chat.Id, "An unexpected error occurred while sending your feedback. Please try again later.", 0)
+		h.simpleSend(u.Message.Chat.Id, "An error occurred while sending your feedback. Please try again later.", 0)
 		log.Println(err)
 		return
 	}
@@ -56,7 +56,7 @@ func (h *Handler) Bug(u *objs.Update) {
 	text := u.Message.Text
 
 	message := fmt.Sprintf(`
-	Bug Report... 🐞🐛
+	Bug Report... 🐞
 	
 	<b>ID:</b> %d
 	<b>Username:</b> %s
@@ -65,7 +65,7 @@ func (h *Handler) Bug(u *objs.Update) {
 	`, u.Message.Chat.Id, u.Message.Chat.Username, u.Message.Chat.FirstName, u.Message.Chat.LastName, text)
 	_, err = h.b.SendMessage(botOwnerID, message, "HTML", 0, false, false)
 	if err != nil {
-		h.simpleSend(u.Message.Chat.Id, "An unexpected error occurred while sending your bug report. Please try again later.", 0)
+		h.simpleSend(u.Message.Chat.Id, "An error occurred while sending your bug report. Please try again later.", 0)
 		log.Println(err)
 		return
 	}

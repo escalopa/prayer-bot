@@ -19,6 +19,7 @@ services:
       - BOT_TOKEN=${BOT_TOKEN}
       - CACHE_URL=${CACHE_URL}
       - DATA_PATH=${DATA_PATH}
+      - UPCOMING_REMINDER=${UPCOMING_REMINDER}
     build:
       context: .
       dockerfile: ./Dockerfile

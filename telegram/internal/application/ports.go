@@ -25,6 +25,7 @@ type Parser interface {
 }
 
 type Notifier interface {
+	Notify(func(id []int, msg string)) error
 	Subscribe(id int) error
 	Unsubscribe(id int) error
 }

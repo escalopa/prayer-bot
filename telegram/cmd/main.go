@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/escalopa/gopray/telegram/internal/handler"
 
@@ -9,7 +10,7 @@ import (
 	cfg "github.com/SakoDroid/telego/configs"
 	"github.com/escalopa/gopray/pkg/config"
 
-	gpc "github.com/escalopa/gopray/pkg/error"
+	gpe "github.com/escalopa/gopray/pkg/error"
 	"github.com/escalopa/gopray/telegram/internal/adapters/notifier"
 	"github.com/escalopa/gopray/telegram/internal/adapters/parser"
 	"github.com/escalopa/gopray/telegram/internal/adapters/redis"
@@ -20,11 +21,12 @@ func main() {
 
 	c := config.NewConfig()
 
+	// TODO: Add a logger.
 	bot, err := bt.NewBot(cfg.Default(c.Get("BOT_TOKEN")))
-	gpc.CheckError(err)
+	gpe.CheckError(err)
 
 	err = bot.Run()
-	gpc.CheckError(err)
+	gpe.CheckError(err)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -39,10 +41,13 @@ func main() {
 	// Create schedule parser & parse the schedule.
 	p := parser.New(c.Get("DATA_PATH"), pr)
 	err = p.ParseSchedule()
-	gpc.CheckError(err)
+	gpe.CheckError(err, "Error parsing schedule")
 
-	n := notifier.New(pr, sr, lr)
-	go n.Notify()
+	// Create notifier.
+	ur := c.Get("UPCOMING_REMINDER")
+	urInt, err := strconv.Atoi(ur)
+	gpe.CheckError(err, "UPCOMING_REMINDER must be an integer")
+	n := notifier.New(pr, sr, lr, uint(urInt))
 
 	a := application.New(n, pr, lr)
 	run(bot, a, ctx)
@@ -54,6 +59,9 @@ func run(b *bt.Bot, a *application.UseCase, ctx context.Context) {
 	updateChannel := b.GetUpdateChannel()
 	h := handler.New(b, a, ctx)
 	h.Register()
+
+	// Notify subscriber about the prayer times.
+	go h.NotifyPrayers()
 
 	//Monitors any other update.
 	for {

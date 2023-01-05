@@ -3,29 +3,28 @@ package prayer
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 )
 
-type Prayer string
-
 type PrayerTimes struct {
-	Date    string `json:"date"`
-	Fajr    Prayer `json:"fajr"`
-	Sunrise Prayer `json:"sunrise"`
-	Dhuhr   Prayer `json:"dhuhr"`
-	Asr     Prayer `json:"asr"`
-	Maghrib Prayer `json:"maghrib"`
-	Isha    Prayer `json:"isha"`
+	Date    string    `json:"date"`
+	Fajr    time.Time `json:"fajr"`
+	Sunrise time.Time `json:"sunrise"`
+	Dhuhr   time.Time `json:"dhuhr"`
+	Asr     time.Time `json:"asr"`
+	Maghrib time.Time `json:"maghrib"`
+	Isha    time.Time `json:"isha"`
 }
 
-func NewPrayerTimes(date, fajr, sunrise, dhuhr, asr, maghrib, isha string) PrayerTimes {
+func NewPrayerTimes(date string, fajr, sunrise, dhuhr, asr, maghrib, isha time.Time) PrayerTimes {
 	return PrayerTimes{
 		Date:    date,
-		Fajr:    Prayer(fajr),
-		Sunrise: Prayer(sunrise),
-		Dhuhr:   Prayer(dhuhr),
-		Asr:     Prayer(asr),
-		Maghrib: Prayer(maghrib),
-		Isha:    Prayer(isha),
+		Fajr:    fajr,
+		Sunrise: sunrise,
+		Dhuhr:   dhuhr,
+		Asr:     asr,
+		Maghrib: maghrib,
+		Isha:    isha,
 	}
 }
 
@@ -91,7 +90,7 @@ func (p *PrayerTimes) ArHTML() string {
 		<b>المغرب</b> : %s
 		<b>العشاء</b> : %s
 		
-		`, p.Date, p.Fajr, p.Sunrise, p.Dhuhr, p.Asr, p.Maghrib, p.Isha,
+		`, p.Date, p.Fajr.Format("HH:MM"), p.Sunrise, p.Dhuhr, p.Asr, p.Maghrib, p.Isha,
 	)
 }
 

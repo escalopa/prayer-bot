@@ -82,14 +82,14 @@ func (p *Parser) ParseSchedule() error {
 		)
 		schedule = append(schedule, prayers)
 	}
-	log.Println("Parsed prayers schedule successfully.")
+	log.Println("Parsed prayers schedule")
 
 	// Save to database
 	err = p.saveSchedule(schedule)
 	if err != nil {
 		return err
 	}
-	log.Println("Saved prayers schedule successfully.")
+	log.Println("Saved prayers schedule")
 	return nil
 }
 

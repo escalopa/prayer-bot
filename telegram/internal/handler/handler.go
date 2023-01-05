@@ -24,7 +24,6 @@ func New(b *bt.Bot, ac *application.UseCase, ctx context.Context) *Handler {
 }
 
 func (h *Handler) Register() {
-	// h.b.AddHandler("/start", h.Start, "all")
 	h.b.AddHandler("/help", h.Help, "all")
 	h.b.AddHandler("/subscribe", h.Subscribe, "all")
 	h.b.AddHandler("/unsubscribe", h.Unsubscribe, "all")
@@ -37,13 +36,13 @@ func (h *Handler) Register() {
 
 func (h *Handler) Help(u *objs.Update) {
 	h.b.SendMessage(u.Message.Chat.Id, `
-	Asalamu alaykum, I am a kazan prayers time, I can help you know prayers time anytime to always pray on time 🙏.
+	Asalamu alaykum, I am kazan prayer's time bot, I can help you know prayer's time anytime to always pray on time 🙏.
 	
 	Available commands are below: 👇	
 
 	<b>Prayers</b>
-	/prayers - Get prayers for today ⏰
-	/prayersdate - Get prayers for a specific date 📅
+	/prayers - Get prayer's time for today ⏰
+	/prayersdate - Get prayer's time for a specific date 📅
 	/subscribe - Subscribe to daily prayers notification 🔔
 	/unsubscribe - Unsubscribe from daily prayers notification 🔕
 
@@ -52,7 +51,6 @@ func (h *Handler) Help(u *objs.Update) {
 	/lang - Set bot language  🌐
 	/feedback - Send feedback or idea to the bot developers 📩
 	/bug - Report a bug to the bot developers 🐞
-
 	`, "HTML", 0, false, false)
 }
 

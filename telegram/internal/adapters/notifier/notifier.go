@@ -29,40 +29,37 @@ func New(pr app.PrayerRepository, sr app.SubscriberRepository, lr app.LanguageRe
 
 func (n *Notifier) Notify(notify func(ids []int, msg string)) error {
 	var tick *time.Ticker
-	var prayerName string
-	var prayerAfter uint // minutes until the prayer starts
-	var err error
 
 	for {
-		prayerName, prayerAfter, err = n.getClosestPrayer()
+		prayerName, prayerAfter, err := n.getClosestPrayer()
 		if err != nil {
-			errors.Wrap(err, "Failed to get closest prayer")
-			break
+			return errors.Wrap(err, "Failed to get closest prayer")
 		}
-		tick = time.NewTicker(time.Duration((prayerAfter - n.ur)) * time.Minute)
 
-		// Wait until the prayer is about to start.
+		upcomingAt, startsAt := n.calculateLeftTime(prayerAfter)
+		// logs for debugging
+		// log.Println("Waiting for", prayerName, "to start in", prayerAfter, "minutes.")
+		// log.Println("Notifying subscribers in", upcomingAt, "minutes.")
+		// log.Println("Prayer start at ", startsAt, "minutes.")
+
+		// Wait until the prayer is about to start, & notify subscribers about the upcoming prayer.
+		tick = time.NewTicker(upcomingAt)
 		<-tick.C
-
-		// Get subscribers.
 		ids, err := n.sr.GetSubscribers()
 		if err != nil {
-			errors.Wrap(err, "Failed to get subscribers")
-			break
+			return errors.Wrap(err, "Failed to get subscribers")
 		}
+		notify(ids, fmt.Sprintf("<b>%s</b> prayer is about to start in <b>%d</b> minutes.", prayerName, prayerAfter))
 
-		// Notify subscribers about the upcoming prayer.
-		notify(ids, fmt.Sprintf("%s is about to start in %d minutes.", prayerName, prayerAfter))
-
-		// Wait until the prayer starts.
-		t2 := time.NewTicker(time.Duration(n.ur) * time.Minute)
+		// Wait until the prayer starts & notify subscribers that the prayer has started.
+		t2 := time.NewTicker(startsAt)
 		<-t2.C
-
-		// Notify subscribers about the prayer that has started.
-		notify(ids, fmt.Sprintf("<b>%s</b> time has arrived.", prayerName))
+		ids, err = n.sr.GetSubscribers()
+		if err != nil {
+			return errors.Wrap(err, "Failed to get subscribers")
+		}
+		notify(ids, fmt.Sprintf("<b>%s</b> prayer time has arrived.", prayerName))
 	}
-
-	return err
 }
 
 // Subscribe adds the subscriber with the given id to the list of subscribers.
@@ -135,4 +132,15 @@ func (n *Notifier) getPrayerTime(t time.Time) (prayer.PrayerTimes, error) {
 		return prayer.PrayerTimes{}, err
 	}
 	return p, nil
+}
+
+func (n *Notifier) calculateLeftTime(t uint) (upcomingAt, startsAt time.Duration) {
+	upcomingAt = time.Duration((t - n.ur))
+	// If the prayer is close, wait for 1 minute then notify.
+	if upcomingAt <= 0 {
+		upcomingAt = 1
+	}
+	startsAt = time.Duration(t)
+	upcomingAt, startsAt = upcomingAt*time.Minute, startsAt*time.Minute
+	return
 }

@@ -1,0 +1,27 @@
+version: "3.8"
+
+services:
+  cache:
+    container_name: "cache"
+    restart: unless-stopped
+    image: redis:latest
+    volumes:
+      - ./data:/data
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+  gopray:
+    container_name: "gopray"
+    restart: unless-stopped
+    volumes:
+      - .:/go/src/github.com/escalopa/gopray/
+    environment:
+      - BOT_TOKEN=${BOT_TOKEN}
+      - CACHE_URL=${CACHE_URL}
+      - DATA_PATH=${DATA_PATH}
+      - UPCOMING_REMINDER=${UPCOMING_REMINDER}
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      target: development
+      no_cache: true

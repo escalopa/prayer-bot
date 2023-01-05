@@ -2,6 +2,7 @@ package application
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/escalopa/gopray/pkg/prayer"
@@ -36,6 +37,15 @@ func (uc *UseCase) GetPrayersByDate(date string) (prayer.PrayerTimes, error) {
 	return p, nil
 }
 
+func (uc *UseCase) Notify(send func(id int, msg string)) {
+	err := uc.n.Notify(func(ids []int, message string) {
+		for _, id := range ids {
+			send(id, message)
+		}
+	})
+	log.Printf("Notifier stoped with error: %v", err)
+}
+
 func (uc *UseCase) Subscribe(id int) error {
 	err := uc.n.Subscribe(id)
 	if err != nil {
@@ -58,4 +68,12 @@ func (uc *UseCase) SetLang(id int, lang string) error {
 		return errors.Wrap(err, "failed to set language")
 	}
 	return nil
+}
+
+func (uc *UseCase) GetLang(id int) (string, error) {
+	lang, err := uc.lr.GetLang(id)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to get language")
+	}
+	return lang, nil
 }

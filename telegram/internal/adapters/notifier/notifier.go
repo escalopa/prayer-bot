@@ -1,31 +1,138 @@
 package notifier
 
 import (
+	"fmt"
+	"time"
+
+	"github.com/escalopa/gopray/pkg/prayer"
 	app "github.com/escalopa/gopray/telegram/internal/application"
+	"github.com/pkg/errors"
 )
 
+// Notifier is responsible for notifying subscribers about the upcoming prayer.
+// It also notifies subscribers when the prayer has started.
 type Notifier struct {
 	pr app.PrayerRepository
 	sr app.SubscriberRepository
 	lr app.LanguageRepository
+	ur uint
 }
 
-func New(pr app.PrayerRepository, sr app.SubscriberRepository, lr app.LanguageRepository) *Notifier {
+func New(pr app.PrayerRepository, sr app.SubscriberRepository, lr app.LanguageRepository, upcomingReminder uint) *Notifier {
 	return &Notifier{
 		pr: pr,
 		sr: sr,
 		lr: lr,
+		ur: upcomingReminder,
 	}
 }
 
-func (n *Notifier) Notify() {
+func (n *Notifier) Notify(notify func(ids []int, msg string)) error {
+	var tick *time.Ticker
+	var prayerName string
+	var prayerAfter uint // minutes until the prayer starts
+	var err error
 
+	for {
+		prayerName, prayerAfter, err = n.getClosestPrayer()
+		if err != nil {
+			errors.Wrap(err, "Failed to get closest prayer")
+			break
+		}
+		tick = time.NewTicker(time.Duration((prayerAfter - n.ur)) * time.Minute)
+
+		// Wait until the prayer is about to start.
+		<-tick.C
+
+		// Get subscribers.
+		ids, err := n.sr.GetSubscribers()
+		if err != nil {
+			errors.Wrap(err, "Failed to get subscribers")
+			break
+		}
+
+		// Notify subscribers about the upcoming prayer.
+		notify(ids, fmt.Sprintf("%s is about to start in %d minutes.", prayerName, prayerAfter))
+
+		// Wait until the prayer starts.
+		t2 := time.NewTicker(time.Duration(n.ur) * time.Minute)
+		<-t2.C
+
+		// Notify subscribers about the prayer that has started.
+		notify(ids, fmt.Sprintf("<b>%s</b> time has arrived.", prayerName))
+	}
+
+	return err
 }
 
+// Subscribe adds the subscriber with the given id to the list of subscribers.
+// @param id int - the id of the subscriber to add
+// @return error - any error that might have occurred
 func (n *Notifier) Subscribe(id int) error {
-	return nil
+	return n.sr.StoreSubscriber(id)
 }
 
+// Unsubscribe removes the subscriber with the given id from the list of subscribers.
+// @param id int - the id of the subscriber to remove
+// @return error - any error that might have occurred
 func (n *Notifier) Unsubscribe(id int) error {
-	return nil
+	return n.sr.RemoveSubscribe(id)
+}
+
+// getClosestPrayer returns the name of the closest prayer and the time left until it starts
+// @return prayerName string - the name of the closest prayer
+// @return prayerAfter int - the time left in minutes until the closest prayer starts
+// @return err error - any error that might have occurred
+func (n *Notifier) getClosestPrayer() (prayerName string, prayerAfter uint, err error) {
+	// Get the prayer times for today.
+	p, err := n.getPrayerTime(time.Now())
+	if err != nil {
+		return "", 0, err
+	}
+
+	// Get the current time.
+	// Time is in UTC, so we need to convert it to the local time in Kazan Russia("Europe/Moscow").
+	loc, err := time.LoadLocation("Europe/Moscow")
+	if err != nil {
+		return "", 0, err
+	}
+	now := time.Now().In(loc)
+
+	// Get the closest prayer.
+	// To get time left until the prayer starts, we subtract the current time from the prayer time
+	// and convert the result to minutes.
+	if p.Fajr.After(now) {
+		return "Fajr", uint(p.Fajr.Sub(now).Minutes()), nil
+	} else if p.Dhuhr.After(now) {
+		return "Dhuhr", uint(p.Dhuhr.Sub(now).Minutes()), nil
+	} else if p.Asr.After(now) {
+		return "Asr", uint(p.Asr.Sub(now).Minutes()), nil
+	} else if p.Maghrib.After(now) {
+		return "Maghrib", uint(p.Maghrib.Sub(now).Minutes()), nil
+	} else if p.Isha.After(now) {
+		return "Isha", uint(p.Isha.Sub(now).Minutes()), nil
+	}
+
+	// If reach this block, it means that the current time is after Isha.
+	// Get the first prayer time for the next day(Fajr).
+	tomorrow := time.Now().Add(time.Hour * 24)
+	p, err = n.getPrayerTime(tomorrow)
+	if err != nil {
+		return "", 0, err
+	}
+	return "Fajr", uint(p.Fajr.Sub(now).Minutes()), nil
+}
+
+// getPrayerTime returns the prayer times for the given date.
+// @param t time.Time - the date for which to get the prayer times
+// @return prayer.PrayerTimes - the prayer times for the given date
+// @return error - any error that might have occurred
+func (n *Notifier) getPrayerTime(t time.Time) (prayer.PrayerTimes, error) {
+	// Create the key for the prayer times. in the format of "day/month" without leading zeros.
+	key := fmt.Sprintf("%d/%d", t.Day(), t.Month())
+	p, err := n.pr.GetPrayer(key)
+	if err != nil {
+		return prayer.PrayerTimes{}, err
+	}
+	return p, nil
 }

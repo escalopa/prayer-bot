@@ -1,0 +1,23 @@
+version: "3.8"
+
+services:
+  telegram:
+    image: dekuyo/gopray:latest
+    volumes:
+      - .:/go/src/github.com/escalopa/gopray/
+    secrets:
+      - gopray_bot_token
+      - gopray_cache_url
+    environment:
+      - BOT_TOKEN_FILE=/run/secrets/gopray_bot_token
+      - CACHE_URL_FILE=/run/secrets/gopray_cache_url
+      - DATA_PATH=/go/src/github.com/escalopa/gopray/times.csv
+      - UPCOMING_REMINDER=20
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+secrets:
+  gopray_bot_token:
+    external: true
+  gopray_cache_url:
+    external: true

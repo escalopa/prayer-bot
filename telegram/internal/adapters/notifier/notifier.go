@@ -155,11 +155,11 @@ func (n *Notifier) calculateLeftTime(t time.Time) (upcomingAt, startsAt time.Dur
 	if left < n.ur {
 		upcomingAt = 0
 		startsIn = left
-		startsAt = time.Duration(left)
+		startsAt = time.Duration(left + 1)
 	} else {
 		upcomingAt = time.Duration((left - n.ur))
 		startsIn = n.ur
-		startsAt = time.Duration(n.ur)
+		startsAt = time.Duration(n.ur + 1)
 	}
 	upcomingAt, startsAt = upcomingAt*time.Minute, startsAt*time.Minute
 	return

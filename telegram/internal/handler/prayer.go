@@ -38,7 +38,7 @@ func (h *Handler) Getprayersdate(u *objs.Update) {
 	}
 
 	// Send a message to the user to ask for the date
-	h.b.SendMessage(u.Message.Chat.Id, "Please insert date in the format of <u>DD/MM</u> or <u>DD-MM</u>", "HTML", 0, false, false)
+	h.b.SendMessage(u.Message.Chat.Id, "Please insert date in the format of <u>DD/MM</u> or <u>DD-MM</u>, Example: <b>9/10</b>", "HTML", 0, false, false)
 	u = <-*ch
 	date, ok := parseDate(u.Message.Text)
 	if !ok {
@@ -133,6 +133,12 @@ func parseDate(date string) (string, bool) {
 	// Check if the month is valid and between 1 and 12
 	month, err := strconv.Atoi(nums[1])
 	if err != nil || month > 12 || month < 1 {
+		return "", false
+	}
+	// Check if the days is in the correct range for the month
+	if month == 2 && day > 28 {
+		return "", false
+	} else if (month == 4 || month == 6 || month == 9 || month == 11) && day > 30 {
 		return "", false
 	}
 	return fmt.Sprintf("%d/%d", day, month), true

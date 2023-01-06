@@ -3,7 +3,7 @@ package handler
 import objs "github.com/SakoDroid/telego/objects"
 
 func (h *Handler) SetLang(u *objs.Update) {
-	// TODO: Implement this
+	// TODO: Implement SetLang
 	if true {
 		h.simpleSend(u.Message.Chat.Id, "This feature is not available yet.", 0)
 		return

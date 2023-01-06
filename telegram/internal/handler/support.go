@@ -20,7 +20,7 @@ func (h *Handler) Feedback(u *objs.Update) {
 		return
 	}
 
-	h.simpleSend(u.Message.Chat.Id, "Please send your feedback as text message", 0)
+	h.simpleSend(u.Message.Chat.Id, "Please send your feedback as text message in the language that comforts you", 0)
 	u = <-*ch
 	text := u.Message.Text
 
@@ -51,7 +51,7 @@ func (h *Handler) Bug(u *objs.Update) {
 		return
 	}
 
-	h.simpleSend(u.Message.Chat.Id, "Please send your bug report as text message", 0)
+	h.simpleSend(u.Message.Chat.Id, "Please send your bug report as text message in the language that comforts you", 0)
 	u = <-*ch
 	text := u.Message.Text
 

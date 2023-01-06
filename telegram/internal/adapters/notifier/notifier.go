@@ -137,11 +137,13 @@ func (n *Notifier) getPrayerTime(t time.Time) (prayer.PrayerTimes, error) {
 }
 
 // calculateLeftTime calculates the time left until the prayer starts
-// @param t uint - the time left in minutes until the prayer starts
+// @param t time.Time - the prayer time
 // @return upcomingAt time.Duration - the time left in minutes until the prayer starts subtracted from the user reminder time `UPCOMING_REMINDER`
 // @return startsIn time.Duration - the time left in minutes until the prayer starts after upcoming reminder has passed
 // @return startsAt time.Duration - the time to wait in minutes until the prayer starts, after the upcoming reminder has passed
 // Returns usage flow, `upcomingAt` >> `startsIn` >> `startsAt`
+// The difference between `startsIn` and `startsAt` is that `startsIn` is `int` representing the time left in minutes
+// while `startsAt` is `time.Duration.Minute()`  which is the time left in minutes as `float64` or more precisely in `nanoseconds`.
 func (n *Notifier) calculateLeftTime(t time.Time) (upcomingAt, startsAt time.Duration, startsIn uint) {
 	// Get the current time, Error here is ommited because it's already handled in the `getClosestPrayer` function.
 	// And it's not possible to get an error on this call, since the previous call to `now()` was successful.
@@ -151,6 +153,11 @@ func (n *Notifier) calculateLeftTime(t time.Time) (upcomingAt, startsAt time.Dur
 	// and set the `startsAt` to the `UPCOMING_REMINDER`
 	// else, set the `upcomingAt` to the time left until the prayer starts subtracted from the `UPCOMING_REMINDER`
 	left := uint(t.Sub(now).Minutes())
+
+	////////////////////////
+	// NOTE: StartAt is increased by 1 minute to avoid sending the notification twice or many times.
+	////////////////////////
+
 	// The prayers start in time less than the `UPCOMING_REMINDER`.
 	if left < n.ur {
 		upcomingAt = 0

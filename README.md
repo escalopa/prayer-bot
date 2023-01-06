@@ -58,7 +58,14 @@ for more details check the [notifier code](https://github.com/escalopa/gopray/tr
 
 ## Upcoming Features 🚀
 
+# Version 1 Milestones 🏁
 - [x] Support date format for prayersdate command with leading zeros and with delimiters (. / -)
 - [x] Implement subscriptions & notifications
 - [x] Update text messages to be more user friendly
+
+# Version 2 Milestones 🏁
+- [ ] send sorat al kahf on friday
 - [ ] Add different languages support (AR, RU)
+
+# Version 3 Milestones 🏁
+- [ ] make response endpoint for admin to respond to feedback & bug messages

@@ -2,3 +2,4 @@
 *.env
 data
 configs.json
+pre-commit*

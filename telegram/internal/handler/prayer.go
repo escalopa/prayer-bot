@@ -38,7 +38,11 @@ func (h *Handler) Getprayersdate(u *objs.Update) {
 	}
 
 	// Send a message to the user to ask for the date
-	h.b.SendMessage(u.Message.Chat.Id, "Please insert date in the format of <u>DD/MM</u> or <u>DD-MM</u>, Example: <b>9/10</b>", "HTML", 0, false, false)
+	_, err = h.b.SendMessage(u.Message.Chat.Id, "Please insert date in the format of <u>DD/MM</u> or <u>DD-MM</u>, Example: <b>9/10</b>", "HTML", 0, false, false)
+	if err != nil {
+		log.Println(err)
+		return
+	}
 	u = <-*ch
 	date, ok := parseDate(u.Message.Text)
 	if !ok {

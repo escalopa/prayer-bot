@@ -36,7 +36,12 @@ func (p *Parser) ParseSchedule() error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() {
+		err = file.Close()
+		if err != nil {
+			log.Printf("Error: %s, Failed to close file", err)
+		}
+	}()
 
 	// parse csv file
 	var schedule []prayer.PrayerTimes

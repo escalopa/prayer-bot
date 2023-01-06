@@ -1,0 +1,19 @@
+version: "3"
+
+tasks:
+  deploy:
+    cmds:
+      - echo "Building image..."
+      - docker build -f ./Dockerfile -t dekuyo/gopray:${TAG} --target=production --no-cache .
+      - echo "\nDeploying image to Docker Hub..."
+      - docker image push dekuyo/gopray:${TAG}
+  test:
+    cmds:
+      - go test -v ./...
+
+  lint:
+    cmds:
+      - golangci-lint run
+  sec:
+    cmds:
+      - gosec ./...

@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"path/filepath"
 )
 
 type Config struct {
@@ -34,7 +35,7 @@ func (c *Config) Get(key string) (result string) {
 	file := key + "_FILE"
 	secret, set := os.LookupEnv(file)
 	if set {
-		b, err := os.ReadFile(secret)
+		b, err := os.ReadFile(filepath.Clean(secret))
 		if err != nil {
 			return ""
 		}

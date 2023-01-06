@@ -145,7 +145,7 @@ func (n *Notifier) getPrayerTime(t time.Time) (prayer.PrayerTimes, error) {
 // The difference between `startsIn` and `startsAt` is that `startsIn` is `int` representing the time left in minutes
 // while `startsAt` is `time.Duration.Minute()`  which is the time left in minutes as `float64` or more precisely in `nanoseconds`.
 func (n *Notifier) calculateLeftTime(t time.Time) (upcomingAt, startsAt time.Duration, startsIn uint) {
-	// Get the current time, Error here is ommited because it's already handled in the `getClosestPrayer` function.
+	// Get the current time, Error here is omitted because it's already handled in the `getClosestPrayer` function.
 	// And it's not possible to get an error on this call, since the previous call to `now()` was successful.
 	now, _ := now()
 

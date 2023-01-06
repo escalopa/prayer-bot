@@ -1,6 +1,9 @@
 # gopray 🙏
 
-A Telegram Bot to get muslim prayers time, And subscribe to get notified on the prayers time 
+A Telegram Bot to get muslim prayers time, And subscribe to get notified on the prayers time
+
+<p align="center"><a href="https://pkg.go.dev/github.com/escalopa/gopray/v3?tab=doc"
+target="_blank"><img src="https://img.shields.io/badge/Go-1.19+-00ADD8?style=for-the-badge&logo=go" alt="go version" /></a>&nbsp;<a href="https://gocover.io/github.com/escalopa/gopray/telegram/" target="_blank"><img src="https://img.shields.io/badge/Go_Cover-88.3%25-success?style=for-the-badge&logo=none" alt="go cover" /></a>&nbsp;<a href="https://goreportcard.com/report/github.com/escalopa/gopray" target="_blank"><img src="https://img.shields.io/badge/Go_report-A+-success?style=for-the-badge&logo=none" alt="go report" /></a>&nbsp;<img src="https://img.shields.io/badge/license-apache_2.0-red?style=for-the-badge&logo=none" alt="license" /></p>
 
 ## Contributing 🤼
 
@@ -16,10 +19,10 @@ A[User] --> |Change Bot Language| B((Bot))
 B((Bot)) --> |Notifiy Users about prayers| B((Bot))
 A[User] --> |Send Feedback Messages\nOr Bug Reports| B((Bot))
 B((Bot)) --> |Store Prayers Time| C[[Database]]
-B((Bot)) --> |Store User ID For Subscribtion| C[[Database]]
+B((Bot)) --> |Store User ID For Subscriptions| C[[Database]]
 ```
 
-## Subscribe Feature 📢
+## Subscription Feature 📢
 
 This feature allows the bot to notify users `20 min` before the prayers time.
 
@@ -38,7 +41,7 @@ The first sleep is until the `20 min` before the prayer's time. And the second s
 for more details check the [notifier code](https://github.com/escalopa/gopray/tree/main/telegram/internal/adapters/notifier/notifier.go).
 
 ## Bot Options 🤖
-  
+
 | Command | Description |
 | --- | --- |
 | /help | Get help message showing all possible commands |
@@ -50,7 +53,7 @@ for more details check the [notifier code](https://github.com/escalopa/gopray/tr
 | /feedback | Send feedback to the bot owner |
 | /bug | Report a bug to the bot owner |
 
-## References 📚 
+## References 📚
 
 - [Telegram API (Telego)](https://github.com/SakoDroid/telego)
 - [Prayer Times Site](http://dumrt.ru/ru/help-info/prayertime/)

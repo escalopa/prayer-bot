@@ -2,6 +2,7 @@ package notifier
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/escalopa/gopray/pkg/prayer"
@@ -36,24 +37,26 @@ func (n *Notifier) Notify(notify func(ids []int, msg string)) error {
 			return errors.Wrap(err, "Failed to get closest prayer")
 		}
 
-		upcomingAt, startsAt := n.calculateLeftTime(prayerAfter)
+		upcomingAt, startsAt, startsIn := n.calculateLeftTime(prayerAfter)
 		// logs for debugging
-		// log.Println("Waiting for", prayerName, "to start in", prayerAfter, "minutes.")
-		// log.Println("Notifying subscribers in", upcomingAt, "minutes.")
-		// log.Println("Prayer start at ", startsAt, "minutes.")
+		log.Printf("Prayer: %s\nupcomingAt:%d\nstartsAt: %d\nstartsIn: %d", prayerName, upcomingAt, startsAt, startsIn)
 
 		// Wait until the prayer is about to start, & notify subscribers about the upcoming prayer.
-		tick = time.NewTicker(upcomingAt)
-		<-tick.C
+		if upcomingAt > 0 {
+			tick = time.NewTicker(upcomingAt)
+			<-tick.C
+		}
 		ids, err := n.sr.GetSubscribers()
 		if err != nil {
 			return errors.Wrap(err, "Failed to get subscribers")
 		}
-		notify(ids, fmt.Sprintf("<b>%s</b> prayer is about to start in <b>%d</b> minutes.", prayerName, prayerAfter))
+		notify(ids, fmt.Sprintf("<b>%s</b> prayer is about to start in <b>%d</b> minutes.", prayerName, startsIn))
 
 		// Wait until the prayer starts & notify subscribers that the prayer has started.
-		t2 := time.NewTicker(startsAt)
-		<-t2.C
+		if startsAt > 0 {
+			tick = time.NewTicker(startsAt)
+			<-tick.C
+		}
 		ids, err = n.sr.GetSubscribers()
 		if err != nil {
 			return errors.Wrap(err, "Failed to get subscribers")
@@ -80,34 +83,33 @@ func (n *Notifier) Unsubscribe(id int) error {
 // @return prayerName string - the name of the closest prayer
 // @return prayerAfter int - the time left in minutes until the closest prayer starts
 // @return err error - any error that might have occurred
-func (n *Notifier) getClosestPrayer() (prayerName string, prayerAfter uint, err error) {
+func (n *Notifier) getClosestPrayer() (prayerName string, prayerTime time.Time, err error) {
 	// Get the prayer times for today.
 	p, err := n.getPrayerTime(time.Now())
 	if err != nil {
-		return "", 0, err
+		return "", time.Time{}, err
 	}
 
+	now, err := now()
+	if err != nil {
+		return "", time.Time{}, err
+	}
 	// Get the current time.
 	// Time is in UTC, so we need to convert it to the local time in Kazan Russia("Europe/Moscow").
-	loc, err := time.LoadLocation("Europe/Moscow")
-	if err != nil {
-		return "", 0, err
-	}
-	now := time.Now().In(loc)
 
 	// Get the closest prayer.
 	// To get time left until the prayer starts, we subtract the current time from the prayer time
 	// and convert the result to minutes.
 	if p.Fajr.After(now) {
-		return "Fajr", uint(p.Fajr.Sub(now).Minutes()), nil
+		return "Fajr", p.Fajr, nil
 	} else if p.Dhuhr.After(now) {
-		return "Dhuhr", uint(p.Dhuhr.Sub(now).Minutes()), nil
+		return "Dhuhr", p.Dhuhr, nil
 	} else if p.Asr.After(now) {
-		return "Asr", uint(p.Asr.Sub(now).Minutes()), nil
+		return "Asr", p.Asr, nil
 	} else if p.Maghrib.After(now) {
-		return "Maghrib", uint(p.Maghrib.Sub(now).Minutes()), nil
+		return "Maghrib", p.Maghrib, nil
 	} else if p.Isha.After(now) {
-		return "Isha", uint(p.Isha.Sub(now).Minutes()), nil
+		return "Isha", p.Isha, nil
 	}
 
 	// If reach this block, it means that the current time is after Isha.
@@ -115,9 +117,9 @@ func (n *Notifier) getClosestPrayer() (prayerName string, prayerAfter uint, err 
 	tomorrow := time.Now().Add(time.Hour * 24)
 	p, err = n.getPrayerTime(tomorrow)
 	if err != nil {
-		return "", 0, err
+		return "", time.Time{}, err
 	}
-	return "Fajr", uint(p.Fajr.Sub(now).Minutes()), nil
+	return "Fajr", p.Fajr, nil
 }
 
 // getPrayerTime returns the prayer times for the given date.
@@ -137,17 +139,37 @@ func (n *Notifier) getPrayerTime(t time.Time) (prayer.PrayerTimes, error) {
 // calculateLeftTime calculates the time left until the prayer starts
 // @param t uint - the time left in minutes until the prayer starts
 // @return upcomingAt time.Duration - the time left in minutes until the prayer starts subtracted from the user reminder time `UPCOMING_REMINDER`
-// @return startsAt time.Duration - the time left in minutes until the prayer starts, equals to `t`
-func (n *Notifier) calculateLeftTime(t uint) (upcomingAt, startsAt time.Duration) {
-	upcomingAt = time.Duration((t - n.ur))
-	// If the prayer is close, wait for 1 minute then notify.
-	if upcomingAt <= 0 {
-		upcomingAt = 1
+// @return startsIn time.Duration - the time left in minutes until the prayer starts after upcoming reminder has passed
+// @return startsAt time.Duration - the time to wait in minutes until the prayer starts, after the upcoming reminder has passed
+// Returns usage flow, `upcomingAt` >> `startsIn` >> `startsAt`
+func (n *Notifier) calculateLeftTime(t time.Time) (upcomingAt, startsAt time.Duration, startsIn uint) {
+	// Get the current time, Error here is ommited because it's already handled in the `getClosestPrayer` function.
+	// And it's not possible to get an error on this call, since the previous call to `now()` was successful.
+	now, _ := now()
+
+	// if time left until the prayer starts is less than the `UPCOMING_REMINDER`, then set the `upcomingAt` to 0
+	// and set the `startsAt` to the `UPCOMING_REMINDER`
+	// else, set the `upcomingAt` to the time left until the prayer starts subtracted from the `UPCOMING_REMINDER`
+	left := uint(t.Sub(now).Minutes())
+	// The prayers start in time less than the `UPCOMING_REMINDER`.
+	if left < n.ur {
+		upcomingAt = 0
+		startsIn = left
+		startsAt = time.Duration(left)
+	} else {
+		upcomingAt = time.Duration((left - n.ur))
+		startsIn = n.ur
+		startsAt = time.Duration(n.ur)
 	}
-	if t == 0 {
-		t = 1
-	}
-	startsAt = time.Duration(t)
 	upcomingAt, startsAt = upcomingAt*time.Minute, startsAt*time.Minute
 	return
+}
+
+func now() (time.Time, error) {
+	loc, err := time.LoadLocation("Europe/Moscow")
+	if err != nil {
+		return time.Time{}, err
+	}
+	now := time.Now().In(loc)
+	return now, nil
 }

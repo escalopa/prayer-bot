@@ -39,7 +39,7 @@ func (n *Notifier) Notify(notify func(ids []int, msg string)) error {
 
 		upcomingAt, startsAt, startsIn := n.calculateLeftTime(prayerAfter)
 		// logs for debugging
-		log.Printf("Prayer: %s\nupcomingAt:%d\nstartsAt: %d\nstartsIn: %d", prayerName, upcomingAt, startsAt, startsIn)
+		log.Printf("Prayer: %s,upcomingAt:%d,startsAt: %d,startsIn: %d", prayerName, upcomingAt, startsAt, startsIn)
 
 		// Wait until the prayer is about to start, & notify subscribers about the upcoming prayer.
 		if upcomingAt > 0 {

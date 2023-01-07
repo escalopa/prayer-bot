@@ -18,15 +18,17 @@ A[User] --> |Subscribe To Bot| B((Bot))
 A[User] --> |Change Bot Language| B((Bot))
 B((Bot)) --> |Notifiy Users about prayers| B((Bot))
 A[User] --> |Send Feedback Messages\nOr Bug Reports| B((Bot))
-B((Bot)) --> |Store Prayers Time| C[[Database]]
+B((Bot)) --> |Store Prayers Time| D[[Run Time Memory]]
 B((Bot)) --> |Store User ID For Subscriptions| C[[Database]]
 ```
 
 ## Subscription Feature 📢
 
-This feature allows the bot to notify users `20 min` before the prayers time.
+This feature allows the bot to notify users `20 min` before the prayers time. (Time is set by the `UPCOMING_REMINDER` env variable)
 
 Users can subscribe to the bot by sending `/subscribe` command to the bot. And unsubscribe by sending `/unsubscribe` command to the bot.
+
+Also on friday the bot will remind the user to pray gomoaa prayer. at `7:00 PM` (Time is set by the `GOMOAA_REMINDER_HOUR` env variable), This is value to when to remind them, The prayer time is calculated based on the prayers time of the day and sent to the user.
 
 ### How it works 🤔
 

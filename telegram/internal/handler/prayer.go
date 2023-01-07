@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"strconv"
-	"strings"
 	"time"
 
 	objs "github.com/SakoDroid/telego/objects"
@@ -67,10 +66,7 @@ const (
 // prayrify returns a string representation of the prayer times in a Markdown table format.
 func prayrify(p prayer.PrayerTimes) string {
 	// Get the day and monthName
-	s := strings.Split(p.Date, "/")
-	day, _ := strconv.Atoi(s[0])
-	month, _ := strconv.Atoi(s[1])
-	monthName := time.Month(month)
+	monthName := time.Month(p.Month)
 
 	// Create a Markdown table with the prayer times
 	basicTable, err := markdown.NewTableFormatterBuilder().
@@ -88,5 +84,5 @@ func prayrify(p prayer.PrayerTimes) string {
 		log.Println(err)
 	}
 
-	return fmt.Sprintf("\nDay %d %s 🕌\n>\n%s>", day, monthName, basicTable)
+	return fmt.Sprintf("\nDay %d %s 🕌\n>\n%s>", p.Day, monthName, basicTable)
 }

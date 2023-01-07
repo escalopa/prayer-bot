@@ -1,7 +1,6 @@
 package application
 
 import (
-	"fmt"
 	"log"
 	"regexp"
 	"strconv"
@@ -22,8 +21,7 @@ func New(n Notifier, pr PrayerRepository, lr LanguageRepository) *UseCase {
 }
 
 func (uc *UseCase) GetPrayers() (prayer.PrayerTimes, error) {
-	format := fmt.Sprintf("%d/%d", time.Now().Day(), time.Now().Month())
-	p, err := uc.pr.GetPrayer(format)
+	p, err := uc.pr.GetPrayer(time.Now().Day(), int(time.Now().Month()))
 	if err != nil {
 		return prayer.PrayerTimes{}, errors.Wrap(err, "failed to get prayer")
 	}
@@ -31,12 +29,12 @@ func (uc *UseCase) GetPrayers() (prayer.PrayerTimes, error) {
 }
 
 func (uc *UseCase) Getprayersdate(date string) (prayer.PrayerTimes, error) {
-	date, ok := parseDate(date)
+	day, month, ok := parseDate(date)
 	if !ok {
 		return prayer.PrayerTimes{}, errors.New("invalid date")
 	}
 
-	p, err := uc.pr.GetPrayer(date)
+	p, err := uc.pr.GetPrayer(day, month)
 	if err != nil {
 		return prayer.PrayerTimes{}, errors.Wrap(err, "failed to get prayer by date")
 	}
@@ -102,28 +100,31 @@ func (uc *UseCase) GetLang(id int) (string, error) {
 // @param date: The date to parse
 // @return: The date in the format of DD/MM
 // @return: True if the date is valid, false otherwise
-func parseDate(date string) (string, bool) {
+func parseDate(date string) (day, month int, ok bool) {
 	// Split the date by /, - or .
 	re := regexp.MustCompile(`(\/|-|\.)`)
 	nums := re.Split(date, -1)
 	if len(nums) != 2 {
-		return "", false
+		return 0, 0, false
 	}
+
+	var err error
 	// Check if the day is valid and between 1 and 31
-	day, err := strconv.Atoi(nums[0])
+	day, err = strconv.Atoi(nums[0])
 	if err != nil || day > 31 || day < 1 {
-		return "", false
+		return 0, 0, false
 	}
 	// Check if the month is valid and between 1 and 12
-	month, err := strconv.Atoi(nums[1])
+	month, err = strconv.Atoi(nums[1])
 	if err != nil || month > 12 || month < 1 {
-		return "", false
+		return 0, 0, false
 	}
 	// Check if the days is in the correct range for the month
 	if month == 2 && day > 28 {
-		return "", false
+		return 0, 0, false
 	} else if (month == 4 || month == 6 || month == 9 || month == 11) && day > 30 {
-		return "", false
+		return 0, 0, false
 	}
-	return fmt.Sprintf("%d/%d", day, month), true
+	ok = true
+	return
 }

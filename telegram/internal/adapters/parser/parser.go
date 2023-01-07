@@ -82,9 +82,7 @@ func (p *Parser) ParseSchedule() error {
 		isha, err := convertToTime(record[6], day, month)
 		gpe.CheckError(err)
 
-		prayers := prayer.New(record[0],
-			fajr, sunrise, dhuhr, asr, maghrib, isha,
-		)
+		prayers := prayer.New(day, month, fajr, sunrise, dhuhr, asr, maghrib, isha)
 		schedule = append(schedule, prayers)
 	}
 	log.Println("Parsed prayers schedule")
@@ -104,7 +102,7 @@ func (p *Parser) ParseSchedule() error {
 func (p *Parser) saveSchedule(schedule []prayer.PrayerTimes) error {
 	// Loop through all days of the schedule and save them to the database
 	for _, prayers := range schedule {
-		err := p.pr.StorePrayer(prayers.Date, prayers)
+		err := p.pr.StorePrayer(prayers)
 		if err != nil {
 			return err
 		}

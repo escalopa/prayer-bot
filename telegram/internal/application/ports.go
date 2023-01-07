@@ -5,8 +5,8 @@ import (
 )
 
 type PrayerRepository interface {
-	StorePrayer(date string, times p.PrayerTimes) error // Date format: dd:mm
-	GetPrayer(date string) (p.PrayerTimes, error)       // Date format: dd:mm
+	StorePrayer(times p.PrayerTimes) error
+	GetPrayer(day, month int) (p.PrayerTimes, error)
 }
 
 type SubscriberRepository interface {

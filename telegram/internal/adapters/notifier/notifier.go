@@ -116,7 +116,7 @@ func (n *Notifier) NotifyGomaa(notify func(ids []int, msg string)) error {
 		}
 
 		// Get the prayer time for the gomaa
-		prayers, err := n.pr.GetPrayer(fmt.Sprintf("%d/%d", gomaa.Day(), gomaa.Month()))
+		prayers, err := n.pr.GetPrayer(gomaa.Day(), int(gomaa.Month()))
 		if err != nil {
 			return errors.Wrap(err, "Failed to get prayers for gomaa")
 		}
@@ -210,9 +210,7 @@ func (n *Notifier) getClosestGomaa() (gomaa time.Time, err error) {
 // @return prayer.PrayerTimes - the prayer times for the given date
 // @return error - any error that might have occurred
 func (n *Notifier) getPrayerTime(t time.Time) (prayer.PrayerTimes, error) {
-	// Create the key for the prayer times. in the format of "day/month" without leading zeros.
-	key := fmt.Sprintf("%d/%d", t.Day(), t.Month())
-	p, err := n.pr.GetPrayer(key)
+	p, err := n.pr.GetPrayer(t.Day(), int(t.Month()))
 	if err != nil {
 		return prayer.PrayerTimes{}, err
 	}

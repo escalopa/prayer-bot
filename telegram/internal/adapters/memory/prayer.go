@@ -1,6 +1,8 @@
 package memory
 
 import (
+	"fmt"
+
 	"github.com/escalopa/gopray/pkg/prayer"
 )
 
@@ -12,11 +14,13 @@ func NewPrayerRepository() *PrayerRepository {
 	return &PrayerRepository{prayers: make(map[string]prayer.PrayerTimes)}
 }
 
-func (pr *PrayerRepository) GetPrayer(date string) (prayer.PrayerTimes, error) {
-	return pr.prayers[date], nil
+func (pr *PrayerRepository) GetPrayer(day, month int) (prayer.PrayerTimes, error) {
+	key := fmt.Sprintf("%d/%d", day, month)
+	return pr.prayers[key], nil
 }
 
-func (pr *PrayerRepository) StorePrayer(date string, times prayer.PrayerTimes) error {
-	pr.prayers[date] = times
+func (pr *PrayerRepository) StorePrayer(p prayer.PrayerTimes) error {
+	key := fmt.Sprintf("%d/%d", p.Day, p.Month)
+	pr.prayers[key] = p
 	return nil
 }

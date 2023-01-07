@@ -1,8 +1,9 @@
 package application
 
 import (
-	"fmt"
 	"log"
+	"regexp"
+	"strconv"
 	"time"
 
 	"github.com/escalopa/gopray/pkg/prayer"
@@ -20,17 +21,20 @@ func New(n Notifier, pr PrayerRepository, lr LanguageRepository) *UseCase {
 }
 
 func (uc *UseCase) GetPrayers() (prayer.PrayerTimes, error) {
-	format := fmt.Sprintf("%d/%d", time.Now().Day(), time.Now().Month())
-	p, err := uc.pr.GetPrayer(format)
+	p, err := uc.pr.GetPrayer(time.Now().Day(), int(time.Now().Month()))
 	if err != nil {
 		return prayer.PrayerTimes{}, errors.Wrap(err, "failed to get prayer")
 	}
-	// TODO: Add language support
 	return p, nil
 }
 
 func (uc *UseCase) Getprayersdate(date string) (prayer.PrayerTimes, error) {
-	p, err := uc.pr.GetPrayer(date)
+	day, month, ok := parseDate(date)
+	if !ok {
+		return prayer.PrayerTimes{}, errors.New("invalid date")
+	}
+
+	p, err := uc.pr.GetPrayer(day, month)
 	if err != nil {
 		return prayer.PrayerTimes{}, errors.Wrap(err, "failed to get prayer by date")
 	}
@@ -38,12 +42,26 @@ func (uc *UseCase) Getprayersdate(date string) (prayer.PrayerTimes, error) {
 }
 
 func (uc *UseCase) Notify(send func(id int, msg string)) {
-	err := uc.n.Notify(func(ids []int, message string) {
+	// Notify gomaa
+	go func() {
+		err := uc.n.NotifyGomaa(func(ids []int, message string) {
+			for _, id := range ids {
+				send(id, message)
+			}
+		})
+		if err != nil {
+			log.Printf("Notifiy Gomma hasstoped with error: %v", err)
+		}
+	}()
+	// Notify prayers
+	err := uc.n.NotifyPrayers(func(ids []int, message string) {
 		for _, id := range ids {
 			send(id, message)
 		}
 	})
-	log.Printf("Notifier stoped with error: %v", err)
+	if err != nil {
+		log.Printf("Notifiy Prayers toped with error: %v", err)
+	}
 }
 
 func (uc *UseCase) Subscribe(id int) error {
@@ -76,4 +94,37 @@ func (uc *UseCase) GetLang(id int) (string, error) {
 		return "", errors.Wrap(err, "failed to get language")
 	}
 	return lang, nil
+}
+
+// parseDate parses the date
+// @param date: The date to parse
+// @return: The date in the format of DD/MM
+// @return: True if the date is valid, false otherwise
+func parseDate(date string) (day, month int, ok bool) {
+	// Split the date by /, - or .
+	re := regexp.MustCompile(`(\/|-|\.)`)
+	nums := re.Split(date, -1)
+	if len(nums) != 2 {
+		return 0, 0, false
+	}
+
+	var err error
+	// Check if the day is valid and between 1 and 31
+	day, err = strconv.Atoi(nums[0])
+	if err != nil || day > 31 || day < 1 {
+		return 0, 0, false
+	}
+	// Check if the month is valid and between 1 and 12
+	month, err = strconv.Atoi(nums[1])
+	if err != nil || month > 12 || month < 1 {
+		return 0, 0, false
+	}
+	// Check if the days is in the correct range for the month
+	if month == 2 && day > 28 {
+		return 0, 0, false
+	} else if (month == 4 || month == 6 || month == 9 || month == 11) && day > 30 {
+		return 0, 0, false
+	}
+	ok = true
+	return
 }

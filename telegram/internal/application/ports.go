@@ -5,8 +5,8 @@ import (
 )
 
 type PrayerRepository interface {
-	StorePrayer(date string, times p.PrayerTimes) error // Date format: dd:mm
-	GetPrayer(date string) (p.PrayerTimes, error)       // Date format: dd:mm
+	StorePrayer(times p.PrayerTimes) error
+	GetPrayer(day, month int) (p.PrayerTimes, error)
 }
 
 type SubscriberRepository interface {
@@ -25,7 +25,8 @@ type Parser interface {
 }
 
 type Notifier interface {
-	Notify(func(id []int, msg string)) error
+	NotifyPrayers(func(id []int, msg string)) error
+	NotifyGomaa(func(id []int, msg string)) error
 	Subscribe(id int) error
 	Unsubscribe(id int) error
 }

@@ -1,6 +1,9 @@
 # gopray 🙏
 
-A Telegram Bot to get muslim prayers time, And subscribe to get notified on the prayers time 
+A Telegram Bot to get muslim prayers time, And subscribe to get notified on the prayers time
+
+![Build status](https://github.com/escalopa/gopray/workflows/Deploy/badge.svg)  [![Report card](https://goreportcard.com/badge/github.com/escalopa/gopray)](https://goreportcard.com/report/github.com/escalopa/gopray)
+<img src="./cover.jpg">
 
 ## Contributing 🤼
 
@@ -16,10 +19,10 @@ A[User] --> |Change Bot Language| B((Bot))
 B((Bot)) --> |Notifiy Users about prayers| B((Bot))
 A[User] --> |Send Feedback Messages\nOr Bug Reports| B((Bot))
 B((Bot)) --> |Store Prayers Time| C[[Database]]
-B((Bot)) --> |Store User ID For Subscribtion| C[[Database]]
+B((Bot)) --> |Store User ID For Subscriptions| C[[Database]]
 ```
 
-## Subscribe Feature 📢
+## Subscription Feature 📢
 
 This feature allows the bot to notify users `20 min` before the prayers time.
 
@@ -38,7 +41,7 @@ The first sleep is until the `20 min` before the prayer's time. And the second s
 for more details check the [notifier code](https://github.com/escalopa/gopray/tree/main/telegram/internal/adapters/notifier/notifier.go).
 
 ## Bot Options 🤖
-  
+
 | Command | Description |
 | --- | --- |
 | /help | Get help message showing all possible commands |
@@ -50,7 +53,7 @@ for more details check the [notifier code](https://github.com/escalopa/gopray/tr
 | /feedback | Send feedback to the bot owner |
 | /bug | Report a bug to the bot owner |
 
-## References 📚 
+## References 📚
 
 - [Telegram API (Telego)](https://github.com/SakoDroid/telego)
 - [Prayer Times Site](http://dumrt.ru/ru/help-info/prayertime/)
@@ -58,7 +61,15 @@ for more details check the [notifier code](https://github.com/escalopa/gopray/tr
 
 ## Upcoming Features 🚀
 
+### Version 1 Milestones 🏁
 - [x] Support date format for prayersdate command with leading zeros and with delimiters (. / -)
 - [x] Implement subscriptions & notifications
 - [x] Update text messages to be more user friendly
+
+### Version 2 Milestones 🏁
+- [x] store prayers time in memory to reduce the number of requests to the database since the prayers time is not changing
+- [x] make response endpoint for admin to respond to feedback & bug messages
+- [x] remind about gomoaa prayer on friday
+
+### Version 3 Milestones 🏁
 - [ ] Add different languages support (AR, RU)

@@ -5,6 +5,7 @@ import (
 	"log"
 	"strconv"
 
+	"github.com/escalopa/gopray/telegram/internal/adapters/memory"
 	"github.com/escalopa/gopray/telegram/internal/handler"
 
 	bt "github.com/SakoDroid/telego"
@@ -35,10 +36,11 @@ func main() {
 	// Set up the database.
 	r := redis.New(c.Get("CACHE_URL"))
 	defer r.Close()
-	pr := redis.NewPrayerRepository(r)
+	// pr := redis.NewPrayerRepository(r)
+	pr := memory.NewPrayerRepository() // Use memory for prayer repository. To not hit the cache on every reload.
 	sr := redis.NewSubscriberRepository(r)
 	lr := redis.NewLanguageRepository(r)
-	log.Println("Connected to Cache...")
+	log.Println("Connected to Cache")
 
 	// Create schedule parser & parse the schedule.
 	p := parser.New(c.Get("DATA_PATH"), pr)
@@ -48,9 +50,15 @@ func main() {
 	// Create notifier.
 	ur := c.Get("UPCOMING_REMINDER")
 	urInt, err := strconv.Atoi(ur)
-	gpe.CheckError(err, "UPCOMING_REMINDER must be an integer")
-	n := notifier.New(pr, sr, lr, uint(urInt))
-	log.Println("Notifier created...")
+	gpe.CheckError(err, "UPCOMING_REMINDER must be an integer.")
+
+	gnh := c.Get("GOMAA_NOTIFY_HOUR")
+	gnhInt, err := strconv.Atoi(gnh)
+	gpe.CheckError(err, "GOMAA_NOTIFY_HOUR must be an integer.")
+
+	n, err := notifier.New(pr, sr, lr, urInt, gnhInt)
+	gpe.CheckError(err)
+	log.Printf("Notifier created with `Upcoming reminder`: %dM, `Gomaa notify hour`: %dH.", urInt, gnhInt)
 
 	a := application.New(n, pr, lr)
 	run(bot, a, ctx)
@@ -61,11 +69,7 @@ func run(b *bt.Bot, a *application.UseCase, ctx context.Context) {
 	//The general update channel.
 	updateChannel := b.GetUpdateChannel()
 	h := handler.New(b, a, ctx)
-	h.Register()
-
-	// Notify subscriber about the prayer times.
-	go h.NotifyPrayers()
-	log.Println("Bot started...")
+	h.Start()
 
 	//Monitors any other update.
 	for {

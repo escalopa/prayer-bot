@@ -13,6 +13,7 @@ services:
       - CACHE_URL_FILE=/run/secrets/gopray_cache_url
       - DATA_PATH=/go/src/github.com/escalopa/gopray/times.csv
       - UPCOMING_REMINDER=20
+      - GOMAA_NOTIFY_HOUR=7
     extra_hosts:
       - "host.docker.internal:host-gateway"
 

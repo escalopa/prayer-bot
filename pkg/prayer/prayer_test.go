@@ -8,7 +8,8 @@ import (
 
 func TestPrayerTimes_Marshal(t *testing.T) {
 	p1 := New(
-		"2020-01-01",
+		1,
+		1,
 		time.Now().Add(time.Hour*1),
 		time.Now().Add(time.Hour*2),
 		time.Now().Add(time.Hour*3),

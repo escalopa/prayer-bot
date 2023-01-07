@@ -21,7 +21,7 @@ func (h *Handler) Subscribe(u *objs.Update) {
 		h.simpleSend(u.Message.Chat.Id, "An error occurred while subscribing. Please try again later.", 0)
 		return
 	}
-	_, err = h.b.SendMessage(u.Message.Chat.Id, "You have been <b>Subscribed</b> to the daily prayer notifications. 🔔", "HTML", 0, false, false)
+	_, err = h.b.SendMessage(u.Message.Chat.Id, "You have been <b>Subscribed</b> to the daily prayers notifications. 🔔", "HTML", 0, false, false)
 	if err != nil {
 		log.Printf("Error: %s, Failed to send subscribe message", err)
 	}
@@ -33,7 +33,7 @@ func (h *Handler) Unsubscribe(u *objs.Update) {
 		h.simpleSend(u.Message.Chat.Id, "An error occurred while unsubscribing. Please try again later.", 0)
 		return
 	}
-	_, err = h.b.SendMessage(u.Message.Chat.Id, "You have been <b>Unsubscribed</b> from the daily prayer notifications. 🔕", "HTML", 0, false, false)
+	_, err = h.b.SendMessage(u.Message.Chat.Id, "You have been <b>Unsubscribed</b> from the daily prayers notifications. 🔕", "HTML", 0, false, false)
 	if err != nil {
 		log.Printf("Error: %s, Failed to send unsubscribe message", err)
 	}

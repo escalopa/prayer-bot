@@ -44,7 +44,7 @@ func (h *Handler) Feedback(u *objs.Update) {
 		return
 	}
 
-	h.simpleSend(u.Message.Chat.Id, "Please send your feedback as text message in the language that comforts you", 0)
+	h.simpleSend(u.Message.Chat.Id, "Please send your feedback as text message", 0)
 	u = <-*ch
 	text := u.Message.Text
 
@@ -64,7 +64,8 @@ func (h *Handler) Feedback(u *objs.Update) {
 		return
 	}
 
-	h.simpleSend(u.Message.Chat.Id, "Thank you for your feedback! 🙏", 0)
+	message = fmt.Sprintf("Thank you for your feedback %s! 😊", u.Message.Chat.FirstName)
+	h.simpleSend(u.Message.Chat.Id, message, 0)
 
 }
 
@@ -76,7 +77,7 @@ func (h *Handler) Bug(u *objs.Update) {
 		return
 	}
 
-	h.simpleSend(u.Message.Chat.Id, "Please send your bug report as text message in the language that comforts you", 0)
+	h.simpleSend(u.Message.Chat.Id, "Please send your bug report as text message", 0)
 	u = <-*ch
 	text := u.Message.Text
 
@@ -96,7 +97,8 @@ func (h *Handler) Bug(u *objs.Update) {
 		return
 	}
 
-	h.simpleSend(u.Message.Chat.Id, "Thank you for your bug report!, We will fix it 🛠️ ASAP.", 0)
+	message = fmt.Sprintf("Thank you for your bug report %s!\nWe will fix it 🛠️ ASAP.", u.Message.Chat.FirstName)
+	h.simpleSend(u.Message.Chat.Id, message, 0)
 
 }
 
@@ -142,11 +144,7 @@ func (h *Handler) Respond(u *objs.Update) {
 		return
 	}
 
-	message := fmt.Sprintf(`
-	Hey %s! 👋, Thanks contacting us! 🙏
-
-	%s
-	`, fullName, response)
+	message := fmt.Sprintf("Hey %s! 👋, Thanks for contacting us! 🙏\n\n%s", fullName, response)
 	_, err = h.b.SendMessage(userID, message, "", messageID, false, false)
 	if err != nil {
 		h.simpleSend(u.Message.Chat.Id, "Failed to send response.", 0)

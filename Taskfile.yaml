@@ -1,19 +1,29 @@
 version: "3"
 
 tasks:
+  # Build the binary & docker image & push to Docker Hub
   deploy:
     cmds:
       - echo "Building image..."
       - docker build -f ./Dockerfile -t dekuyo/gopray:${TAG} --target=production --no-cache .
       - echo "\nDeploying image to Docker Hub..."
       - docker image push dekuyo/gopray:${TAG}
+  # Run tests
   test:
     cmds:
-      - go test -v ./...
+      - go test ./... -cover {{.CLI_ARGS}}
 
+  # Run linters
   lint:
     cmds:
       - golangci-lint run
+
+  # Check for security issues
   sec:
     cmds:
       - gosec ./...
+
+  # Check for misspelled words
+  spell:
+    cmds:
+      - misspell . -locale=US .

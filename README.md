@@ -2,10 +2,8 @@
 
 A Telegram Bot to get muslim prayers time, And subscribe to get notified on the prayers time
 
-<p align="center">
-<a href="https://goreportcard.com/report/github.com/escalopa/gopray" target="_blank"><img src="https://img.shields.io/badge/Go_report-A+-success?style=for-the-badge&logo=none" alt="go report" /></a>
+![Build status](https://github.com/escalopa/gopray/workflows/Deploy/badge.svg)  [![Report card](https://goreportcard.com/badge/github.com/escalopa/gopray)](https://goreportcard.com/report/github.com/escalopa/gopray)
 <img src="./cover.jpg">
-</p>
 
 ## Contributing 🤼
 
@@ -63,14 +61,15 @@ for more details check the [notifier code](https://github.com/escalopa/gopray/tr
 
 ## Upcoming Features 🚀
 
-# Version 1 Milestones 🏁
+### Version 1 Milestones 🏁
 - [x] Support date format for prayersdate command with leading zeros and with delimiters (. / -)
 - [x] Implement subscriptions & notifications
 - [x] Update text messages to be more user friendly
 
-# Version 2 Milestones 🏁
-- [ ] send sorat al kahf on friday
-- [ ] Add different languages support (AR, RU)
+### Version 2 Milestones 🏁
+- [x] store prayers time in memory to reduce the number of requests to the database since the prayers time is not changing
+- [x] make response endpoint for admin to respond to feedback & bug messages
+- [x] remind about gomoaa prayer on friday
 
-# Version 3 Milestones 🏁
-- [ ] make response endpoint for admin to respond to feedback & bug messages
+### Version 3 Milestones 🏁
+- [ ] Add different languages support (AR, RU)

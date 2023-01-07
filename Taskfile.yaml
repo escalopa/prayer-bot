@@ -6,7 +6,7 @@ tasks:
     cmds:
       - echo "Building image..."
       - docker build -f ./Dockerfile -t dekuyo/gopray:${TAG} --target=production --no-cache .
-      - echo "\nDeploying image to Docker Hub..."
+      - echo "Deploying image to Docker Hub..."
       - docker image push dekuyo/gopray:${TAG}
   # Run tests
   test:

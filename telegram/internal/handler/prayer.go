@@ -37,7 +37,7 @@ func (h *Handler) Getprayersdate(u *objs.Update) {
 	}
 
 	// Send a message to the user to ask for the date
-	_, err = h.b.SendMessage(u.Message.Chat.Id, "Please insert date in the format of <u>DD/MM</u> or <u>DD-MM</u>, Example: <b>9/10</b>", "HTML", 0, false, false)
+	_, err = h.b.SendMessage(u.Message.Chat.Id, "Please insert date in the format of <u>DD/MM</u> or <u>DD-MM</u>.\nExample: <b>9/10</b>", "HTML", 0, false, false)
 	if err != nil {
 		log.Println(err)
 		return
@@ -88,5 +88,5 @@ func prayrify(p prayer.PrayerTimes) string {
 		log.Println(err)
 	}
 
-	return fmt.Sprintf("-\nDay %d %s 🕌\n>\n%s>", day, monthName, basicTable)
+	return fmt.Sprintf("\nDay %d %s 🕌\n>\n%s>", day, monthName, basicTable)
 }

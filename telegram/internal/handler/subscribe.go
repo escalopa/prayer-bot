@@ -6,7 +6,7 @@ import (
 	objs "github.com/SakoDroid/telego/objects"
 )
 
-func (h *Handler) NotifyPrayers() {
+func (h *Handler) NotifySubscribers() {
 	h.ac.Notify(func(id int, msg string) {
 		_, err := h.b.SendMessage(id, msg, "HTML", 0, false, false)
 		if err != nil {

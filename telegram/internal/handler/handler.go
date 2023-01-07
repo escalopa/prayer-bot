@@ -26,8 +26,8 @@ func New(b *bt.Bot, ac *application.UseCase, ctx context.Context) *Handler {
 func (h *Handler) Start() {
 	h.register()
 	h.setupBundler()
-	go h.NotifyPrayers() // Notify subscriber about the prayer times.
-	log.Println("Bot started...")
+	go h.NotifySubscribers() // Notify subscriber about the prayer times.
+	log.Println("Bot started.")
 }
 
 func (h *Handler) register() {

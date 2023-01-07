@@ -20,6 +20,7 @@ services:
       - CACHE_URL=${CACHE_URL}
       - DATA_PATH=${DATA_PATH}
       - UPCOMING_REMINDER=${UPCOMING_REMINDER}
+      - GOMAA_NOTIFY_HOUR=${GOMAA_NOTIFY_HOUR}
     build:
       context: .
       dockerfile: ./Dockerfile

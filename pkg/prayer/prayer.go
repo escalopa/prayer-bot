@@ -6,7 +6,7 @@ import (
 )
 
 type PrayerTimes struct {
-	Date    string    `json:"date"`
+	Date    string    `json:"date"` // MUST be store in format: DD/MM, with no leading zeros
 	Fajr    time.Time `json:"fajr"`
 	Sunrise time.Time `json:"sunrise"`
 	Dhuhr   time.Time `json:"dhuhr"`

@@ -44,12 +44,26 @@ func (uc *UseCase) Getprayersdate(date string) (prayer.PrayerTimes, error) {
 }
 
 func (uc *UseCase) Notify(send func(id int, msg string)) {
-	err := uc.n.Notify(func(ids []int, message string) {
+	// Notify gomaa
+	go func() {
+		err := uc.n.NotifyGomaa(func(ids []int, message string) {
+			for _, id := range ids {
+				send(id, message)
+			}
+		})
+		if err != nil {
+			log.Printf("Notifiy Gomma hasstoped with error: %v", err)
+		}
+	}()
+	// Notify prayers
+	err := uc.n.NotifyPrayers(func(ids []int, message string) {
 		for _, id := range ids {
 			send(id, message)
 		}
 	})
-	log.Printf("Notifier stoped with error: %v", err)
+	if err != nil {
+		log.Printf("Notifiy Prayers toped with error: %v", err)
+	}
 }
 
 func (uc *UseCase) Subscribe(id int) error {

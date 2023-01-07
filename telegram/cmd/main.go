@@ -46,6 +46,7 @@ func main() {
 	p := parser.New(c.Get("DATA_PATH"), pr)
 	err = p.ParseSchedule()
 	gpe.CheckError(err, "Error parsing schedule")
+	log.Println("Parsed & saved prayers schedule")
 
 	// Create notifier.
 	ur := c.Get("UPCOMING_REMINDER")
@@ -58,7 +59,7 @@ func main() {
 
 	n, err := notifier.New(pr, sr, lr, urInt, gnhInt)
 	gpe.CheckError(err)
-	log.Printf("Notifier created with `Upcoming reminder`: %dM, `Gomaa notify hour`: %dH.", urInt, gnhInt)
+	log.Printf("Notifier created, ur: %dM, gnh: %dH.", urInt, gnhInt)
 
 	a := application.New(n, pr, lr)
 	run(bot, a, ctx)

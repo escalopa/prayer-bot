@@ -32,7 +32,7 @@ func (h *Handler) Help(u *objs.Update) {
 	/bug - Report a bug to the bot developers 🐞
 	`, "HTML", 0, false, false)
 	if err != nil {
-		log.Println(err)
+		log.Printf("Error: %s, Failed to send help message", err)
 	}
 }
 
@@ -60,7 +60,7 @@ func (h *Handler) Feedback(u *objs.Update) {
 	_, err = h.b.SendMessage(botOwnerID, message, "HTML", 0, false, false)
 	if err != nil {
 		h.simpleSend(u.Message.Chat.Id, "An error occurred while sending your feedback. Please try again later.", 0)
-		log.Println(err)
+		log.Printf("Error: %s, Failed to send feedback message to bot owner", err)
 		return
 	}
 
@@ -93,7 +93,7 @@ func (h *Handler) Bug(u *objs.Update) {
 	_, err = h.b.SendMessage(botOwnerID, message, "HTML", 0, false, false)
 	if err != nil {
 		h.simpleSend(u.Message.Chat.Id, "An error occurred while sending your bug report. Please try again later.", 0)
-		log.Println(err)
+		log.Printf("Error: %s, Failed to send bug report to bot owner", err)
 		return
 	}
 
@@ -115,13 +115,6 @@ func (h *Handler) Respond(u *objs.Update) {
 		return
 	}
 
-	// // Reply to the message that you want to respond to with any text
-	// h.simpleSend(u.Message.Chat.Id, "Reply to the message that you want to respond to with any text", 0)
-	// u = <-*ch
-	// if h.CancelOperation(u.Message.Text, "Canceled response.", u.Message.Chat.Id) {
-	// 	return
-	// }
-
 	// Check if reply message is provided
 	if u.Message.ReplyToMessage == nil {
 		h.simpleSend(u.Message.Chat.Id, "No reply message provided, /respond", 0)
@@ -130,14 +123,13 @@ func (h *Handler) Respond(u *objs.Update) {
 
 	// Read userID, messageID, username from the old message that will be replied to
 	userID, messageID, fullName, ok := parseUserMessage(u.Message.ReplyToMessage.Text)
-	log.Println(userID, messageID, fullName)
 	if !ok {
 		h.simpleSend(u.Message.Chat.Id, "Invalid message.", 0)
 		return
 	}
 
 	// Read response message
-	h.simpleSend(u.Message.Chat.Id, "Send your response message", 0)
+	h.simpleSend(u.Message.Chat.Id, "Send your response message, Or /cancel", 0)
 	u = <-*ch
 	response := u.Message.Text
 	if h.CancelOperation(response, "Canceled response.", u.Message.Chat.Id) {
@@ -148,7 +140,7 @@ func (h *Handler) Respond(u *objs.Update) {
 	_, err = h.b.SendMessage(userID, message, "", messageID, false, false)
 	if err != nil {
 		h.simpleSend(u.Message.Chat.Id, "Failed to send response.", 0)
-		log.Println(err)
+		log.Printf("Error: %s, Failed to repond to user message", err)
 		return
 	}
 
@@ -175,7 +167,6 @@ func parseUserMessage(message string) (userID, messageID int, name string, ok bo
 	var err error
 	var sa string // second argument
 	for _, line := range strings.Split(message, "\n") {
-		log.Print(line)
 		// Parse user ID
 		if strings.HasPrefix(strings.TrimSpace(line), "User ID:") {
 			sa, ok = secondArg(line)

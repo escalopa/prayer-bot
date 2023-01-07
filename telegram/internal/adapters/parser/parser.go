@@ -85,14 +85,12 @@ func (p *Parser) ParseSchedule() error {
 		prayers := prayer.New(day, month, fajr, sunrise, dhuhr, asr, maghrib, isha)
 		schedule = append(schedule, prayers)
 	}
-	log.Println("Parsed prayers schedule")
 
 	// Save to database
 	err = p.saveSchedule(schedule)
 	if err != nil {
 		return err
 	}
-	log.Println("Saved prayers schedule")
 	return nil
 }
 

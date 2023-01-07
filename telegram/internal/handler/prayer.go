@@ -23,7 +23,7 @@ func (h *Handler) GetPrayers(u *objs.Update) {
 	message := fmt.Sprintf("```%s```", prayrify(prayers))
 	_, err = h.b.SendMessage(u.Message.Chat.Id, message, "MarkDownV2", 0, false, false)
 	if err != nil {
-		log.Println(err)
+		log.Printf("Error: %s, Failed to sned default prayers table", err)
 	}
 }
 
@@ -38,7 +38,7 @@ func (h *Handler) Getprayersdate(u *objs.Update) {
 	// Send a message to the user to ask for the date
 	_, err = h.b.SendMessage(u.Message.Chat.Id, "Please insert date in the format of <u>DD/MM</u> or <u>DD-MM</u>.\nExample: <b>9/10</b>", "HTML", 0, false, false)
 	if err != nil {
-		log.Println(err)
+		log.Printf("Error: %s, Failed to send date format request", err)
 		return
 	}
 	u = <-*ch
@@ -54,7 +54,7 @@ func (h *Handler) Getprayersdate(u *objs.Update) {
 	message := fmt.Sprintf("```%s```", prayrify(prayers))
 	_, err = h.b.SendMessage(u.Message.Chat.Id, message, "MarkDownV2", 0, false, false)
 	if err != nil {
-		log.Println(err)
+		log.Printf("Error: %s, Failed to send the date prayers table", err)
 	}
 }
 
@@ -81,7 +81,7 @@ func prayrify(p prayer.PrayerTimes) string {
 			{"Isha", p.Isha.Format(prayerTimeFormat)},
 		})
 	if err != nil {
-		log.Println(err)
+		log.Printf("Error: %s, Failed to prayrify table", err)
 	}
 
 	return fmt.Sprintf("\nDay %d %s 🕌\n>\n%s>", p.Day, monthName, basicTable)

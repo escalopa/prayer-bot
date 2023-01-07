@@ -1,4 +1,4 @@
-package handler
+package application
 
 import (
 	"testing"

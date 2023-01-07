@@ -5,7 +5,6 @@ import (
 	"log"
 
 	bt "github.com/SakoDroid/telego"
-	objs "github.com/SakoDroid/telego/objects"
 	gpe "github.com/escalopa/gopray/pkg/error"
 	"github.com/escalopa/gopray/telegram/internal/application"
 )
@@ -24,7 +23,14 @@ func New(b *bt.Bot, ac *application.UseCase, ctx context.Context) *Handler {
 	}
 }
 
-func (h *Handler) Register() {
+func (h *Handler) Start() {
+	h.register()
+	h.setupBundler()
+	go h.NotifyPrayers() // Notify subscriber about the prayer times.
+	log.Println("Bot started...")
+}
+
+func (h *Handler) register() {
 	var err error
 	err = h.b.AddHandler("/help", h.Help, "all")
 	gpe.CheckError(err)
@@ -42,30 +48,12 @@ func (h *Handler) Register() {
 	gpe.CheckError(err)
 	err = h.b.AddHandler("/bug", h.Bug, "all")
 	gpe.CheckError(err)
+	err = h.b.AddHandler("/respond", h.Respond, "all")
+	gpe.CheckError(err)
 }
 
-func (h *Handler) Help(u *objs.Update) {
-	_, err := h.b.SendMessage(u.Message.Chat.Id, `
-	Asalamu alaykum, I am kazan prayer's time bot, I can help you know prayer's time anytime to always pray on time 🙏.
-
-	Available commands are below: 👇
-
-	<b>Prayers</b>
-	/prayers - Get prayer's time for today ⏰
-	/prayersdate - Get prayer's time for a specific date 📅
-	/subscribe - Subscribe to daily prayers notification 🔔
-	/unsubscribe - Unsubscribe from daily prayers notification 🔕
-
-	<b>Support</b>
-	/help - Show this message 📖
-	/lang - Set bot language  🌐
-	/feedback - Send feedback or idea to the bot developers 📩
-	/bug - Report a bug to the bot developers 🐞
-	`, "HTML", 0, false, false)
-	if err != nil {
-		log.Println(err)
-	}
-}
+// TODO: Implement bundler for multilanugage support.
+func (h *Handler) setupBundler() {}
 
 // SimpleSend sends a simple message
 func (bh *Handler) simpleSend(chatID int, text string, replyTo int) {
@@ -73,4 +61,12 @@ func (bh *Handler) simpleSend(chatID int, text string, replyTo int) {
 	if err != nil {
 		log.Println(err)
 	}
+}
+
+func (h *Handler) CancelOperation(message, response string, chatID int) bool {
+	if message == "/cancel" {
+		h.simpleSend(chatID, response, 0)
+		return true
+	}
+	return false
 }

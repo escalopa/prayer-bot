@@ -5,6 +5,7 @@ import (
 	"log"
 	"strconv"
 
+	"github.com/escalopa/gopray/telegram/internal/adapters/memory"
 	"github.com/escalopa/gopray/telegram/internal/handler"
 
 	bt "github.com/SakoDroid/telego"
@@ -35,7 +36,8 @@ func main() {
 	// Set up the database.
 	r := redis.New(c.Get("CACHE_URL"))
 	defer r.Close()
-	pr := redis.NewPrayerRepository(r)
+	// pr := redis.NewPrayerRepository(r)
+	pr := memory.NewPrayerRepository() // Use memory for prayer repository. To not hit the cache on every reload.
 	sr := redis.NewSubscriberRepository(r)
 	lr := redis.NewLanguageRepository(r)
 	log.Println("Connected to Cache...")
@@ -61,11 +63,7 @@ func run(b *bt.Bot, a *application.UseCase, ctx context.Context) {
 	//The general update channel.
 	updateChannel := b.GetUpdateChannel()
 	h := handler.New(b, a, ctx)
-	h.Register()
-
-	// Notify subscriber about the prayer times.
-	go h.NotifyPrayers()
-	log.Println("Bot started...")
+	h.Start()
 
 	//Monitors any other update.
 	for {

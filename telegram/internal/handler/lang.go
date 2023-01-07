@@ -1,6 +1,8 @@
 package handler
 
-import objs "github.com/SakoDroid/telego/objects"
+import (
+	objs "github.com/SakoDroid/telego/objects"
+)
 
 func (h *Handler) SetLang(u *objs.Update) {
 	// TODO: Implement SetLang

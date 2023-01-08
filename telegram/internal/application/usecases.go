@@ -50,7 +50,7 @@ func (uc *UseCase) Notify(send func(id int, msg string)) {
 			}
 		})
 		if err != nil {
-			log.Printf("Notifiy Gomma hasstoped with error: %v", err)
+			log.Printf("Notifiy Gomma has stoped with error: %v", err)
 		}
 	}()
 	// Notify prayers
@@ -60,7 +60,7 @@ func (uc *UseCase) Notify(send func(id int, msg string)) {
 		}
 	})
 	if err != nil {
-		log.Printf("Notifiy Prayers toped with error: %v", err)
+		log.Printf("Notify Prayers has stoped with error: %v", err)
 	}
 }
 

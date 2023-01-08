@@ -141,7 +141,7 @@ func TestNotifier_CalculateTimeLeft(t *testing.T) {
 				t.Fatal(err)
 			}
 			upcomingAt, startsAt, startsIn := n.calculateLeftTime(now.Add(tt.prayerAfter))
-			// We compoare the time difference with 1 minute because the time difference due to the `now`` function.
+			// We compare the time difference with 1 minute because the time difference due to the `now`` function.
 			if upcomingAt != tt.expectedUpcomingAt && time.Duration(math.Abs(float64(upcomingAt-tt.expectedUpcomingAt))) != 1*time.Minute {
 				t.Errorf("Expected upcomingAt to be %v, got %v", tt.expectedUpcomingAt, upcomingAt)
 			}

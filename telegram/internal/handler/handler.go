@@ -52,7 +52,7 @@ func (h *Handler) register() {
 	gpe.CheckError(err)
 }
 
-// TODO: Implement bundler for multilanugage support.
+// TODO: Implement bundler for multi language support.
 func (h *Handler) setupBundler() {}
 
 // SimpleSend sends a simple message

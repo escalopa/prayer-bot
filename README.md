@@ -16,7 +16,7 @@ graph LR
 A[User] --> |Get Prayers Time| B((Bot))
 A[User] --> |Subscribe To Bot| B((Bot))
 A[User] --> |Change Bot Language| B((Bot))
-B((Bot)) --> |Notifiy Users about prayers| B((Bot))
+B((Bot)) --> |Notify Users about prayers| B((Bot))
 A[User] --> |Send Feedback Messages\nOr Bug Reports| B((Bot))
 B((Bot)) --> |Store Prayers Time| D[[Run Time Memory]]
 B((Bot)) --> |Store User ID For Subscriptions| C[[Database]]
@@ -28,7 +28,7 @@ This feature allows the bot to notify users `20 min` before the prayers time. (T
 
 Users can subscribe to the bot by sending `/subscribe` command to the bot. And unsubscribe by sending `/unsubscribe` command to the bot.
 
-Also on friday the bot will remind the user to pray gomoaa prayer. at `7:00 PM` (Time is set by the `GOMOAA_REMINDER_HOUR` env variable), This is value to when to remind them, The prayer time is calculated based on the prayers time of the day and sent to the user.
+Also on friday the bot will remind the user to pray Gomaa prayer. at `7:00 PM` (Time is set by the `GOMOAA_REMINDER_HOUR` env variable), This is value to when to remind them, The prayer time is calculated based on the prayers time of the day and sent to the user.
 
 ### How it works 🤔
 
@@ -44,16 +44,16 @@ for more details check the [notifier code](https://github.com/escalopa/gopray/tr
 
 ## Bot Options 🤖
 
-| Command | Description |
-| --- | --- |
-| /help | Get help message showing all possible commands |
-| /prayers | Get prayers time |
-| /prayersdate | Get prayers time by date |
-| /subscribe | Subscribe to get notified on the prayers time |
+| Command      | Description                                         |
+|--------------|-----------------------------------------------------|
+| /help        | Get help message showing all possible commands      |
+| /prayers     | Get prayers time                                    |
+| /prayersdate | Get prayers time by date                            |
+| /subscribe   | Subscribe to get notified on the prayers time       |
 | /unsubscribe | Unsubscribe to not get notified on the prayers time |
-| /lang | Change the bot language (Default English) |
-| /feedback | Send feedback to the bot owner |
-| /bug | Report a bug to the bot owner |
+| /lang        | Change the bot language (Default English)           |
+| /feedback    | Send feedback to the bot owner                      |
+| /bug         | Report a bug to the bot owner                       |
 
 ## References 📚
 
@@ -64,14 +64,14 @@ for more details check the [notifier code](https://github.com/escalopa/gopray/tr
 ## Upcoming Features 🚀
 
 ### Version 1 Milestones 🏁
-- [x] Support date format for prayersdate command with leading zeros and with delimiters (. / -)
+- [x] Support date format for `/prayersdate` command with leading zeros and with delimiters (. / -)
 - [x] Implement subscriptions & notifications
-- [x] Update text messages to be more user friendly
+- [x] Update text messages to be more user-friendly
 
 ### Version 2 Milestones 🏁
 - [x] store prayers time in memory to reduce the number of requests to the database since the prayers time is not changing
 - [x] make response endpoint for admin to respond to feedback & bug messages
-- [x] remind about gomoaa prayer on friday
+- [x] remind about gomaa prayer on friday
 
 ### Version 3 Milestones 🏁
 - [ ] Add different languages support (AR, RU)

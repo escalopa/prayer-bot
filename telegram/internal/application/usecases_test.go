@@ -31,7 +31,7 @@ func TestPrayer_ParserDate(t *testing.T) {
 			wantMonth: 10,
 			ok:        true,
 		}, {
-			name:      "Inalid date with |",
+			name:      "Invalid date with |",
 			date:      "09|10",
 			wantDay:   0,
 			wantMonth: 0,

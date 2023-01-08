@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"log"
 	"strconv"
 
 	"github.com/go-redis/redis/v9"
@@ -18,11 +19,21 @@ func NewSubscriberRepository(r *redis.Client) *SubscriberRepository {
 }
 
 func (s *SubscriberRepository) StoreSubscriber(id int) error {
-	return s.r.SAdd(context.TODO(), sk, id).Err()
+	err := s.r.SAdd(context.TODO(), sk, id).Err()
+	if err != nil {
+		return err
+	}
+	log.Printf("Added Subscriber: %d", id)
+	return nil
 }
 
 func (s *SubscriberRepository) RemoveSubscribe(id int) error {
-	return s.r.SRem(context.TODO(), sk, id).Err()
+	err := s.r.SRem(context.TODO(), sk, id).Err()
+	if err != nil {
+		return err
+	}
+	log.Printf("Removed Subscriber: %d", id)
+	return nil
 }
 
 func (s *SubscriberRepository) GetSubscribers() ([]int, error) {

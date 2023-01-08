@@ -59,7 +59,7 @@ func (h *Handler) setupBundler() {}
 func (bh *Handler) simpleSend(chatID int, text string, replyTo int) {
 	_, err := bh.b.SendMessage(chatID, text, "", replyTo, false, false)
 	if err != nil {
-		log.Println(err)
+		log.Printf("Error: %s, Failed to simpleSend", err)
 	}
 }
 

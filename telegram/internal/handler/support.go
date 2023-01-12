@@ -20,8 +20,8 @@ func (h *Handler) Help(u *objs.Update) {
 	Available commands are below: 👇
 
 	<b>Prayers</b>
-	/prayers - Get prayer's time for today ⏰
-	/prayersdate - Get prayer's time for a specific date 📅
+	/today - Get prayer's time for today ⏰
+	/date - Get prayer's time for a specific date 📅
 	/subscribe - Subscribe to daily prayers notification 🔔
 	/unsubscribe - Unsubscribe from daily prayers notification 🔕
 

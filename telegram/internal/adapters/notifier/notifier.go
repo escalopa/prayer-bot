@@ -123,7 +123,7 @@ func (n *Notifier) NotifyGomaa(notify func(ids []int, msg string)) error {
 
 		// Notify the subscribers
 		message := fmt.Sprintf(
-			"Assalamu Alaikum 👋!\n\nDon't forget today is <b>Gomaa</b> , make sure to attend prayers at the mosque! 🕌, Gomma today is at <b>%s</b>",
+			"Assalamu Alaikum 👋!\nDon't forget today is <b>Gomaa</b> , make sure to attend prayers at the mosque! 🕌, Gomma today is at <b>%s</b>",
 			prayers.Dhuhr.Format("15:04"))
 		notify(ids, message)
 	}

@@ -2,6 +2,8 @@ package parser
 
 import (
 	"encoding/csv"
+	"fmt"
+	"io"
 	"log"
 	"os"
 	"strconv"
@@ -11,7 +13,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/escalopa/gopray/pkg/core"
-	gpe "github.com/escalopa/gopray/pkg/error"
 	"github.com/escalopa/gopray/telegram/internal/application"
 )
 
@@ -20,19 +21,35 @@ import (
 type Parser struct {
 	path string // data path
 	pr   application.PrayerRepository
+	loc  *time.Location
 }
 
 // New returns a new Parser.
 // @param path: path to the data file.
 // @param pr: prayer repository.
-func New(path string, pr application.PrayerRepository) *Parser {
-	return &Parser{
-		path: path,
-		pr:   pr,
+func New(path string, opts ...func(*Parser)) *Parser {
+	p := &Parser{path: path}
+	for _, opt := range opts {
+		opt(p)
+	}
+	return p
+}
+
+// WithPrayerRepository sets the prayer repository for the parser.
+func WithPrayerRepository(pr application.PrayerRepository) func(*Parser) {
+	return func(p *Parser) {
+		p.pr = pr
 	}
 }
 
-// ParseSchedule returns prayer times for all days of the year.
+// WithTimeLocation sets the time location for the parser.
+func WithTimeLocation(loc *time.Location) func(*Parser) {
+	return func(p *Parser) {
+		p.loc = loc
+	}
+}
+
+// ParseSchedule parses the prayer schedule and saves it to the database.
 func (p *Parser) ParseSchedule() error {
 	file, err := os.Open(p.path)
 	if err != nil {
@@ -41,7 +58,7 @@ func (p *Parser) ParseSchedule() error {
 	defer func() {
 		err = file.Close()
 		if err != nil {
-			log.Printf("Error: %s, Failed to close file", err)
+			log.Printf("failed to close csv file, err: %s", err)
 		}
 	}()
 
@@ -51,7 +68,7 @@ func (p *Parser) ParseSchedule() error {
 	reader.FieldsPerRecord = 7 // 7 fields per record (date, fajr, sunrise, dhuhr, asr, maghrib, isha)
 	reader.TrimLeadingSpace = true
 
-	// Skip header
+	// skip header
 	_, err = reader.Read()
 	if err != nil {
 		return err
@@ -60,29 +77,56 @@ func (p *Parser) ParseSchedule() error {
 	for {
 		record, err := reader.Read()
 		if err != nil {
-			break
+			if err == io.EOF {
+				break
+			} else {
+				return err
+			}
 		}
+		if len(record) != 7 {
+			return errors.New(fmt.Sprintf("invalid record length, expected 7, got %d", len(record)))
+		}
+
 		// Parse date DD/MM
 		date := record[0]
 		ss := strings.Split(date, "/")
+		if len(ss) != 2 {
+			return errors.New(fmt.Sprintf("invalid date format, expected DD/MM, got %s", date))
+		}
 		day, err := strconv.Atoi(ss[0])
-		gpe.CheckError(err)
+		if err != nil {
+			return err
+		}
 		month, err := strconv.Atoi(ss[1])
-		gpe.CheckError(err)
+		if err != nil {
+			return err
+		}
 
-		// Parse prayers times
-		fajr, err := convertToTime(record[1], day, month)
-		gpe.CheckError(err)
-		sunrise, err := convertToTime(record[2], day, month)
-		gpe.CheckError(err)
-		dhuhr, err := convertToTime(record[3], day, month)
-		gpe.CheckError(err)
-		asr, err := convertToTime(record[4], day, month)
-		gpe.CheckError(err)
-		maghrib, err := convertToTime(record[5], day, month)
-		gpe.CheckError(err)
-		isha, err := convertToTime(record[6], day, month)
-		gpe.CheckError(err)
+		// Parse prayers times and convert into time.Time
+		fajr, err := p.convertToTime(record[1], day, month)
+		if err != nil {
+			return err
+		}
+		sunrise, err := p.convertToTime(record[2], day, month)
+		if err != nil {
+			return err
+		}
+		dhuhr, err := p.convertToTime(record[3], day, month)
+		if err != nil {
+			return err
+		}
+		asr, err := p.convertToTime(record[4], day, month)
+		if err != nil {
+			return err
+		}
+		maghrib, err := p.convertToTime(record[5], day, month)
+		if err != nil {
+			return err
+		}
+		isha, err := p.convertToTime(record[6], day, month)
+		if err != nil {
+			return err
+		}
 
 		prayers := core.New(day, month, fajr, sunrise, dhuhr, asr, maghrib, isha)
 		schedule = append(schedule, prayers)
@@ -91,7 +135,7 @@ func (p *Parser) ParseSchedule() error {
 	// Save to database
 	err = p.saveSchedule(schedule)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to save schedule to database")
 	}
 	return nil
 }
@@ -113,24 +157,26 @@ func (p *Parser) saveSchedule(schedule []core.PrayerTimes) error {
 // convertToTime converts a string from format `dd:mm` to time.Time.
 // @param str: string to convert.
 // @return time.Time: converted time.
-func convertToTime(str string, day, month int) (time.Time, error) {
+func (p *Parser) convertToTime(str string, day, month int) (time.Time, error) {
 	ss := strings.Split(str, ":")
 	if len(ss) != 2 {
-		return time.Time{}, errors.New("convert time failed, passed str in not in format HH:MM")
+		return time.Time{}, errors.New(fmt.Sprintf("invalid time format, expected HH:MM, got %s", str))
 	}
+	// Parse hour
 	hour, err := strconv.Atoi(ss[0])
 	if err != nil {
-		return time.Time{}, err
+		return time.Time{}, errors.New(fmt.Sprintf("invalid hour, expected HH, got %s", ss[0]))
 	}
+	if hour < 0 || hour > 23 {
+		return time.Time{}, errors.New(fmt.Sprintf("invalid hour, expected HH in range [0, 23], got %d", hour))
+	}
+	// Parse minute
 	minute, err := strconv.Atoi(ss[1])
 	if err != nil {
-		return time.Time{}, err
+		return time.Time{}, errors.New(fmt.Sprintf("invalid minute, expected MM, got %s", ss[1]))
 	}
-
-	// Get location for Moscow
-	loc, err := time.LoadLocation("Europe/Moscow")
-	if err != nil {
-		return time.Time{}, err
+	if minute < 0 || minute > 59 {
+		return time.Time{}, errors.New(fmt.Sprintf("invalid minute, expected MM in range [0, 59], got %d", minute))
 	}
-	return time.Date(time.Now().Year(), time.Month(month), day, hour, minute, 0, 0, loc), nil
+	return time.Date(time.Now().Year(), time.Month(month), day, hour, minute, 0, 0, p.loc), nil
 }

@@ -5,11 +5,15 @@ services:
     container_name: "cache"
     restart: unless-stopped
     image: redis:latest
-    volumes:
-      - ./data:/data
     command: redis-server --appendonly yes
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 1s
+      timeout: 2s
+      retries: 5
+
   gopray:
     container_name: "gopray"
     restart: unless-stopped
@@ -25,4 +29,6 @@ services:
       context: .
       dockerfile: ./Dockerfile
       target: development
-      no_cache: true
+    depends_on:
+      cache:
+        condition: service_healthy

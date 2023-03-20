@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"context"
 	"encoding/csv"
 	"fmt"
 	"io"
@@ -50,7 +51,10 @@ func WithTimeLocation(loc *time.Location) func(*Parser) {
 }
 
 // ParseSchedule parses the prayer schedule and saves it to the database.
-func (p *Parser) ParseSchedule() error {
+func (p *Parser) ParseSchedule(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	file, err := os.Open(p.path)
 	if err != nil {
 		return err
@@ -133,7 +137,7 @@ func (p *Parser) ParseSchedule() error {
 	}
 
 	// Save to database
-	err = p.saveSchedule(schedule)
+	err = p.saveSchedule(ctx, schedule)
 	if err != nil {
 		return errors.Wrap(err, "failed to save schedule to database")
 	}
@@ -143,10 +147,10 @@ func (p *Parser) ParseSchedule() error {
 // saveSchedule saves the schedule to the database.
 // @param schedule: prayer times for all days of the year.
 // @return error: error if any.
-func (p *Parser) saveSchedule(schedule []core.PrayerTimes) error {
+func (p *Parser) saveSchedule(ctx context.Context, schedule []core.PrayerTimes) error {
 	// Loop through all days of the schedule and save them to the database
 	for _, prayers := range schedule {
-		err := p.pr.StorePrayer(prayers)
+		err := p.pr.StorePrayer(ctx, prayers)
 		if err != nil {
 			return err
 		}

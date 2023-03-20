@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"context"
 	"os"
 	"testing"
 	"time"
@@ -10,11 +11,12 @@ import (
 )
 
 func TestParser_ParseSchedule(t *testing.T) {
+	ctx := context.Background()
 	loc, err := time.LoadLocation("Europe/Moscow")
 	require.NoError(t, err)
 
 	pr := memory.NewPrayerRepository()
-	testCases := []struct {
+	tests := []struct {
 		name    string
 		data    []string
 		wantErr bool
@@ -141,10 +143,66 @@ func TestParser_ParseSchedule(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "Test 16",
+			data: []string{
+				"День,ФАЖР,ВОСХОД,ЗУХР,АСР,МАГРИБ,ИША\n",
+				"1/1,5:53,8:13,11:47,13:34,15:21,17:18,1:2:3\n", // too many columns
+			},
+			wantErr: true,
+		},
+		{
+			name: "Test 17",
+			data: []string{
+				"День,ФАЖР,ВОСХОД,ЗУХР,АСР,МАГРИБ,ИША\n",
+				"1/1,50:53,8:13,11:47,13:34,16:21,17:18\n", // wrong time for fajr, hours > 24
+			},
+			wantErr: true,
+		},
+		{
+			name: "Test 18",
+			data: []string{
+				"День,ФАЖР,ВОСХОД,ЗУХР,АСР,МАГРИБ,ИША\n",
+				"1/1,5:53,80:13,11:47,13:34,15:21,17:18\n", // wrong time for sunrise, hours > 24
+			},
+			wantErr: true,
+		},
+		{
+			name: "Test 19",
+			data: []string{
+				"День,ФАЖР,ВОСХОД,ЗУХР,АСР,МАГРИБ,ИША\n",
+				"1/1,5:53,8:13,35:47,13:34,15:21,17:18\n", // wrong time for dhuhr, hours > 24
+			},
+			wantErr: true,
+		},
+		{
+			name: "Test 20",
+			data: []string{
+				"День,ФАЖР,ВОСХОД,ЗУХР,АСР,МАГРИБ,ИША\n",
+				"1/1,5:53,8:13,11:47,134:34,15:21,17:18\n", // wrong time for asr, hours > 24
+			},
+			wantErr: true,
+		},
+		{
+			name: "Test 21",
+			data: []string{
+				"День,ФАЖР,ВОСХОД,ЗУХР,АСР,МАГРИБ,ИША\n",
+				"1/1,5:53,8:13,11:47,13:34,155:21,17:18\n", // wrong time for maghrib, hours > 24
+			},
+			wantErr: true,
+		},
+		{
+			name: "Test 22",
+			data: []string{
+				"День,ФАЖР,ВОСХОД,ЗУХР,АСР,МАГРИБ,ИША\n",
+				"1/1,5:53,8:13,11:47,13:34,15:21,177:18\n", // wrong time for isha, hours > 24
+			},
+			wantErr: true,
+		},
 	}
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 			// Create a temporary file
 			file, err := os.CreateTemp("", "test")
 			require.NoError(t, err)
@@ -153,15 +211,15 @@ func TestParser_ParseSchedule(t *testing.T) {
 				require.NoError(t, os.Remove(file.Name()))
 			}()
 			// Write data to the file
-			for _, line := range tc.data {
+			for _, line := range tt.data {
 				_, err := file.WriteString(line)
 				require.NoError(t, err)
 			}
 			// Create a parser with the path to the file
 			p := New(file.Name(), WithTimeLocation(loc), WithPrayerRepository(pr))
 			// Parse the file
-			err = p.ParseSchedule()
-			require.Equal(t, tc.wantErr, err != nil)
+			err = p.ParseSchedule(ctx)
+			require.Equal(t, tt.wantErr, err != nil)
 		})
 	}
 }
@@ -178,6 +236,7 @@ func TestParser_ConvertToTime(t *testing.T) {
 		t.Errorf("time.LoadLocation() error = %v, wantErr %v", err, false)
 		return
 	}
+
 	p := New("RANDOM_PATH", WithTimeLocation(loc))
 	tests := []struct {
 		name string
@@ -205,6 +264,7 @@ func TestParser_ConvertToTime(t *testing.T) {
 			want: time.Date(time.Now().Year(), 1, 1, 0, 0, 0, 0, loc),
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := p.convertToTime(tt.args.time, tt.args.day, tt.args.month)

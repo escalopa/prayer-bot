@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/pkg/errors"
+
 	"github.com/escalopa/gopray/pkg/core"
 	"github.com/go-redis/redis/v9"
 )
@@ -17,19 +19,30 @@ func NewPrayerRepository(r *redis.Client) *PrayerRepository {
 	return &PrayerRepository{r: r}
 }
 
-func (p *PrayerRepository) StorePrayer(date string, times core.PrayerTimes) error {
-	err := p.r.Set(context.Background(), fmt.Sprintf("prayer:%s", date), times, 0)
-	return err.Err()
+func (p *PrayerRepository) StorePrayer(ctx context.Context, times core.PrayerTimes) error {
+	_, err := p.r.Set(ctx, p.formatKey(times.Day, times.Month), times, 0).Result()
+	if err != nil {
+		return errors.Wrap(err, "failed to set prayer in redis")
+	}
+	return nil
 }
 
-func (p *PrayerRepository) GetPrayer(date string) (core.PrayerTimes, error) {
-	data := p.r.Get(context.Background(), fmt.Sprintf("prayer:%s", date))
-	if data.Err() != nil {
-		return core.PrayerTimes{}, data.Err()
+func (p *PrayerRepository) GetPrayer(ctx context.Context, day, month int) (core.PrayerTimes, error) {
+	bytes, err := p.r.Get(ctx, p.formatKey(day, month)).Result()
+	if err != nil {
+		if err == redis.Nil {
+			return core.PrayerTimes{}, errors.New(fmt.Sprintf("prayer not found for %d/%d", day, month))
+		}
+		return core.PrayerTimes{}, errors.Wrap(err, "failed to get prayer from redis")
 	}
+	// Unmarshal
 	var pt core.PrayerTimes
-	if err := json.Unmarshal([]byte(data.Val()), &pt); err != nil {
-		return core.PrayerTimes{}, err
+	if err = json.Unmarshal([]byte(bytes), &pt); err != nil {
+		return core.PrayerTimes{}, errors.Wrap(err, "failed to unmarshal prayer from redis")
 	}
 	return pt, nil
+}
+
+func (p *PrayerRepository) formatKey(day, month int) string {
+	return fmt.Sprintf("%d/%d", day, month)
 }

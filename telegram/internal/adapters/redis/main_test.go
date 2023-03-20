@@ -1,0 +1,26 @@
+package redis
+
+import (
+	"context"
+	"log"
+	"testing"
+
+	"github.com/escalopa/gopray/pkg/testcon"
+)
+
+var testRedisURL string
+
+func TestMain(m *testing.M) {
+	url, terminate, err := testcon.NewRedisContainer(context.Background())
+	if err != nil {
+		log.Fatalf("failed to start redis container: %v", err)
+	}
+	testRedisURL = url
+	defer func() {
+		err = terminate()
+		if err != nil {
+			log.Fatalf("failed to terminate redis container: %v", err)
+		}
+	}()
+	m.Run()
+}

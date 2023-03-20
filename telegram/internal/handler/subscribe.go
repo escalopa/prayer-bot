@@ -7,7 +7,7 @@ import (
 )
 
 func (h *Handler) NotifySubscribers() {
-	h.ac.Notify(func(id int, msg string) {
+	h.u.Notify(func(id int, msg string) {
 		_, err := h.b.SendMessage(id, msg, "HTML", 0, false, false)
 		if err != nil {
 			log.Printf("Err: %s, Failed to send subscription message to: %d", err, id)
@@ -16,7 +16,7 @@ func (h *Handler) NotifySubscribers() {
 }
 
 func (h *Handler) Subscribe(u *objs.Update) {
-	err := h.ac.Subscribe(u.Message.Chat.Id)
+	err := h.u.Subscribe(u.Message.Chat.Id)
 	if err != nil {
 		h.simpleSend(u.Message.Chat.Id, "An error occurred while subscribing. Please try again later.", 0)
 		return
@@ -28,7 +28,7 @@ func (h *Handler) Subscribe(u *objs.Update) {
 }
 
 func (h *Handler) Unsubscribe(u *objs.Update) {
-	err := h.ac.Unsubscribe(u.Message.Chat.Id)
+	err := h.u.Unsubscribe(u.Message.Chat.Id)
 	if err != nil {
 		h.simpleSend(u.Message.Chat.Id, "An error occurred while unsubscribing. Please try again later.", 0)
 		return

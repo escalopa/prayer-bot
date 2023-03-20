@@ -132,7 +132,7 @@ func (h *Handler) Respond(u *objs.Update) {
 	h.simpleSend(u.Message.Chat.Id, "Send your response message, Or /cancel", 0)
 	u = <-*ch
 	response := u.Message.Text
-	if h.CancelOperation(response, "Canceled response.", u.Message.Chat.Id) {
+	if h.cancelOperation(response, "Canceled response.", u.Message.Chat.Id) {
 		return
 	}
 

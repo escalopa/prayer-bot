@@ -1,4 +1,4 @@
-package prayer
+package core
 
 import (
 	"encoding/json"

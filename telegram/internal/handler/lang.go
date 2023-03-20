@@ -10,7 +10,7 @@ func (h *Handler) SetLang(u *objs.Update) {
 		h.simpleSend(u.Message.Chat.Id, "This feature is not available yet.", 0)
 		return
 	}
-	err := h.ac.SetLang(u.Message.Chat.Id, u.Message.Text)
+	err := h.u.SetLang(u.Message.Chat.Id, u.Message.Text)
 	if err != nil {
 		h.simpleSend(u.Message.Chat.Id, "An error occurred while setting language. Please try again later.", 0)
 		return

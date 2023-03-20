@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/escalopa/gopray/pkg/prayer"
+	"github.com/escalopa/gopray/pkg/core"
 	"github.com/pkg/errors"
 )
 
@@ -20,23 +20,23 @@ func New(n Notifier, pr PrayerRepository, lr LanguageRepository) *UseCase {
 	return &UseCase{n: n, pr: pr, lr: lr}
 }
 
-func (uc *UseCase) GetPrayers() (prayer.PrayerTimes, error) {
+func (uc *UseCase) GetPrayers() (core.PrayerTimes, error) {
 	p, err := uc.pr.GetPrayer(time.Now().Day(), int(time.Now().Month()))
 	if err != nil {
-		return prayer.PrayerTimes{}, errors.Wrap(err, "failed to get prayer")
+		return core.PrayerTimes{}, errors.Wrap(err, "failed to get prayer")
 	}
 	return p, nil
 }
 
-func (uc *UseCase) Getprayersdate(date string) (prayer.PrayerTimes, error) {
+func (uc *UseCase) Getprayersdate(date string) (core.PrayerTimes, error) {
 	day, month, ok := parseDate(date)
 	if !ok {
-		return prayer.PrayerTimes{}, errors.New("invalid date")
+		return core.PrayerTimes{}, errors.New("invalid date")
 	}
 
 	p, err := uc.pr.GetPrayer(day, month)
 	if err != nil {
-		return prayer.PrayerTimes{}, errors.Wrap(err, "failed to get prayer by date")
+		return core.PrayerTimes{}, errors.Wrap(err, "failed to get prayer by date")
 	}
 	return p, nil
 }

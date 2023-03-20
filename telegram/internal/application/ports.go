@@ -1,12 +1,12 @@
 package application
 
 import (
-	p "github.com/escalopa/gopray/pkg/prayer"
+	"github.com/escalopa/gopray/pkg/core"
 )
 
 type PrayerRepository interface {
-	StorePrayer(times p.PrayerTimes) error
-	GetPrayer(day, month int) (p.PrayerTimes, error)
+	StorePrayer(times core.PrayerTimes) error
+	GetPrayer(day, month int) (core.PrayerTimes, error)
 }
 
 type SubscriberRepository interface {

@@ -10,16 +10,16 @@ import (
 )
 
 type Handler struct {
-	b  *bt.Bot
-	ac *application.UseCase
-	c  context.Context
+	c context.Context
+	b *bt.Bot
+	u *application.UseCase
 }
 
-func New(b *bt.Bot, ac *application.UseCase, ctx context.Context) *Handler {
+func New(ctx context.Context, b *bt.Bot, u *application.UseCase) *Handler {
 	return &Handler{
-		b:  b,
-		ac: ac,
-		c:  ctx,
+		b: b,
+		u: u,
+		c: ctx,
 	}
 }
 
@@ -56,14 +56,14 @@ func (h *Handler) register() {
 func (h *Handler) setupBundler() {}
 
 // SimpleSend sends a simple message
-func (bh *Handler) simpleSend(chatID int, text string, replyTo int) {
-	_, err := bh.b.SendMessage(chatID, text, "", replyTo, false, false)
+func (h *Handler) simpleSend(chatID int, text string, replyTo int) {
+	_, err := h.b.SendMessage(chatID, text, "", replyTo, false, false)
 	if err != nil {
 		log.Printf("Error: %s, Failed to simpleSend", err)
 	}
 }
 
-func (h *Handler) CancelOperation(message, response string, chatID int) bool {
+func (h *Handler) cancelOperation(message, response string, chatID int) bool {
 	if message == "/cancel" {
 		h.simpleSend(chatID, response, 0)
 		return true

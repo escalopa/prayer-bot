@@ -19,7 +19,7 @@ func NewSubscriberRepository(r *redis.Client) *SubscriberRepository {
 }
 
 func (s *SubscriberRepository) StoreSubscriber(id int) error {
-	err := s.r.SAdd(context.TODO(), sk, id).Err()
+	err := s.r.SAdd(context.Background(), sk, id).Err()
 	if err != nil {
 		return err
 	}
@@ -28,7 +28,7 @@ func (s *SubscriberRepository) StoreSubscriber(id int) error {
 }
 
 func (s *SubscriberRepository) RemoveSubscribe(id int) error {
-	err := s.r.SRem(context.TODO(), sk, id).Err()
+	err := s.r.SRem(context.Background(), sk, id).Err()
 	if err != nil {
 		return err
 	}
@@ -37,7 +37,7 @@ func (s *SubscriberRepository) RemoveSubscribe(id int) error {
 }
 
 func (s *SubscriberRepository) GetSubscribers() ([]int, error) {
-	sIds, err := s.r.SMembers(context.TODO(), sk).Result()
+	sIds, err := s.r.SMembers(context.Background(), sk).Result()
 	if err != nil {
 		return nil, err
 	}

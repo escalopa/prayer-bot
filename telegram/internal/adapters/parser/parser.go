@@ -8,8 +8,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
+
+	"github.com/escalopa/gopray/pkg/core"
 	gpe "github.com/escalopa/gopray/pkg/error"
-	"github.com/escalopa/gopray/pkg/prayer"
 	"github.com/escalopa/gopray/telegram/internal/application"
 )
 
@@ -44,7 +46,7 @@ func (p *Parser) ParseSchedule() error {
 	}()
 
 	// parse csv file
-	var schedule []prayer.PrayerTimes
+	var schedule []core.PrayerTimes
 	reader := csv.NewReader(file)
 	reader.FieldsPerRecord = 7 // 7 fields per record (date, fajr, sunrise, dhuhr, asr, maghrib, isha)
 	reader.TrimLeadingSpace = true
@@ -82,7 +84,7 @@ func (p *Parser) ParseSchedule() error {
 		isha, err := convertToTime(record[6], day, month)
 		gpe.CheckError(err)
 
-		prayers := prayer.New(day, month, fajr, sunrise, dhuhr, asr, maghrib, isha)
+		prayers := core.New(day, month, fajr, sunrise, dhuhr, asr, maghrib, isha)
 		schedule = append(schedule, prayers)
 	}
 
@@ -97,7 +99,7 @@ func (p *Parser) ParseSchedule() error {
 // saveSchedule saves the schedule to the database.
 // @param schedule: prayer times for all days of the year.
 // @return error: error if any.
-func (p *Parser) saveSchedule(schedule []prayer.PrayerTimes) error {
+func (p *Parser) saveSchedule(schedule []core.PrayerTimes) error {
 	// Loop through all days of the schedule and save them to the database
 	for _, prayers := range schedule {
 		err := p.pr.StorePrayer(prayers)
@@ -113,6 +115,9 @@ func (p *Parser) saveSchedule(schedule []prayer.PrayerTimes) error {
 // @return time.Time: converted time.
 func convertToTime(str string, day, month int) (time.Time, error) {
 	ss := strings.Split(str, ":")
+	if len(ss) != 2 {
+		return time.Time{}, errors.New("convert time failed, passed str in not in format HH:MM")
+	}
 	hour, err := strconv.Atoi(ss[0])
 	if err != nil {
 		return time.Time{}, err

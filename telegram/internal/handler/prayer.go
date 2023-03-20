@@ -7,13 +7,13 @@ import (
 	"time"
 
 	objs "github.com/SakoDroid/telego/objects"
-	"github.com/escalopa/gopray/pkg/prayer"
+	"github.com/escalopa/gopray/pkg/core"
 	"github.com/fbiville/markdown-table-formatter/pkg/markdown"
 )
 
 func (h *Handler) GetPrayers(u *objs.Update) {
 	// Get the prayers for today
-	prayers, err := h.ac.GetPrayers()
+	prayers, err := h.u.GetPrayers()
 	if err != nil {
 		h.simpleSend(u.Message.Chat.Id, "An error occurred while getting prayers. Please try again later.", 0)
 		return
@@ -44,7 +44,7 @@ func (h *Handler) Getprayersdate(u *objs.Update) {
 	u = <-*ch
 
 	// Get the prayers for the date
-	prayers, err := h.ac.Getprayersdate(u.Message.Text)
+	prayers, err := h.u.Getprayersdate(u.Message.Text)
 	if err != nil {
 		h.simpleSend(u.Message.Chat.Id, "An error occurred while getting prayers. Please try again later.", 0)
 		return
@@ -64,7 +64,7 @@ const (
 )
 
 // prayrify returns a string representation of the prayer times in a Markdown table format.
-func prayrify(p prayer.PrayerTimes) string {
+func prayrify(p core.PrayerTimes) string {
 	// Get the day and monthName
 	monthName := time.Month(p.Month)
 

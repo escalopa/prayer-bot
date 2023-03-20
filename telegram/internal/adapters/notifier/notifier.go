@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/escalopa/gopray/pkg/prayer"
+	"github.com/escalopa/gopray/pkg/core"
 	app "github.com/escalopa/gopray/telegram/internal/application"
 	"github.com/pkg/errors"
 )
@@ -35,10 +35,10 @@ func New(pr app.PrayerRepository, sr app.SubscriberRepository, lr app.LanguageRe
 		gnh: gomaaNotifyHour,
 	}
 	if n.ur <= 0 || n.ur >= 60 {
-		return nil, errors.New("UPCOMING_REMINDER must be between 1 and 60")
+		return nil, errors.New("UPCOMING_REMINDER must be between 1 and 59")
 	}
 	if n.gnh <= 0 || n.gnh >= 12 {
-		return nil, errors.New("GOMAA_NOTIFY_HOUR must be between 0 and 12")
+		return nil, errors.New("GOMAA_NOTIFY_HOUR must be between 0 and 11")
 	}
 	loc, err := time.LoadLocation("Europe/Moscow")
 	if err != nil {
@@ -207,12 +207,12 @@ func (n *Notifier) getClosestGomaa() (gomaa time.Time, err error) {
 
 // getPrayerTime returns the prayer times for the given date.
 // @param t time.Time - the date for which to get the prayer times
-// @return prayer.PrayerTimes - the prayer times for the given date
+// @return core.PrayerTimes - the prayer times for the given date
 // @return error - any error that might have occurred
-func (n *Notifier) getPrayerTime(t time.Time) (prayer.PrayerTimes, error) {
+func (n *Notifier) getPrayerTime(t time.Time) (core.PrayerTimes, error) {
 	p, err := n.pr.GetPrayer(t.Day(), int(t.Month()))
 	if err != nil {
-		return prayer.PrayerTimes{}, err
+		return core.PrayerTimes{}, err
 	}
 	return p, nil
 }

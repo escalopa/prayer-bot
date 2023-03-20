@@ -5,12 +5,14 @@ import (
 	"log"
 	"strconv"
 
+	redis2 "github.com/go-redis/redis/v9"
+
 	"github.com/escalopa/gopray/telegram/internal/adapters/memory"
 	"github.com/escalopa/gopray/telegram/internal/handler"
 
 	bt "github.com/SakoDroid/telego"
 	cfg "github.com/SakoDroid/telego/configs"
-	"github.com/escalopa/gopray/pkg/config"
+	"github.com/escalopa/goconfig"
 
 	gpe "github.com/escalopa/gopray/pkg/error"
 	"github.com/escalopa/gopray/telegram/internal/adapters/notifier"
@@ -21,9 +23,9 @@ import (
 
 func main() {
 
-	c := config.NewConfig()
+	c := goconfig.New()
 
-	// TODO: Add a logger.
+	// TODO: Add useCases logger.
 	bot, err := bt.NewBot(cfg.Default(c.Get("BOT_TOKEN")))
 	gpe.CheckError(err)
 
@@ -35,7 +37,9 @@ func main() {
 
 	// Set up the database.
 	r := redis.New(c.Get("CACHE_URL"))
-	defer r.Close()
+	defer func(r *redis2.Client) {
+		gpe.CheckError(r.Close(), "failed to close redis client")
+	}(r)
 	// pr := redis.NewPrayerRepository(r)
 	pr := memory.NewPrayerRepository() // Use memory for prayer repository. To not hit the cache on every reload.
 	sr := redis.NewSubscriberRepository(r)
@@ -44,8 +48,7 @@ func main() {
 
 	// Create schedule parser & parse the schedule.
 	p := parser.New(c.Get("DATA_PATH"), pr)
-	err = p.ParseSchedule()
-	gpe.CheckError(err, "Error parsing schedule")
+	gpe.CheckError(p.ParseSchedule(), "Error parsing schedule")
 	log.Println("Parsed & saved prayers schedule")
 
 	// Create notifier.
@@ -61,15 +64,15 @@ func main() {
 	gpe.CheckError(err)
 	log.Printf("Notifier created, ur: %dM, gnh: %dH.", urInt, gnhInt)
 
-	a := application.New(n, pr, lr)
-	run(bot, a, ctx)
+	useCases := application.New(n, pr, lr)
+	run(ctx, bot, useCases)
 }
 
-func run(b *bt.Bot, a *application.UseCase, ctx context.Context) {
+func run(ctx context.Context, b *bt.Bot, useCases *application.UseCase) {
 
 	//The general update channel.
 	updateChannel := b.GetUpdateChannel()
-	h := handler.New(b, a, ctx)
+	h := handler.New(ctx, b, useCases)
 	h.Start()
 
 	//Monitors any other update.

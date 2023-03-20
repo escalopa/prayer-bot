@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"log"
-	"strconv"
+	"time"
 
 	redis2 "github.com/go-redis/redis/v9"
 
@@ -22,18 +22,19 @@ import (
 )
 
 func main() {
-
 	c := goconfig.New()
 
-	// TODO: Add useCases logger.
+	// Create a new bot instance.
 	bot, err := bt.NewBot(cfg.Default(c.Get("BOT_TOKEN")))
-	gpe.CheckError(err)
+	gpe.CheckError(err, "failed to create bot instance")
 
-	err = bot.Run()
-	gpe.CheckError(err)
-
+	// Create base context.
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	// Load application time location.
+	loc, err := time.LoadLocation(c.Get("TIME_LOCATION"))
+	gpe.CheckError(err, "failed to load time location")
 
 	// Set up the database.
 	r := redis.New(c.Get("CACHE_URL"))
@@ -44,38 +45,53 @@ func main() {
 	pr := memory.NewPrayerRepository() // Use memory for prayer repository. To not hit the cache on every reload.
 	sr := redis.NewSubscriberRepository(r)
 	lr := redis.NewLanguageRepository(r)
-	log.Println("Connected to Cache")
+	log.Println("successfully connected to database")
 
 	// Create schedule parser & parse the schedule.
-	p := parser.New(c.Get("DATA_PATH"), pr)
-	gpe.CheckError(p.ParseSchedule(), "Error parsing schedule")
-	log.Println("Parsed & saved prayers schedule")
+	p := parser.New(c.Get("DATA_PATH"), parser.WithPrayerRepository(pr), parser.WithTimeLocation(loc))
+	gpe.CheckError(p.ParseSchedule(ctx), "failed to parse schedule")
+	log.Println("successfully parsed prayer's schedule")
+
+	// Parse upcoming reminder.
+	ur := c.Get("UPCOMING_REMINDER")
+	urDuration, err := time.ParseDuration(ur)
+	gpe.CheckError(err, "failed to parse UPCOMING_REMINDER")
+	log.Printf("successfully parsed upcoming reminder %s", ur)
+
+	// Parse gomaa notify hour.
+	gnh := c.Get("GOMAA_NOTIFY_HOUR")
+	gnhDuration, err := time.ParseDuration(gnh)
+	gpe.CheckError(err, "failed to parse GOMAA_NOTIFY_HOUR")
+	log.Printf("successfully parsed gomaa notify hour %s", gnh)
 
 	// Create notifier.
-	ur := c.Get("UPCOMING_REMINDER")
-	urInt, err := strconv.Atoi(ur)
-	gpe.CheckError(err, "UPCOMING_REMINDER must be an integer.")
-
-	gnh := c.Get("GOMAA_NOTIFY_HOUR")
-	gnhInt, err := strconv.Atoi(gnh)
-	gpe.CheckError(err, "GOMAA_NOTIFY_HOUR must be an integer.")
-
-	n, err := notifier.New(pr, sr, lr, urInt, gnhInt)
+	n, err := notifier.New(urDuration, gnhDuration,
+		notifier.WithPrayerRepository(pr),
+		notifier.WithSubscriberRepository(sr),
+		notifier.WithLanguageRepository(lr),
+		notifier.WithTimeLocation(loc),
+	)
 	gpe.CheckError(err)
-	log.Printf("Notifier created, ur: %dM, gnh: %dH.", urInt, gnhInt)
+	log.Printf("successfully created notifier with upcoming reminder: %s and gomaa notify hour: %s", ur, gnh)
 
-	useCases := application.New(n, pr, lr)
+	// Create use cases.
+	useCases := application.New(ctx,
+		application.WithNotifier(n),
+		application.WithPrayerRepository(pr),
+		application.WithSubscriberRepository(sr),
+		application.WithLanguageRepository(lr),
+	)
+	log.Println("successfully created use cases")
 	run(ctx, bot, useCases)
 }
 
 func run(ctx context.Context, b *bt.Bot, useCases *application.UseCase) {
-
+	// Create handler & start it.
+	h := handler.New(ctx, b, useCases)
+	gpe.CheckError(h.Start(), "failed to start handler")
+	gpe.CheckError(b.Run(), "failed to run bot")
 	//The general update channel.
 	updateChannel := b.GetUpdateChannel()
-	h := handler.New(ctx, b, useCases)
-	h.Start()
-
-	//Monitors any other update.
 	for {
 		update := <-*updateChannel
 		if update.Message == nil {

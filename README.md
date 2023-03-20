@@ -32,15 +32,15 @@ Also on friday the bot will remind the user to pray Gomaa prayer. at `7:00 PM` (
 
 ### How it works 🤔
 
-In order to implement this feature, We have to make to bot sleep until `20 min` before the prayer's time. And then send a notification to the subscribed users.
+In order to implement this feature, We have to make to bot wait until `20 min` are left before the prayer's time. And then send a notification to the subscribed users.
 
-Also when the time of the prayer's arrive we should also notify them.
+Also, when the time of the prayer's arrive we should also notify them.
 
-So for that I use simple `channels` to make the bot sleep until the time of the prayer's time.
+So for that I use simple `channels` to sleep the goroutine until the time is right to send the notification.
 
-The first sleep is until the `20 min` before the prayer's time. And the second sleep is until the prayer's time.
+The first sleep is until the `20 min` before the prayer's time. And the second is until the prayer's time.
 
-for more details check the [notifier code](https://github.com/escalopa/gopray/tree/main/telegram/internal/adapters/notifier/notifier.go).
+for more details check the [notifier code](./telegram/internal/adapters/notifier/notifier.go).
 
 ## Bot Options 🤖
 
@@ -75,3 +75,6 @@ for more details check the [notifier code](https://github.com/escalopa/gopray/tr
 
 ### Version 3 Milestones 🏁
 - [ ] Add different languages support (AR, RU)
+- [ ] Add time keyboard to `/prayersdate` command
+- [ ] Add feature to send all subscribers a message from admin
+- [ ] Write more robust tests for core features

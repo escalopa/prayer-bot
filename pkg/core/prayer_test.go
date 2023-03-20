@@ -1,9 +1,11 @@
 package core
 
 import (
-	"reflect"
+	"encoding/json"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestPrayerTimes_Marshal(t *testing.T) {
@@ -24,10 +26,15 @@ func TestPrayerTimes_Marshal(t *testing.T) {
 	}
 
 	p2 := PrayerTimes{}
-	if err := p2.UnmarshalBinary(b); err != nil {
-		t.Fatal(err)
-	}
-	if reflect.DeepEqual(p1, p2) {
-		t.Fatalf("expected %v, got %v", p1, p2)
-	}
+	require.NoError(t, json.Unmarshal(b, &p2))
+
+	// Compare p1 and p2
+	require.Equal(t, p1.Day, p2.Day)
+	require.Equal(t, p1.Month, p2.Month)
+	require.WithinDurationf(t, p1.Fajr, p2.Fajr, time.Second, "Fajr")
+	require.WithinDurationf(t, p1.Sunrise, p2.Sunrise, time.Second, "Sunrise")
+	require.WithinDurationf(t, p1.Dhuhr, p2.Dhuhr, time.Second, "Dhuhr")
+	require.WithinDurationf(t, p1.Asr, p2.Asr, time.Second, "Asr")
+	require.WithinDurationf(t, p1.Maghrib, p2.Maghrib, time.Second, "Maghrib")
+	require.WithinDurationf(t, p1.Isha, p2.Isha, time.Second, "Isha")
 }

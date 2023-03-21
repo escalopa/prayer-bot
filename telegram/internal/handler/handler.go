@@ -91,12 +91,12 @@ func (h *Handler) setupBundler() {}
 
 // simpleSend sends a simple message to the chat with the given chatID & text and replyTo.
 func (h *Handler) simpleSend(chatID int, text string, replyTo int) (messageID int) {
-	o, err := h.b.SendMessage(chatID, text, "", replyTo, false, false)
+	r, err := h.b.SendMessage(chatID, text, "", replyTo, false, false)
 	if err != nil {
 		log.Printf("Error: %s, Failed to simpleSend", err)
 		return 0
 	}
-	return o.Result.MessageId
+	return r.Result.MessageId
 }
 
 // cancelOperation checks if the message is /cancel and sends a response.

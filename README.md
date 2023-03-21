@@ -44,6 +44,8 @@ for more details check the [notifier code](./telegram/internal/adapters/notifier
 
 ## Bot Options 🤖
 
+### Default Commands 📝
+
 | Command      | Description                                         |
 |--------------|-----------------------------------------------------|
 | /help        | Get help message showing all possible commands      |
@@ -54,6 +56,14 @@ for more details check the [notifier code](./telegram/internal/adapters/notifier
 | /lang        | Change the bot language (Default English)           |
 | /feedback    | Send feedback to the bot owner                      |
 | /bug         | Report a bug to the bot owner                       |
+
+### Admin Commands 📝
+
+| Command  | Description                        |
+|----------|------------------------------------|
+| /subs    | Get subscribers count              |
+| /sall    | Send message to all subscribers    |
+| /respond | Respond to feedback or bug message |
 
 ## References 📚
 
@@ -74,9 +84,11 @@ for more details check the [notifier code](./telegram/internal/adapters/notifier
 - [x] remind about gomaa prayer on friday
 
 ### Version 3 Milestones 🏁
-- [ ] Add different languages support (AR, RU)
 - [ ] Add time keyboard to `/prayersdate` command
 - [ ] Add feature to delete old prayer time message when new one is sent
 - [x] Add feature to send all subscribers a message from admin
 - [x] Add feature to get count of subscribers for admin
 - [x] Write more robust tests for core features
+
+### Version 4 Milestones 🏁
+- [ ] Add different languages support (AR, RU)

@@ -50,9 +50,9 @@ func (h *Handler) SetLang(u *objs.Update) {
 	}
 
 	// Sends the message along with the keyboard.
-	o, err := h.b.AdvancedMode().ASendMessage(u.Message.Chat.Id, "Choose language", "", u.Message.MessageId, false, false, nil, false, false, kb)
+	r, err := h.b.AdvancedMode().ASendMessage(u.Message.Chat.Id, "Choose language", "", u.Message.MessageId, false, false, nil, false, false, kb)
 	if err != nil {
 		log.Println(err)
 	}
-	messageID = o.Result.MessageId
+	messageID = r.Result.MessageId
 }

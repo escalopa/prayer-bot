@@ -40,7 +40,7 @@ func (h *Handler) GetPrayersByDate(u *objs.Update) {
 	// 	Replace messages with buttons and inline keyboard.
 	//  The keyboard should be deleted after the user sends the date.
 	// Send a message to the user to ask for the date
-	o, err := h.b.SendMessage(u.Message.Chat.Id, "Please insert date in the format of <u>DD/MM</u> or <u>DD-MM</u>.\nExample: <b>9/10</b>", "HTML", 0, false, false)
+	r, err := h.b.SendMessage(u.Message.Chat.Id, "Please insert date in the format of <u>DD/MM</u> or <u>DD-MM</u>.\nExample: <b>9/10</b>", "HTML", 0, false, false)
 	if err != nil {
 		log.Printf("Error: %s, Failed to send date format request", err)
 		return
@@ -51,7 +51,7 @@ func (h *Handler) GetPrayersByDate(u *objs.Update) {
 	//	if err == nil {
 	//		h.deleteMessage(u.Message.Chat.Id, messageID)
 	//	}
-	//}(o.Result.MessageId)
+	//}(r.Result.MessageId)
 
 	// Wait for the user to send the date or timeout after 10 minutes
 	ctx, cancel := context.WithTimeout(h.c, 10*time.Minute)
@@ -73,7 +73,7 @@ func (h *Handler) GetPrayersByDate(u *objs.Update) {
 
 	defer func() {
 		if err == nil {
-			h.deleteMessage(u.Message.Chat.Id, o.Result.MessageId)
+			h.deleteMessage(u.Message.Chat.Id, r.Result.MessageId)
 		}
 	}()
 

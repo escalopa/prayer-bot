@@ -8,29 +8,38 @@ import (
 )
 
 func (h *Handler) notifySubscribers() {
+	previousPrayerMessages := make(map[int]int) // chatID: messageID
+	prevGomaaMessage := make(map[int]int)       // chatID: messageID
+
 	h.u.Notify(
 		func(id int, prayer, time string) {
 			// notifySoon
-			_, err := h.b.SendMessage(id, fmt.Sprintf("<b>%s</b> prayer starts in <b>%s</b> minutes.", prayer, time), "HTML", 0, false, false)
+			h.deleteMessage(id, previousPrayerMessages[id])
+			r, err := h.b.SendMessage(id, fmt.Sprintf("<b>%s</b> prayer starts in <b>%s</b> minutes.", prayer, time), "HTML", 0, false, false)
 			if err != nil {
 				log.Printf("failed to send message, Error: %s", err)
 			}
+			previousPrayerMessages[id] = r.Result.MessageId
 		},
 		func(id int, prayer string) {
 			// notifyNow
-			_, err := h.b.SendMessage(id, fmt.Sprintf("<b>%s</b> prayer time has arrived.", prayer), "HTML", 0, false, false)
+			h.deleteMessage(id, previousPrayerMessages[id])
+			r, err := h.b.SendMessage(id, fmt.Sprintf("<b>%s</b> prayer time has arrived.", prayer), "HTML", 0, false, false)
 			if err != nil {
 				log.Printf("failed to send message, Error: %s", err)
 			}
+			previousPrayerMessages[id] = r.Result.MessageId
 		},
 		func(id int, time string) {
 			// notifyGomaa
+			h.deleteMessage(id, prevGomaaMessage[id])
 			message := fmt.Sprintf(
 				"Assalamu Alaikum 👋!\nDon't forget today is <b>Gomaa</b>,make sure to attend prayers at the mosque! 🕌, Gomma today is at <b>%s</b>", time)
-			_, err := h.b.SendMessage(id, message, "HTML", 0, false, false)
+			r, err := h.b.SendMessage(id, message, "HTML", 0, false, false)
 			if err != nil {
 				log.Printf("failed to send message, Error: %s", err)
 			}
+			prevGomaaMessage[id] = r.Result.MessageId
 		},
 	)
 }

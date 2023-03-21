@@ -5,7 +5,6 @@ import (
 	"log"
 
 	bt "github.com/SakoDroid/telego"
-	gpe "github.com/escalopa/gopray/pkg/error"
 	"github.com/escalopa/gopray/telegram/internal/application"
 )
 
@@ -23,50 +22,97 @@ func New(ctx context.Context, b *bt.Bot, u *application.UseCase) *Handler {
 	}
 }
 
-func (h *Handler) Start() {
-	h.register()
+func (h *Handler) Start() error {
+	err := h.register()
+	if err != nil {
+		return err
+	}
 	h.setupBundler()
-	go h.NotifySubscribers() // Notify subscriber about the prayer times.
-	log.Println("Bot started.")
+	go h.notifySubscribers() // Notify subscriber about the prayer times.
+	return nil
 }
 
-func (h *Handler) register() {
+func (h *Handler) register() error {
 	var err error
 	err = h.b.AddHandler("/help", h.Help, "all")
-	gpe.CheckError(err)
+	if err != nil {
+		return err
+	}
 	err = h.b.AddHandler("/subscribe", h.Subscribe, "all")
-	gpe.CheckError(err)
+	if err != nil {
+		return err
+	}
 	err = h.b.AddHandler("/unsubscribe", h.Unsubscribe, "all")
-	gpe.CheckError(err)
+	if err != nil {
+		return err
+	}
 	err = h.b.AddHandler("/today", h.GetPrayers, "all")
-	gpe.CheckError(err)
-	err = h.b.AddHandler("/date", h.Getprayersdate, "all")
-	gpe.CheckError(err)
+	if err != nil {
+		return err
+	}
+	err = h.b.AddHandler("/date", h.GetPrayersByDate, "all")
+	if err != nil {
+		return err
+	}
 	err = h.b.AddHandler("/lang", h.SetLang, "all")
-	gpe.CheckError(err)
+	if err != nil {
+		return err
+	}
 	err = h.b.AddHandler("/feedback", h.Feedback, "all")
-	gpe.CheckError(err)
+	if err != nil {
+		return err
+	}
 	err = h.b.AddHandler("/bug", h.Bug, "all")
-	gpe.CheckError(err)
+	if err != nil {
+		return err
+	}
+
+	//////////////////////////
+	///// Admin Commands /////
+	//////////////////////////
+
 	err = h.b.AddHandler("/respond", h.Respond, "all")
-	gpe.CheckError(err)
+	if err != nil {
+		return err
+	}
+	err = h.b.AddHandler("/subs", h.GetSubscribers, "all")
+	if err != nil {
+		return err
+	}
+	err = h.b.AddHandler("/sall", h.SendAll, "all")
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // TODO: Implement bundler for multi language support.
 func (h *Handler) setupBundler() {}
 
-// SimpleSend sends a simple message
-func (h *Handler) simpleSend(chatID int, text string, replyTo int) {
-	_, err := h.b.SendMessage(chatID, text, "", replyTo, false, false)
+// simpleSend sends a simple message to the chat with the given chatID & text and replyTo.
+func (h *Handler) simpleSend(chatID int, text string, replyTo int) (messageID int) {
+	o, err := h.b.SendMessage(chatID, text, "", replyTo, false, false)
 	if err != nil {
 		log.Printf("Error: %s, Failed to simpleSend", err)
+		return 0
 	}
+	return o.Result.MessageId
 }
 
+// cancelOperation checks if the message is /cancel and sends a response.
+// Returns true if the message is /cancel.
 func (h *Handler) cancelOperation(message, response string, chatID int) bool {
 	if message == "/cancel" {
 		h.simpleSend(chatID, response, 0)
 		return true
 	}
 	return false
+}
+
+func (h *Handler) deleteMessage(chatID, messageID int) {
+	editor := h.b.GetMsgEditor(chatID)
+	_, err := editor.DeleteMessage(messageID)
+	if err != nil {
+		log.Printf("Error: %s, Failed to delete message", err)
+	}
 }

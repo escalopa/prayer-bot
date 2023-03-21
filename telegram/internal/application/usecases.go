@@ -16,6 +16,7 @@ type UseCase struct {
 	sr  SubscriberRepository
 	pr  PrayerRepository
 	lr  LanguageRepository
+	loc *time.Location
 	ctx context.Context
 }
 
@@ -30,6 +31,12 @@ func New(ctx context.Context, opts ...func(*UseCase)) *UseCase {
 func WithNotifier(n Notifier) func(*UseCase) {
 	return func(uc *UseCase) {
 		uc.n = n
+	}
+}
+
+func WithTimeLocation(loc *time.Location) func(*UseCase) {
+	return func(uc *UseCase) {
+		uc.loc = loc
 	}
 }
 
@@ -52,9 +59,10 @@ func WithLanguageRepository(lr LanguageRepository) func(*UseCase) {
 }
 
 func (uc *UseCase) GetPrayers() (core.PrayerTimes, error) {
-	p, err := uc.pr.GetPrayer(uc.ctx, time.Now().Day(), int(time.Now().Month()))
+	now := time.Now().In(uc.loc)
+	p, err := uc.pr.GetPrayer(uc.ctx, now.Day(), int(now.Month()))
 	if err != nil {
-		return core.PrayerTimes{}, errors.Wrap(err, "failed to get prayer")
+		return core.PrayerTimes{}, err
 	}
 	return p, nil
 }
@@ -66,75 +74,62 @@ func (uc *UseCase) GetPrayersDate(date string) (core.PrayerTimes, error) {
 	}
 
 	p, err := uc.pr.GetPrayer(uc.ctx, day, month)
-	if err != nil {
-		return core.PrayerTimes{}, errors.Wrap(err, "failed to get prayer by date")
-	}
-	return p, nil
+	return p, err
 }
 
 // Notify TODO: Handle message with date & translation before sending to users
-func (uc *UseCase) Notify(send func(id int, msg string)) {
+func (uc *UseCase) Notify(
+	notifySoon func(id int, prayer, time string),
+	notifyNow func(id int, prayer string),
+	notifyGomaa func(ids int, time string),
+) {
 	// Notify gomaa
 	go func() {
-		uc.n.NotifyGomaa(uc.ctx, func(ids []int, time string) {
-			for _, id := range ids {
-				send(id, time)
-			}
-			/**
-			message := fmt.Sprintf(
-				"Assalamu Alaikum 👋!\nDon't forget today is <b>Gomaa</b> ,
-					make sure to attend prayers at the mosque! 🕌, Gomma today is at <b>%s</b>",
-				prayers.Dhuhr.Format("15:04"))
-			notify(ids, message)
-			*/
-		})
+		uc.n.NotifyGomaa(uc.ctx,
+			func(ids []int, time string) {
+				for _, id := range ids {
+					notifyGomaa(id, time)
+				}
+			})
 	}()
 	// Notify prayers
 	go func() {
-		uc.n.NotifyPrayers(uc.ctx, func(ids []int, prayer, time string) {
-			for _, id := range ids {
-				send(id, prayer+" "+time)
-			}
-			// notify(ids, fmt.Sprintf("<b>%s</b> prayer is about to start in <b>%d</b> minutes.", prayerName, startsIn))
-		}, func(ids []int, time string) {
-			for _, id := range ids {
-				send(id, time)
-			}
-			// notify(ids, fmt.Sprintf("<b>%s</b> prayer time has arrived.", prayerName))
-		})
+		uc.n.NotifyPrayers(uc.ctx,
+			func(ids []int, prayer, time string) {
+				for _, id := range ids {
+					notifySoon(id, prayer, time)
+				}
+			}, func(ids []int, time string) {
+				for _, id := range ids {
+					notifyNow(id, time)
+				}
+			})
 	}()
 }
 
 func (uc *UseCase) Subscribe(ctx context.Context, id int) error {
 	err := uc.sr.StoreSubscriber(ctx, id)
-	if err != nil {
-		return errors.Wrap(err, "failed to subscribe")
-	}
-	return nil
+	return err
 }
 
 func (uc *UseCase) Unsubscribe(ctx context.Context, id int) error {
 	err := uc.sr.RemoveSubscribe(ctx, id)
-	if err != nil {
-		return errors.Wrap(err, "failed to unsubscribe")
-	}
-	return nil
+	return err
+}
+
+func (uc *UseCase) GetSubscribers(ctx context.Context) ([]int, error) {
+	ids, err := uc.sr.GetSubscribers(ctx)
+	return ids, err
 }
 
 func (uc *UseCase) SetLang(ctx context.Context, id int, lang string) error {
 	err := uc.lr.SetLang(ctx, id, lang)
-	if err != nil {
-		return errors.Wrap(err, "failed to set language")
-	}
-	return nil
+	return err
 }
 
 func (uc *UseCase) GetLang(ctx context.Context, id int) (string, error) {
 	lang, err := uc.lr.GetLang(ctx, id)
-	if err != nil {
-		return "", errors.Wrap(err, "failed to get language")
-	}
-	return lang, nil
+	return lang, err
 }
 
 // parseDate parses the date

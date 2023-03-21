@@ -1,22 +1,42 @@
 package handler
 
 import (
+	"fmt"
 	"log"
 
 	objs "github.com/SakoDroid/telego/objects"
 )
 
-func (h *Handler) NotifySubscribers() {
-	h.u.Notify(func(id int, msg string) {
-		_, err := h.b.SendMessage(id, msg, "HTML", 0, false, false)
-		if err != nil {
-			log.Printf("Err: %s, Failed to send subscription message to: %d", err, id)
-		}
-	})
+func (h *Handler) notifySubscribers() {
+	h.u.Notify(
+		func(id int, prayer, time string) {
+			// notifySoon
+			_, err := h.b.SendMessage(id, fmt.Sprintf("<b>%s</b> prayer starts in <b>%s</b> minutes.", prayer, time), "HTML", 0, false, false)
+			if err != nil {
+				log.Printf("failed to send message, Error: %s", err)
+			}
+		},
+		func(id int, prayer string) {
+			// notifyNow
+			_, err := h.b.SendMessage(id, fmt.Sprintf("<b>%s</b> prayer time has arrived.", prayer), "HTML", 0, false, false)
+			if err != nil {
+				log.Printf("failed to send message, Error: %s", err)
+			}
+		},
+		func(id int, time string) {
+			// notifyGomaa
+			message := fmt.Sprintf(
+				"Assalamu Alaikum 👋!\nDon't forget today is <b>Gomaa</b>,make sure to attend prayers at the mosque! 🕌, Gomma today is at <b>%s</b>", time)
+			_, err := h.b.SendMessage(id, message, "HTML", 0, false, false)
+			if err != nil {
+				log.Printf("failed to send message, Error: %s", err)
+			}
+		},
+	)
 }
 
 func (h *Handler) Subscribe(u *objs.Update) {
-	err := h.u.Subscribe(u.Message.Chat.Id)
+	err := h.u.Subscribe(h.c, u.Message.Chat.Id)
 	if err != nil {
 		h.simpleSend(u.Message.Chat.Id, "An error occurred while subscribing. Please try again later.", 0)
 		return
@@ -28,7 +48,7 @@ func (h *Handler) Subscribe(u *objs.Update) {
 }
 
 func (h *Handler) Unsubscribe(u *objs.Update) {
-	err := h.u.Unsubscribe(u.Message.Chat.Id)
+	err := h.u.Unsubscribe(h.c, u.Message.Chat.Id)
 	if err != nil {
 		h.simpleSend(u.Message.Chat.Id, "An error occurred while unsubscribing. Please try again later.", 0)
 		return

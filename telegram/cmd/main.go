@@ -35,6 +35,7 @@ func main() {
 	// Load application time location.
 	loc, err := time.LoadLocation(c.Get("TIME_LOCATION"))
 	gpe.CheckError(err, "failed to load time location")
+	log.Printf("successfully loaded time zone: %s", loc)
 
 	// Set up the database.
 	r := redis.New(c.Get("CACHE_URL"))
@@ -77,6 +78,7 @@ func main() {
 	// Create use cases.
 	useCases := application.New(ctx,
 		application.WithNotifier(n),
+		application.WithTimeLocation(loc),
 		application.WithPrayerRepository(pr),
 		application.WithSubscriberRepository(sr),
 		application.WithLanguageRepository(lr),

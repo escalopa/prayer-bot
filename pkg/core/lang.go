@@ -1,5 +1,7 @@
 package core
 
+import "strings"
+
 type Language string
 
 const (
@@ -19,4 +21,17 @@ func IsValidLang(l string) bool {
 		return true
 	}
 	return false
+}
+
+// AvaliableLanguages returns all the avaliable languages for the application
+func AvaliableLanguages() []string {
+	return []string{
+		strings.ToUpper(EN.String()),
+		strings.ToUpper(RU.String()),
+		strings.ToUpper(AR.String()),
+	}
+}
+
+func DefaultLang() Language {
+	return EN
 }

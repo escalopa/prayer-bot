@@ -76,5 +76,7 @@ for more details check the [notifier code](./telegram/internal/adapters/notifier
 ### Version 3 Milestones 🏁
 - [ ] Add different languages support (AR, RU)
 - [ ] Add time keyboard to `/prayersdate` command
-- [ ] Add feature to send all subscribers a message from admin
-- [ ] Write more robust tests for core features
+- [ ] Add feature to delete old prayer time message when new one is sent
+- [x] Add feature to send all subscribers a message from admin
+- [x] Add feature to get count of subscribers for admin
+- [x] Write more robust tests for core features

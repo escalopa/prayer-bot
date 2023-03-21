@@ -92,7 +92,7 @@ func (n *Notifier) NotifyPrayers(ctx context.Context, notifySoon func([]int, str
 		upcomingAt, startsAt := n.timeLeft(prayerAfter)
 		// logs for debugging
 		log.Printf("Prayer: %s | upcoming: %s(%d) | starts: %s(%d)", prayerName, n.now().Add(upcomingAt).Format(
-			defaultTimeFormat), int(upcomingAt.Minutes()), n.now().Add(startsAt).Format(defaultTimeFormat), int(startsAt.Minutes()))
+			defaultTimeFormat), int(upcomingAt.Minutes()), n.now().Add(startsAt).Add(upcomingAt).Format(defaultTimeFormat), int(startsAt.Minutes()))
 
 		////////////////////////////////////////////////////////////////
 		/// Notify subscribers about the upcoming prayer.

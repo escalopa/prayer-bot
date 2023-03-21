@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"fmt"
 	"log"
 
@@ -12,14 +11,14 @@ func (h *Handler) notifySubscribers() {
 	// store stores the new message id in the database.
 	// remove deletes the last message id from the database.
 	// I use these functions to avoid code duplication for the three notifications.
-	store := func(ctx context.Context, id int, message int, storeFunc func(ctx context.Context, id int, message int) error) {
-		err := storeFunc(ctx, id, message)
+	store := func(id int, message int) {
+		err := h.u.StorePrayerMessageID(h.c, id, message)
 		if err != nil {
 			log.Printf("failed to store message id, Error: %s", err)
 		}
 	}
-	remove := func(ctx context.Context, id int, removeFunc func(ctx context.Context, id int) (int, error)) {
-		lastMessageId, err := removeFunc(ctx, id)
+	remove := func(id int) {
+		lastMessageId, err := h.u.GetPrayerMessageID(h.c, id)
 		if err != nil {
 			log.Printf("failed to remove last message id, Error: %s", err)
 		} else {
@@ -30,32 +29,32 @@ func (h *Handler) notifySubscribers() {
 	h.u.Notify(
 		func(id int, prayer, time string) {
 			// notifySoon
-			remove(h.c, id, h.u.GetPrayerMessageID)
+			go remove(id)
 			r, err := h.b.SendMessage(id, fmt.Sprintf("<b>%s</b> prayer starts in <b>%s</b> minutes.", prayer, time), "HTML", 0, false, false)
 			if err != nil {
 				log.Printf("failed to send message, Error: %s", err)
 			}
-			store(h.c, id, r.Result.MessageId, h.u.StorePrayerMessageID)
+			go store(id, r.Result.MessageId)
 		},
 		func(id int, prayer string) {
 			// notifyNow
-			remove(h.c, id, h.u.GetPrayerMessageID)
+			go remove(id)
 			r, err := h.b.SendMessage(id, fmt.Sprintf("<b>%s</b> prayer time has arrived.", prayer), "HTML", 0, false, false)
 			if err != nil {
 				log.Printf("failed to send message, Error: %s", err)
 			}
-			store(h.c, id, r.Result.MessageId, h.u.StorePrayerMessageID)
+			go store(id, r.Result.MessageId)
 		},
 		func(id int, time string) {
 			// notifyGomaa
-			remove(h.c, id, h.u.GetGomaaMessageID)
+			go remove(id)
 			message := fmt.Sprintf(
 				"Assalamu Alaikum 👋!\nDon't forget today is <b>Gomaa</b>,make sure to attend prayers at the mosque! 🕌, Gomma today is at <b>%s</b>", time)
 			r, err := h.b.SendMessage(id, message, "HTML", 0, false, false)
 			if err != nil {
 				log.Printf("failed to send message, Error: %s", err)
 			}
-			store(h.c, id, r.Result.MessageId, h.u.StoreGomaaMessageID)
+			go store(id, r.Result.MessageId)
 		},
 	)
 }

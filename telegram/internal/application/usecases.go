@@ -149,16 +149,6 @@ func (uc *UseCase) StorePrayerMessageID(ctx context.Context, userID int, message
 	return err
 }
 
-func (uc *UseCase) GetGomaaMessageID(ctx context.Context, userID int) (int, error) {
-	id, err := uc.hr.GetGomaaMessageID(ctx, userID)
-	return id, err
-}
-
-func (uc *UseCase) StoreGomaaMessageID(ctx context.Context, userID int, messageID int) error {
-	err := uc.hr.StoreGomaaMessageID(ctx, userID, messageID)
-	return err
-}
-
 // parseDate parses the date
 // @param date: The date to parse
 // @return: The date in the format of DD/MM

@@ -37,19 +37,6 @@ func TestHistoryRepository(t *testing.T) {
 			messageID, err = h.GetPrayerMessageID(ctx, tt.userID)
 			require.NoError(t, err)
 			require.Equal(t, 1, messageID)
-
-			// Gomaa
-			// Get message id
-			messageID, err = h.GetGomaaMessageID(ctx, tt.userID)
-			require.Error(t, err)
-			require.Equal(t, 0, messageID)
-			// Store message id
-			err = h.StoreGomaaMessageID(ctx, tt.userID, tt.messageID)
-			require.NoError(t, err)
-			// Re-get message id
-			messageID, err = h.GetGomaaMessageID(ctx, tt.userID)
-			require.NoError(t, err)
-			require.Equal(t, tt.userID, messageID)
 		})
 	}
 
@@ -65,19 +52,6 @@ func TestHistoryRepository(t *testing.T) {
 		require.Error(t, err)
 		// Re-get message id
 		messageID, err = h.GetPrayerMessageID(ctx, 0)
-		require.Error(t, err)
-		require.Equal(t, 0, messageID)
-
-		// Gomaa
-		// Get message id
-		messageID, err = h.GetGomaaMessageID(ctx, 0)
-		require.Error(t, err)
-		require.Equal(t, 0, messageID)
-		// Store message id
-		err = h.StoreGomaaMessageID(ctx, 0, 1)
-		require.Error(t, err)
-		// Re-get message id
-		messageID, err = h.GetGomaaMessageID(ctx, 0)
 		require.Error(t, err)
 		require.Equal(t, 0, messageID)
 	})
@@ -97,19 +71,6 @@ func TestHistoryRepository(t *testing.T) {
 			require.Error(t, err)
 			// Re-get message id
 			messageID, err = h.GetPrayerMessageID(ctx, tt.userID)
-			require.Error(t, err)
-			require.Equal(t, 0, messageID)
-
-			// Gomaa
-			// Get message id
-			messageID, err = h.GetGomaaMessageID(ctx, tt.userID)
-			require.Error(t, err)
-			require.Equal(t, 0, messageID)
-			// Store message id
-			err = h.StoreGomaaMessageID(ctx, tt.userID, tt.messageID)
-			require.Error(t, err)
-			// Re-get message id
-			messageID, err = h.GetGomaaMessageID(ctx, tt.userID)
 			require.Error(t, err)
 			require.Equal(t, 0, messageID)
 		})

@@ -23,12 +23,8 @@ type LanguageRepository interface {
 }
 
 type HistoryRepository interface {
-	// Default prayers
 	GetPrayerMessageID(ctx context.Context, userID int) (int, error)
 	StorePrayerMessageID(ctx context.Context, userID int, messageID int) error
-	// Gomaa
-	GetGomaaMessageID(ctx context.Context, userID int) (int, error)
-	StoreGomaaMessageID(ctx context.Context, userID int, messageID int) error
 }
 
 type Parser interface {

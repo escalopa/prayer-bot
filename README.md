@@ -2,8 +2,10 @@
 
 A Telegram Bot to get muslim prayers time, And subscribe to get notified on the prayers time
 
-![Build status](https://github.com/escalopa/gopray/workflows/Deploy/badge.svg)  [![Report card](https://goreportcard.com/badge/github.com/escalopa/gopray)](https://goreportcard.com/report/github.com/escalopa/gopray)
+![Build status](https://github.com/escalopa/gopray/workflows/Deploy/badge.svg)
+[![Report card](https://goreportcard.com/badge/github.com/escalopa/gopray)](https://goreportcard.com/report/github.com/escalopa/gopray)
 <img src="./cover.jpg">
+[![codecov](https://codecov.io/gh/escalopa/gopray/branch/v3/graph/badge.svg?token=QZQZQZQZQZ)](https://codecov.io/gh/escalopa/gopray)
 
 ## Contributing 🤼
 

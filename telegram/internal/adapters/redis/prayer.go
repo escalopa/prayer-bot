@@ -44,5 +44,5 @@ func (p *PrayerRepository) GetPrayer(ctx context.Context, day, month int) (core.
 }
 
 func (p *PrayerRepository) formatKey(day, month int) string {
-	return fmt.Sprintf("%d/%d", day, month)
+	return fmt.Sprintf("gopray_prayer_time:%d/%d", day, month)
 }

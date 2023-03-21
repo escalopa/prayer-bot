@@ -93,7 +93,7 @@ func (h *Handler) setupBundler() {}
 func (h *Handler) simpleSend(chatID int, text string, replyTo int) (messageID int) {
 	r, err := h.b.SendMessage(chatID, text, "", replyTo, false, false)
 	if err != nil {
-		log.Printf("Error: %s, Failed to simpleSend", err)
+		log.Printf("Error: %s, failed to simpleSend", err)
 		return 0
 	}
 	return r.Result.MessageId
@@ -113,6 +113,6 @@ func (h *Handler) deleteMessage(chatID, messageID int) {
 	editor := h.b.GetMsgEditor(chatID)
 	_, err := editor.DeleteMessage(messageID)
 	if err != nil {
-		log.Printf("Error: %s, Failed to delete message", err)
+		log.Printf("Error: %s, failed to delete message", err)
 	}
 }

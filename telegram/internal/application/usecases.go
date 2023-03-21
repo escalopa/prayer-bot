@@ -16,6 +16,7 @@ type UseCase struct {
 	sr  SubscriberRepository
 	pr  PrayerRepository
 	lr  LanguageRepository
+	hr  HistoryRepository
 	loc *time.Location
 	ctx context.Context
 }
@@ -55,6 +56,12 @@ func WithSubscriberRepository(sr SubscriberRepository) func(*UseCase) {
 func WithLanguageRepository(lr LanguageRepository) func(*UseCase) {
 	return func(uc *UseCase) {
 		uc.lr = lr
+	}
+}
+
+func WithHistoryRepository(hr HistoryRepository) func(*UseCase) {
+	return func(uc *UseCase) {
+		uc.hr = hr
 	}
 }
 
@@ -130,6 +137,26 @@ func (uc *UseCase) SetLang(ctx context.Context, id int, lang string) error {
 func (uc *UseCase) GetLang(ctx context.Context, id int) (string, error) {
 	lang, err := uc.lr.GetLang(ctx, id)
 	return lang, err
+}
+
+func (uc *UseCase) GetPrayerMessageID(ctx context.Context, userID int) (int, error) {
+	id, err := uc.hr.GetPrayerMessageID(ctx, userID)
+	return id, err
+}
+
+func (uc *UseCase) StorePrayerMessageID(ctx context.Context, userID int, messageID int) error {
+	err := uc.hr.StorePrayerMessageID(ctx, userID, messageID)
+	return err
+}
+
+func (uc *UseCase) GetGomaaMessageID(ctx context.Context, userID int) (int, error) {
+	id, err := uc.hr.GetGomaaMessageID(ctx, userID)
+	return id, err
+}
+
+func (uc *UseCase) StoreGomaaMessageID(ctx context.Context, userID int, messageID int) error {
+	err := uc.hr.StoreGomaaMessageID(ctx, userID, messageID)
+	return err
 }
 
 // parseDate parses the date

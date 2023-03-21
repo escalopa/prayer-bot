@@ -22,6 +22,15 @@ type LanguageRepository interface {
 	SetLang(ctx context.Context, id int, lang string) error
 }
 
+type HistoryRepository interface {
+	// Default prayers
+	GetPrayerMessageID(ctx context.Context, userID int) (int, error)
+	StorePrayerMessageID(ctx context.Context, userID int, messageID int) error
+	// Gomaa
+	GetGomaaMessageID(ctx context.Context, userID int) (int, error)
+	StoreGomaaMessageID(ctx context.Context, userID int, messageID int) error
+}
+
 type Parser interface {
 	ParseSchedule(ctx context.Context) error
 }

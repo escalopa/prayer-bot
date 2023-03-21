@@ -46,6 +46,7 @@ func main() {
 	pr := memory.NewPrayerRepository() // Use memory for prayer repository. To not hit the cache on every reload.
 	sr := redis.NewSubscriberRepository(r)
 	lr := redis.NewLanguageRepository(r)
+	hr := redis.NewHistoryRepository(r)
 	log.Println("successfully connected to database")
 
 	// Create schedule parser & parse the schedule.
@@ -82,6 +83,7 @@ func main() {
 		application.WithPrayerRepository(pr),
 		application.WithSubscriberRepository(sr),
 		application.WithLanguageRepository(lr),
+		application.WithHistoryRepository(hr),
 	)
 	log.Println("successfully created use cases")
 	run(ctx, bot, useCases)

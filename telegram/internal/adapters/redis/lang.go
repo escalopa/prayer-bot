@@ -34,5 +34,5 @@ func (l *LanguageRepository) SetLang(ctx context.Context, id int, lang string) e
 }
 
 func (l *LanguageRepository) formatKey(id int) string {
-	return fmt.Sprintf("lang:%d", id)
+	return fmt.Sprintf("gopray_lang:%d", id)
 }

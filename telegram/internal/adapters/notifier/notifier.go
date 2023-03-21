@@ -170,6 +170,8 @@ func (n *Notifier) getClosestPrayer(ctx context.Context) (prayerName string, pra
 	// and convert the result to minutes.
 	if p.Fajr.After(now) {
 		return "Fajr", p.Fajr, nil
+	} else if p.Sunrise.After(now) {
+		return "Sunrise", p.Sunrise, nil
 	} else if p.Dhuhr.After(now) {
 		return "Dhuhr", p.Dhuhr, nil
 	} else if p.Asr.After(now) {

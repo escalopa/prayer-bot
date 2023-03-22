@@ -8,8 +8,25 @@ import (
 	"strings"
 	"time"
 
+	"github.com/escalopa/gopray/pkg/core"
+
 	objs "github.com/SakoDroid/telego/objects"
 )
+
+func (h *Handler) Start(u *objs.Update) {
+	if _, err := h.u.GetLang(h.c, u.Message.Chat.Id); err != nil {
+		userLang := u.Message.From.LanguageCode
+		if !core.IsValidLang(userLang) {
+			userLang = core.DefaultLang()
+		}
+
+		err = h.u.SetLang(h.userCtx[u.Message.Chat.Id].ctx, u.Message.Chat.Id, userLang)
+		if err != nil {
+			log.Printf("failed to set user language on start command, %s", err)
+		}
+	}
+	h.Help(u)
+}
 
 func (h *Handler) Help(u *objs.Update) {
 	_, err := h.b.SendMessage(u.Message.Chat.Id, `

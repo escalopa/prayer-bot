@@ -27,7 +27,7 @@ func New(ctx context.Context, b *bt.Bot, ownerID int, u *application.UseCase) *H
 	}
 }
 
-func (h *Handler) Start() error {
+func (h *Handler) Run() error {
 	err := h.register()
 	if err != nil {
 		return err
@@ -39,6 +39,10 @@ func (h *Handler) Start() error {
 
 func (h *Handler) register() error {
 	var err error
+	err = h.b.AddHandler("/start", h.contextWrapper(h.Start), "all")
+	if err != nil {
+		return err
+	}
 	err = h.b.AddHandler("/help", h.contextWrapper(h.Help), "all")
 	if err != nil {
 		return err

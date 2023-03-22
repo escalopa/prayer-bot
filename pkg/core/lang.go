@@ -32,6 +32,6 @@ func AvaliableLanguages() []string {
 	}
 }
 
-func DefaultLang() Language {
-	return EN
+func DefaultLang() string {
+	return EN.String()
 }

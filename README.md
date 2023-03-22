@@ -88,7 +88,7 @@ for more details check the [notifier code](./telegram/internal/adapters/notifier
 ### Version 3 Milestones 🏁
 - [ ] Add time keyboard to `/date` command
 - [x] Remove selection message for `/date` & `/lang` after the use interacts with the message or timeout
-- [ ] On new user commands terminate other going channels that are listening to the chat
+- [x] On new user commands terminate other going channels that are listening to the chat
 - [x] Add feature to delete old prayer time message when new one is sent
 - [x] Add feature to send all subscribers a message from admin
 - [x] Add feature to get count of subscribers for admin

@@ -98,7 +98,7 @@ func main() {
 func run(ctx context.Context, b *bt.Bot, ownerID int, useCases *application.UseCase) {
 	// Create handler & start it.
 	h := handler.New(ctx, b, ownerID, useCases)
-	gpe.CheckError(h.Start(), "failed to start handler")
+	gpe.CheckError(h.Run(), "failed to start handler")
 	gpe.CheckError(b.Run(), "failed to run bot")
 	//The general update channel.
 	updateChannel := b.GetUpdateChannel()

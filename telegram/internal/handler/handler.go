@@ -12,13 +12,18 @@ type Handler struct {
 	c context.Context
 	b *bt.Bot
 	u *application.UseCase
+
+	botOwner int                 // Bot owner's ID.
+	userCtx  map[int]userContext // userID => latest user context
 }
 
-func New(ctx context.Context, b *bt.Bot, u *application.UseCase) *Handler {
+func New(ctx context.Context, b *bt.Bot, ownerID int, u *application.UseCase) *Handler {
 	return &Handler{
-		b: b,
-		u: u,
-		c: ctx,
+		b:        b,
+		u:        u,
+		c:        ctx,
+		botOwner: ownerID,
+		userCtx:  make(map[int]userContext),
 	}
 }
 
@@ -34,35 +39,35 @@ func (h *Handler) Start() error {
 
 func (h *Handler) register() error {
 	var err error
-	err = h.b.AddHandler("/help", h.Help, "all")
+	err = h.b.AddHandler("/help", h.contextWrapper(h.Help), "all")
 	if err != nil {
 		return err
 	}
-	err = h.b.AddHandler("/subscribe", h.Subscribe, "all")
+	err = h.b.AddHandler("/subscribe", h.contextWrapper(h.Subscribe), "all")
 	if err != nil {
 		return err
 	}
-	err = h.b.AddHandler("/unsubscribe", h.Unsubscribe, "all")
+	err = h.b.AddHandler("/unsubscribe", h.contextWrapper(h.Unsubscribe), "all")
 	if err != nil {
 		return err
 	}
-	err = h.b.AddHandler("/today", h.GetPrayers, "all")
+	err = h.b.AddHandler("/today", h.contextWrapper(h.GetPrayers), "all")
 	if err != nil {
 		return err
 	}
-	err = h.b.AddHandler("/date", h.GetPrayersByDate, "all")
+	err = h.b.AddHandler("/date", h.contextWrapper(h.GetPrayersByDate), "all")
 	if err != nil {
 		return err
 	}
-	err = h.b.AddHandler("/lang", h.SetLang, "all")
+	err = h.b.AddHandler("/lang", h.contextWrapper(h.SetLang), "all")
 	if err != nil {
 		return err
 	}
-	err = h.b.AddHandler("/feedback", h.Feedback, "all")
+	err = h.b.AddHandler("/feedback", h.contextWrapper(h.Feedback), "all")
 	if err != nil {
 		return err
 	}
-	err = h.b.AddHandler("/bug", h.Bug, "all")
+	err = h.b.AddHandler("/bug", h.contextWrapper(h.Bug), "all")
 	if err != nil {
 		return err
 	}
@@ -71,15 +76,15 @@ func (h *Handler) register() error {
 	///// Admin Commands /////
 	//////////////////////////
 
-	err = h.b.AddHandler("/respond", h.Respond, "all")
+	err = h.b.AddHandler("/respond", h.admin(h.contextWrapper(h.Respond)), "all")
 	if err != nil {
 		return err
 	}
-	err = h.b.AddHandler("/subs", h.GetSubscribers, "all")
+	err = h.b.AddHandler("/subs", h.admin(h.contextWrapper(h.GetSubscribers)), "all")
 	if err != nil {
 		return err
 	}
-	err = h.b.AddHandler("/sall", h.SendAll, "all")
+	err = h.b.AddHandler("/sall", h.admin(h.contextWrapper(h.SendAll)), "all")
 	if err != nil {
 		return err
 	}
@@ -109,6 +114,8 @@ func (h *Handler) cancelOperation(message, response string, chatID int) bool {
 	return false
 }
 
+// deleteMessage deletes the message with the given chatID & messageID.
+// If error occurs, it will be logged.
 func (h *Handler) deleteMessage(chatID, messageID int) {
 	editor := h.b.GetMsgEditor(chatID)
 	_, err := editor.DeleteMessage(messageID)

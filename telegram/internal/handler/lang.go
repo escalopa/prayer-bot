@@ -15,7 +15,7 @@ func (h *Handler) SetLang(u *objs.Update) {
 	chatID := u.Message.Chat.Id
 	kb := h.b.CreateInlineKeyboard()
 
-	ctx, cancel := context.WithTimeout(h.c, 1*time.Hour)
+	ctx, cancel := context.WithTimeout(h.userCtx[u.Message.Chat.Id].ctx, 1*time.Minute)
 	pressed := make(chan struct{})
 	// Deletes the message after the button is pressed or after 1 hour.
 	go func() {

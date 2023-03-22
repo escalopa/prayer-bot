@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"strconv"
 	"time"
 
 	redis2 "github.com/go-redis/redis/v9"
@@ -27,6 +28,11 @@ func main() {
 	// Create a new bot instance.
 	bot, err := bt.NewBot(cfg.Default(c.Get("BOT_TOKEN")))
 	gpe.CheckError(err, "failed to create bot instance")
+
+	// Parse bot owner id
+	ownerIDString := c.Get("BOT_OWNER_ID")
+	ownerID, err := strconv.Atoi(ownerIDString)
+	gpe.CheckError(err, "failed to parse BOT_OWNER_ID")
 
 	// Create base context.
 	ctx, cancel := context.WithCancel(context.Background())
@@ -86,12 +92,12 @@ func main() {
 		application.WithHistoryRepository(hr),
 	)
 	log.Println("successfully created use cases")
-	run(ctx, bot, useCases)
+	run(ctx, bot, ownerID, useCases)
 }
 
-func run(ctx context.Context, b *bt.Bot, useCases *application.UseCase) {
+func run(ctx context.Context, b *bt.Bot, ownerID int, useCases *application.UseCase) {
 	// Create handler & start it.
-	h := handler.New(ctx, b, useCases)
+	h := handler.New(ctx, b, ownerID, useCases)
 	gpe.CheckError(h.Start(), "failed to start handler")
 	gpe.CheckError(b.Run(), "failed to run bot")
 	//The general update channel.

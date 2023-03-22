@@ -33,6 +33,7 @@ func (h *Handler) GetPrayersByDate(u *objs.Update) {
 	ch, err := h.b.AdvancedMode().RegisterChannel(chatID, "message")
 	defer h.b.AdvancedMode().UnRegisterChannel(chatID, "message")
 	if err != nil {
+		log.Printf("failed to create a channel for /date command, Err: %s", err)
 		return
 	}
 
@@ -47,19 +48,14 @@ func (h *Handler) GetPrayersByDate(u *objs.Update) {
 	}
 
 	// Delete the message if the user sends the date or if the context times out
-	defer func(messageID int) {
-		if err == nil {
-			h.deleteMessage(u.Message.Chat.Id, messageID)
-		}
-	}(r.Result.MessageId)
+	defer h.deleteMessage(u.Message.Chat.Id, r.Result.MessageId)
 
 	// Wait for the user to send the date or timeout after 10 minutes
-	ctx, cancel := context.WithTimeout(h.c, 10*time.Minute)
+	ctx, cancel := context.WithTimeout(h.userCtx[u.Message.Chat.Id].ctx, 3*time.Minute)
 	defer cancel()
 
 	select {
 	case <-ctx.Done():
-		err = ctx.Err()
 		return
 	case u = <-*ch:
 	}

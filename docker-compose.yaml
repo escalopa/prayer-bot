@@ -21,8 +21,11 @@ services:
       - .:/go/src/github.com/escalopa/gopray/
     environment:
       - BOT_TOKEN=${BOT_TOKEN}
+      - BOT_OWNER_ID=${BOT_OWNER_ID}
+
       - CACHE_URL=${CACHE_URL}
       - DATA_PATH=${DATA_PATH}
+
       - TIME_LOCATION=${TIME_LOCATION}
       - UPCOMING_REMINDER=${UPCOMING_REMINDER}
       - GOMAA_NOTIFY_HOUR=${GOMAA_NOTIFY_HOUR}

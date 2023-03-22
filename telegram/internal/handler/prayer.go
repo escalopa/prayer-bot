@@ -47,11 +47,11 @@ func (h *Handler) GetPrayersByDate(u *objs.Update) {
 	}
 
 	// Delete the message if the user sends the date or if the context times out
-	//defer func(messageID int) {
-	//	if err == nil {
-	//		h.deleteMessage(u.Message.Chat.Id, messageID)
-	//	}
-	//}(r.Result.MessageId)
+	defer func(messageID int) {
+		if err == nil {
+			h.deleteMessage(u.Message.Chat.Id, messageID)
+		}
+	}(r.Result.MessageId)
 
 	// Wait for the user to send the date or timeout after 10 minutes
 	ctx, cancel := context.WithTimeout(h.c, 10*time.Minute)
@@ -70,12 +70,6 @@ func (h *Handler) GetPrayersByDate(u *objs.Update) {
 		h.simpleSend(u.Message.Chat.Id, "An error occurred while getting prayers. Please try again.", 0)
 		return
 	}
-
-	defer func() {
-		if err == nil {
-			h.deleteMessage(u.Message.Chat.Id, r.Result.MessageId)
-		}
-	}()
 
 	// Send the prayers to the user
 	message := fmt.Sprintf("```%s```", prayrify(prayers))

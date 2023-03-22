@@ -34,18 +34,14 @@ func (h *Handler) SetLang(u *objs.Update) {
 			defer func() { pressed <- struct{}{} }()
 			// Sets the language.
 			err := h.u.SetLang(h.c, chatID, u.CallbackQuery.Data)
-			callBackMessage := "Successfully set language to %s"
 			if err != nil {
+				_, err = h.b.AdvancedMode().AAnswerCallbackQuery(u.CallbackQuery.Id,
+					fmt.Sprintf("Failed to set language to %s, Please try again later", u.CallbackQuery.Data),
+					true, "", 0)
 				log.Println(err)
-				callBackMessage = "Failed to set language to %"
+				return
 			}
-			// Sends the callback message.
-			_, err = h.b.AdvancedMode().AAnswerCallbackQuery(u.CallbackQuery.Id,
-				fmt.Sprintf(callBackMessage, u.CallbackQuery.Data),
-				true, "", 0)
-			if err != nil {
-				log.Println(err)
-			}
+			h.simpleSend(chatID, fmt.Sprintf("Successfully set language to %s", u.CallbackQuery.Data), 0)
 		})
 	}
 

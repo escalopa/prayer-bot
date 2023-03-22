@@ -79,9 +79,16 @@ func (h *Handler) Bug(u *objs.Update) {
 		return
 	}
 
-	h.simpleSend(u.Message.Chat.Id, "Please send your bug report as text message", 0)
+	messageID := h.simpleSend(u.Message.Chat.Id, "Please send your bug report as text message", 0)
 	u = <-*ch
 	text := u.Message.Text
+
+	// Delete the message if the user sends the feedback or if the context times out
+	defer func(messageID int) {
+		if err == nil {
+			h.deleteMessage(u.Message.Chat.Id, messageID)
+		}
+	}(messageID)
 
 	message := fmt.Sprintf(`
 	Bug Report... 🐞

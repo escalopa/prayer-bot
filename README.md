@@ -3,8 +3,9 @@
 A Telegram Bot to get muslim prayers time, And subscribe to get notified on the prayers time
 
 ![Build status](https://github.com/escalopa/gopray/workflows/Deploy/badge.svg)
+[![wakatime](https://wakatime.com/badge/user/965e81db-2a88-4564-b236-537c4a901130/project/5b8bc34a-26b1-4a61-be8d-f9b854b1e43a.svg)](https://wakatime.com/badge/user/965e81db-2a88-4564-b236-537c4a901130/project/5b8bc34a-26b1-4a61-be8d-f9b854b1e43a)
 [![Report card](https://goreportcard.com/badge/github.com/escalopa/gopray)](https://goreportcard.com/report/github.com/escalopa/gopray)
-[![codecov](https://codecov.io/gh/escalopa/gopray/branch/main/graph/badge.svg?token=xpSEiuk0s8)](https://codecov.io/gh/escalopa/gopray)<img src="./cover.jpg">
+[![codecov](https://codecov.io/gh/escalopa/gopray/branch/v3/graph/badge.svg?token=xpSEiuk0s8)](https://codecov.io/gh/escalopa/gopray)<img src="./cover.jpg">
 
 ## Contributing 🤼
 
@@ -51,7 +52,7 @@ for more details check the [notifier code](./telegram/internal/adapters/notifier
 |--------------|-----------------------------------------------------|
 | /help        | Get help message showing all possible commands      |
 | /prayers     | Get prayers time                                    |
-| /prayersdate | Get prayers time by date                            |
+| /date        | Get prayers time by date                            |
 | /subscribe   | Subscribe to get notified on the prayers time       |
 | /unsubscribe | Unsubscribe to not get notified on the prayers time |
 | /lang        | Change the bot language (Default English)           |
@@ -85,8 +86,10 @@ for more details check the [notifier code](./telegram/internal/adapters/notifier
 - [x] remind about gomaa prayer on friday
 
 ### Version 3 Milestones 🏁
-- [ ] Add time keyboard to `/prayersdate` command
-- [ ] Add feature to delete old prayer time message when new one is sent
+- [ ] Add time keyboard to `/date` command
+- [x] Remove selection message for `/date` & `/lang` after the use interacts with the message or timeout
+- [ ] On new user commands terminate other going channels that are listening to the chat
+- [x] Add feature to delete old prayer time message when new one is sent
 - [x] Add feature to send all subscribers a message from admin
 - [x] Add feature to get count of subscribers for admin
 - [x] Write more robust tests for core features

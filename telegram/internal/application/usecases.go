@@ -75,7 +75,6 @@ func (uc *UseCase) GetPrayersDate(day, month int) (core.PrayerTimes, error) {
 	return p, err
 }
 
-// Notify TODO: Handle message with date & translation before sending to users
 func (uc *UseCase) Notify(
 	notifySoon func(id int, prayer, time string),
 	notifyNow func(id int, prayer string),

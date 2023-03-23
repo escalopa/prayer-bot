@@ -11,6 +11,10 @@ import (
 )
 
 func (h *Handler) SetLang(u *objs.Update) {
+	if true {
+		h.simpleSend(u.Message.Chat.Id, "This feature is not available yet.", 0)
+		return
+	}
 	var messageID int
 	chatID := u.Message.Chat.Id
 	kb := h.b.CreateInlineKeyboard()

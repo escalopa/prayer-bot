@@ -85,7 +85,7 @@ func (n *Notifier) NotifyPrayers(ctx context.Context, notifySoon func([]int, str
 	for {
 		prayerName, prayerAfter, err := n.getClosestPrayer(ctx)
 		if err != nil {
-			log.Printf("notifyPrayer: failed to get closest prayer, err: %s", err)
+			log.Printf("failed to get closest prayer on /notify: %s", err)
 			break
 		}
 
@@ -121,7 +121,7 @@ func (n *Notifier) NotifyPrayers(ctx context.Context, notifySoon func([]int, str
 		// Get the subscribers
 		ids, err = n.sr.GetSubscribers(ctx)
 		if err != nil {
-			log.Printf("notifyPrayer: failed to get subscribers, err: %s", err)
+			log.Printf("notifyPrayer: failed to get subscribers, %s", err)
 			break
 		}
 		notifyStart(ids, prayerName)

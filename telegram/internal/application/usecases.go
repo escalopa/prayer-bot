@@ -2,13 +2,9 @@ package application
 
 import (
 	"context"
-	"log"
-	"regexp"
-	"strconv"
 	"time"
 
 	"github.com/escalopa/gopray/pkg/core"
-	"github.com/pkg/errors"
 )
 
 type UseCase struct {
@@ -74,12 +70,7 @@ func (uc *UseCase) GetPrayers() (core.PrayerTimes, error) {
 	return p, nil
 }
 
-func (uc *UseCase) GetPrayersDate(date string) (core.PrayerTimes, error) {
-	day, month, err := parseDate(date)
-	if err != nil {
-		return core.PrayerTimes{}, errors.New("invalid date")
-	}
-
+func (uc *UseCase) GetPrayersDate(day, month int) (core.PrayerTimes, error) {
 	p, err := uc.pr.GetPrayer(uc.ctx, day, month)
 	return p, err
 }
@@ -147,39 +138,4 @@ func (uc *UseCase) GetPrayerMessageID(ctx context.Context, userID int) (int, err
 func (uc *UseCase) StorePrayerMessageID(ctx context.Context, userID int, messageID int) error {
 	err := uc.hr.StorePrayerMessageID(ctx, userID, messageID)
 	return err
-}
-
-// parseDate parses the date
-// @param date: The date to parse
-// @return: The date in the format of DD/MM
-// @return: An error if the date is invalid
-func parseDate(date string) (day, month int, err error) {
-	// Split the date by /, - or .
-	re, err := regexp.Compile(`(\/|-|\.)`)
-	if err != nil {
-		log.Printf("failed to compile regex: %v", err)
-		return 0, 0, err
-	}
-	nums := re.Split(date, -1)
-	if len(nums) != 2 {
-		return 0, 0, errors.New("invalid date format")
-	}
-
-	// Check if the day is valid and between 1 and 31
-	day, err = strconv.Atoi(nums[0])
-	if err != nil || day > 31 || day < 1 {
-		return 0, 0, errors.New("invalid day")
-	}
-	// Check if the month is valid and between 1 and 12
-	month, err = strconv.Atoi(nums[1])
-	if err != nil || month > 12 || month < 1 {
-		return 0, 0, errors.New("invalid month")
-	}
-	// Check if the days is in the correct range for the month
-	if month == 2 && day > 28 {
-		return 0, 0, errors.New("invalid day for february")
-	} else if (month == 4 || month == 6 || month == 9 || month == 11) && day > 30 {
-		return 0, 0, errors.New("invalid day for one of the months 4, 6, 9, 11")
-	}
-	return
 }

@@ -62,7 +62,7 @@ func (p *Parser) ParseSchedule(ctx context.Context) error {
 	defer func() {
 		err = file.Close()
 		if err != nil {
-			log.Printf("failed to close csv file, err: %s", err)
+			log.Printf("failed to close csv file, %s", err)
 		}
 	}()
 

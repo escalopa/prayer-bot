@@ -22,7 +22,7 @@ func (h *Handler) Start(u *objs.Update) {
 
 		err = h.u.SetLang(h.userCtx[u.Message.Chat.Id].ctx, u.Message.Chat.Id, userLang)
 		if err != nil {
-			log.Printf("failed to set user language on start command, %s", err)
+			log.Printf("failed to set user language on /start: %s", err)
 		}
 	}
 	h.Help(u)
@@ -47,7 +47,7 @@ func (h *Handler) Help(u *objs.Update) {
 	/bug - Report a bug to the bot developers 🐞
 	`, "HTML", 0, false, false)
 	if err != nil {
-		log.Printf("Error: %s, Failed to send help message", err)
+		log.Printf("failed to send message on /help: %s", err)
 	}
 }
 
@@ -88,8 +88,8 @@ func (h *Handler) Feedback(u *objs.Update) {
 	`, u.Message.Chat.Id, u.Message.Chat.Username, u.Message.Chat.FirstName, u.Message.Chat.LastName, u.Message.MessageId, u.Message.Text)
 	_, err = h.b.SendMessage(h.botOwner, message, "HTML", 0, false, false)
 	if err != nil {
+		log.Printf("failed to send feedback message /feedback: %s", err)
 		h.simpleSend(u.Message.Chat.Id, "An error occurred while sending your feedback. Please try again later.", 0)
-		log.Printf("Error: %s, Failed to send feedback message to bot owner", err)
 		return
 	}
 
@@ -106,9 +106,8 @@ func (h *Handler) Bug(u *objs.Update) {
 		return
 	}
 
-	messageID := h.simpleSend(u.Message.Chat.Id, "Please send your bug report as text message", 0)
-
 	// Delete the message if the user sends the bug or if the context times out
+	messageID := h.simpleSend(u.Message.Chat.Id, "Please send your bug report as text message", 0)
 	defer h.deleteMessage(u.Message.Chat.Id, messageID)
 
 	// Create new command context
@@ -136,7 +135,7 @@ func (h *Handler) Bug(u *objs.Update) {
 	_, err = h.b.SendMessage(h.botOwner, message, "HTML", 0, false, false)
 	if err != nil {
 		h.simpleSend(u.Message.Chat.Id, "An error occurred while sending your bug report. Please try again later.", 0)
-		log.Printf("Error: %s, Failed to send bug report to bot owner", err)
+		log.Printf("failed to send bug report message /bug: %s", err)
 		return
 	}
 
@@ -190,7 +189,7 @@ func (h *Handler) Respond(u *objs.Update) {
 	_, err = h.b.SendMessage(userID, message, "", responeMessageID, false, false)
 	if err != nil {
 		h.simpleSend(u.Message.Chat.Id, "Failed to send response.", 0)
-		log.Printf("Error: %s, Failed to repond to user message", err)
+		log.Printf("failed to respond on user's message on : %s", err)
 		return
 	}
 
@@ -201,7 +200,7 @@ func (h *Handler) GetSubscribers(u *objs.Update) {
 	ids, err := h.u.GetSubscribers(h.c)
 	if err != nil {
 		h.simpleSend(u.Message.Chat.Id, "Failed to get subscribers.", 0)
-		log.Printf("Error: %s, Failed to get subscribers", err)
+		log.Printf("failed to get subscribers on /subs : %s", err)
 		return
 	}
 	h.simpleSend(u.Message.Chat.Id, fmt.Sprintf("Subscribers: %d", len(ids)), 0)
@@ -213,7 +212,7 @@ func (h *Handler) SendAll(u *objs.Update) {
 	ch, err := h.b.AdvancedMode().RegisterChannel(chatID, "message")
 	defer h.b.AdvancedMode().UnRegisterChannel(chatID, "message")
 	if err != nil {
-		log.Printf("Error: %s, Failed to register channel", err)
+		log.Printf("failed to register channel for /sendall: %s", err)
 		return
 	}
 
@@ -261,7 +260,7 @@ func (h *Handler) SendAll(u *objs.Update) {
 		ids, err := h.u.GetSubscribers(h.c)
 		if err != nil {
 			h.simpleSend(u.Message.Chat.Id, "Failed to send message.", 0)
-			log.Printf("Error: %s, Failed to get subscribers", err)
+			log.Printf("failed to send message subscribers on /sendall : %s", err)
 			return
 		}
 		// Send message to all subscribers

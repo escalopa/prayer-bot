@@ -14,13 +14,13 @@ func (h *Handler) notifySubscribers() {
 	store := func(id int, message int) {
 		err := h.u.StorePrayerMessageID(h.c, id, message)
 		if err != nil {
-			log.Printf("failed to store message id, Error: %s", err)
+			log.Printf("failed to store message id /notify, Error: %s", err)
 		}
 	}
 	remove := func(id int) {
 		lastMessageId, err := h.u.GetPrayerMessageID(h.c, id)
 		if err != nil {
-			log.Printf("failed to remove last message id, Error: %s", err)
+			log.Printf("failed to remove last message id /notify, Error: %s", err)
 		} else {
 			h.deleteMessage(id, lastMessageId)
 		}
@@ -32,7 +32,7 @@ func (h *Handler) notifySubscribers() {
 			go remove(id)
 			r, err := h.b.SendMessage(id, fmt.Sprintf("<b>%s</b> prayer starts in <b>%s</b> minutes.", prayer, time), "HTML", 0, false, false)
 			if err != nil {
-				log.Printf("failed to send message, Error: %s", err)
+				log.Printf("failed to send message on notifySoon, Error: %s", err)
 			}
 			go store(id, r.Result.MessageId)
 		},
@@ -41,7 +41,7 @@ func (h *Handler) notifySubscribers() {
 			go remove(id)
 			r, err := h.b.SendMessage(id, fmt.Sprintf("<b>%s</b> prayer time has arrived.", prayer), "HTML", 0, false, false)
 			if err != nil {
-				log.Printf("failed to send message, Error: %s", err)
+				log.Printf("failed to send message on notifyNow, Error: %s", err)
 			}
 			go store(id, r.Result.MessageId)
 		},
@@ -52,7 +52,7 @@ func (h *Handler) notifySubscribers() {
 				"Assalamu Alaikum 👋!\nDon't forget today is <b>Gomaa</b>,make sure to attend prayers at the mosque! 🕌, Gomma today is at <b>%s</b>", time)
 			r, err := h.b.SendMessage(id, message, "HTML", 0, false, false)
 			if err != nil {
-				log.Printf("failed to send message, Error: %s", err)
+				log.Printf("failed to send message on notifyGomaa, Error: %s", err)
 			}
 			go store(id, r.Result.MessageId)
 		},
@@ -67,7 +67,8 @@ func (h *Handler) Subscribe(u *objs.Update) {
 	}
 	_, err = h.b.SendMessage(u.Message.Chat.Id, "You have been <b>Subscribed</b> to the daily prayers notifications. 🔔", "HTML", 0, false, false)
 	if err != nil {
-		log.Printf("Error: %s, Failed to send subscribe message", err)
+		log.Printf("failed to send subscribe message, Error: %s", err)
+		return
 	}
 }
 
@@ -79,6 +80,7 @@ func (h *Handler) Unsubscribe(u *objs.Update) {
 	}
 	_, err = h.b.SendMessage(u.Message.Chat.Id, "You have been <b>Unsubscribed</b> from the daily prayers notifications. 🔕", "HTML", 0, false, false)
 	if err != nil {
-		log.Printf("Error: %s, Failed to send unsubscribe message", err)
+		log.Printf("failed to send unsubscribe message, Error: %s", err)
+		return
 	}
 }

@@ -4,20 +4,21 @@ import (
 	"context"
 	"log"
 
-	bt "github.com/SakoDroid/telego"
+	"github.com/SakoDroid/telego"
+
 	"github.com/escalopa/gopray/telegram/internal/application"
 )
 
 type Handler struct {
 	c context.Context
-	b *bt.Bot
+	b *telego.Bot
 	u *application.UseCase
 
 	botOwner int                 // Bot owner's ID.
 	userCtx  map[int]userContext // userID => latest user context
 }
 
-func New(ctx context.Context, b *bt.Bot, ownerID int, u *application.UseCase) *Handler {
+func New(ctx context.Context, b *telego.Bot, ownerID int, u *application.UseCase) *Handler {
 	return &Handler{
 		b:        b,
 		u:        u,
@@ -102,7 +103,7 @@ func (h *Handler) setupBundler() {}
 func (h *Handler) simpleSend(chatID int, text string, replyTo int) (messageID int) {
 	r, err := h.b.SendMessage(chatID, text, "", replyTo, false, false)
 	if err != nil {
-		log.Printf("Error: %s, failed to simpleSend", err)
+		log.Printf("failed to send message on simpleSend: %s", err)
 		return 0
 	}
 	return r.Result.MessageId
@@ -124,6 +125,7 @@ func (h *Handler) deleteMessage(chatID, messageID int) {
 	editor := h.b.GetMsgEditor(chatID)
 	_, err := editor.DeleteMessage(messageID)
 	if err != nil {
-		log.Printf("Error: %s, failed to delete message", err)
+		log.Printf("failed to delete message: %s", err)
+		return
 	}
 }

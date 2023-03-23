@@ -4,6 +4,8 @@ import (
 	"context"
 	"log"
 
+	"github.com/escalopa/gopray/pkg/language"
+
 	"github.com/SakoDroid/telego"
 
 	"github.com/escalopa/gopray/telegram/internal/application"
@@ -16,15 +18,20 @@ type Handler struct {
 
 	botOwner int                 // Bot owner's ID.
 	userCtx  map[int]userContext // userID => latest user context
+
+	userScript map[int]*language.Script // userID => scripts for the user.
 }
 
 func New(ctx context.Context, b *telego.Bot, ownerID int, u *application.UseCase) *Handler {
 	return &Handler{
-		b:        b,
-		u:        u,
-		c:        ctx,
+		b: b,
+		u: u,
+		c: ctx,
+
 		botOwner: ownerID,
-		userCtx:  make(map[int]userContext),
+
+		userCtx:    make(map[int]userContext),
+		userScript: make(map[int]*language.Script),
 	}
 }
 
@@ -33,7 +40,6 @@ func (h *Handler) Run() error {
 	if err != nil {
 		return err
 	}
-	h.setupBundler()
 	go h.notifySubscribers() // Notify subscriber about the prayer times.
 	return nil
 }
@@ -95,9 +101,6 @@ func (h *Handler) register() error {
 	}
 	return nil
 }
-
-// TODO: Implement bundler for multi language support.
-func (h *Handler) setupBundler() {}
 
 // simpleSend sends a simple message to the chat with the given chatID & text and replyTo.
 func (h *Handler) simpleSend(chatID int, text string, replyTo int) (messageID int) {

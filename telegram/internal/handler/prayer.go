@@ -45,7 +45,7 @@ func (h *Handler) GetPrayersByDate(u *objs.Update) {
 		h.deleteMessage(u.Message.Chat.Id, messageID)
 	}()
 
-	kb := h.newCalendar(func(day, month int) {
+	kb := h.newCalendar(u.Message.Chat.Id, func(day, month int) {
 		defer cancel()
 		prayers, err := h.u.GetPrayersDate(day, month)
 		if err != nil {

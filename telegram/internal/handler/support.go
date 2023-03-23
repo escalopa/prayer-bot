@@ -8,44 +8,37 @@ import (
 	"strings"
 	"time"
 
-	"github.com/escalopa/gopray/pkg/core"
+	"github.com/escalopa/gopray/pkg/language"
 
 	objs "github.com/SakoDroid/telego/objects"
 )
 
 func (h *Handler) Start(u *objs.Update) {
 	if _, err := h.u.GetLang(h.c, u.Message.Chat.Id); err != nil {
+		// Check that the user language is valid & supported.
 		userLang := u.Message.From.LanguageCode
-		if !core.IsValidLang(userLang) {
-			userLang = core.DefaultLang()
+		if !language.IsValidLang(userLang) {
+			userLang = language.DefaultLang().Short
 		}
-
-		err = h.u.SetLang(h.userCtx[u.Message.Chat.Id].ctx, u.Message.Chat.Id, userLang)
+		// Set the user language in the database.
+		go func() {
+			err = h.u.SetLang(h.userCtx[u.Message.Chat.Id].ctx, u.Message.Chat.Id, userLang)
+			if err != nil {
+				log.Printf("failed to set user language on /start: %s", err)
+			}
+		}()
+		// Get & set the user script.
+		script, err := h.u.GetScript(h.userCtx[u.Message.Chat.Id].ctx, userLang)
 		if err != nil {
-			log.Printf("failed to set user language on /start: %s", err)
+			log.Printf("failed to get script for %s: %v", userLang, err)
 		}
+		h.userScript[u.Message.Chat.Id] = script
 	}
 	h.Help(u)
 }
 
 func (h *Handler) Help(u *objs.Update) {
-	_, err := h.b.SendMessage(u.Message.Chat.Id, `
-	Asalamu alaykum, I am kazan prayer's time bot, I can help you know prayer's time anytime to always pray on time 🙏.
-
-	Available commands are below: 👇
-
-	<b>Prayers</b>
-	/today - Get prayer's time for today ⏰
-	/date - Get prayer's time for a specific date 📅
-	/subscribe - Subscribe to daily prayers notification 🔔
-	/unsubscribe - Unsubscribe from daily prayers notification 🔕
-
-	<b>Support</b>
-	/help - Show this message 📖
-	/lang - Set bot language  🌐
-	/feedback - Send feedback or idea to the bot developers 📩
-	/bug - Report a bug to the bot developers 🐞
-	`, "HTML", 0, false, false)
+	_, err := h.b.SendMessage(u.Message.Chat.Id, h.userScript[u.Message.Chat.Id].Help, "HTML", 0, false, false)
 	if err != nil {
 		log.Printf("failed to send message on /help: %s", err)
 	}

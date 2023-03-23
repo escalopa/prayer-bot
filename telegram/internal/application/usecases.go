@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/escalopa/gopray/pkg/language"
+
 	"github.com/escalopa/gopray/pkg/core"
 )
 
@@ -13,6 +15,7 @@ type UseCase struct {
 	pr  PrayerRepository
 	lr  LanguageRepository
 	hr  HistoryRepository
+	scr ScriptRepository
 	loc *time.Location
 	ctx context.Context
 }
@@ -58,6 +61,12 @@ func WithLanguageRepository(lr LanguageRepository) func(*UseCase) {
 func WithHistoryRepository(hr HistoryRepository) func(*UseCase) {
 	return func(uc *UseCase) {
 		uc.hr = hr
+	}
+}
+
+func WithScriptRepository(scr ScriptRepository) func(*UseCase) {
+	return func(uc *UseCase) {
+		uc.scr = scr
 	}
 }
 
@@ -125,8 +134,8 @@ func (uc *UseCase) SetLang(ctx context.Context, id int, lang string) error {
 }
 
 func (uc *UseCase) GetLang(ctx context.Context, id int) (string, error) {
-	lang, err := uc.lr.GetLang(ctx, id)
-	return lang, err
+	language, err := uc.lr.GetLang(ctx, id)
+	return language, err
 }
 
 func (uc *UseCase) GetPrayerMessageID(ctx context.Context, userID int) (int, error) {
@@ -137,4 +146,9 @@ func (uc *UseCase) GetPrayerMessageID(ctx context.Context, userID int) (int, err
 func (uc *UseCase) StorePrayerMessageID(ctx context.Context, userID int, messageID int) error {
 	err := uc.hr.StorePrayerMessageID(ctx, userID, messageID)
 	return err
+}
+
+func (uc *UseCase) GetScript(ctx context.Context, language string) (*language.Script, error) {
+	script, err := uc.scr.GetScript(ctx, language)
+	return script, err
 }

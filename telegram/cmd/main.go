@@ -53,12 +53,18 @@ func main() {
 	sr := redis.NewSubscriberRepository(r)
 	lr := redis.NewLanguageRepository(r)
 	hr := redis.NewHistoryRepository(r)
+	scr := memory.NewScriptRepository() // Use memory for script repository. To not hit the cache on every reload.
 	log.Println("successfully connected to database")
 
 	// Create schedule parser & parse the schedule.
-	p := parser.New(c.Get("DATA_PATH"), parser.WithPrayerRepository(pr), parser.WithTimeLocation(loc))
-	gpe.CheckError(p.ParseSchedule(ctx), "failed to parse schedule")
+	pp := parser.NewPrayerParser(c.Get("DATA_PATH"), parser.WithPrayerRepository(pr), parser.WithTimeLocation(loc))
+	gpe.CheckError(pp.ParseSchedule(ctx), "failed to parse schedule")
 	log.Println("successfully parsed prayer's schedule")
+
+	// Create language parser & parse the languages.
+	lp := parser.NewScriptParser(c.Get("LANGUAGES_PATH"), parser.WithScriptRepository(scr))
+	gpe.CheckError(lp.ParseScripts(ctx), "failed to parse languages")
+	log.Println("successfully parsed languages")
 
 	// Parse upcoming reminder.
 	ur := c.Get("UPCOMING_REMINDER")
@@ -90,6 +96,7 @@ func main() {
 		application.WithSubscriberRepository(sr),
 		application.WithLanguageRepository(lr),
 		application.WithHistoryRepository(hr),
+		application.WithScriptRepository(scr),
 	)
 	log.Println("successfully created use cases")
 	run(ctx, bot, ownerID, useCases)

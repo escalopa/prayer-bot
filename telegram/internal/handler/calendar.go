@@ -11,11 +11,11 @@ import (
 
 // newCalendar creates a new calendar. The callback function is called when the user selects a date.
 // The date is passed as two integers, day and month.
-func (h *Handler) newCalendar(callBack func(int, int)) telego.MarkUps {
+func (h *Handler) newCalendar(chatID int, callBack func(int, int)) telego.MarkUps {
 	kb := h.b.CreateInlineKeyboard()
-	for i := 1; i <= 12; i++ {
-		row := (i-1)/3 + 1 // 3 buttons(months) per row.
-		kb.AddCallbackButtonHandler(time.Month(i).String(), strconv.Itoa(i), row, func(u1 *objs.Update) {
+	for i, v := range h.userScript[chatID].GetMonthNames() {
+		row := (i-1)/2 + 1 // 3 buttons(months) per row.
+		kb.AddCallbackButtonHandler(v, strconv.Itoa(i), row, func(u1 *objs.Update) {
 			// Sets the language.
 			kb = h.b.CreateInlineKeyboard()
 			month, _ := strconv.Atoi(u1.CallbackQuery.Data)

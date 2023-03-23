@@ -3,3 +3,4 @@
 data
 configs.json
 pre-commit*
+coverage.txt

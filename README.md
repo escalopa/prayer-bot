@@ -2,8 +2,10 @@
 
 A Telegram Bot to get muslim prayers time, And subscribe to get notified on the prayers time
 
-![Build status](https://github.com/escalopa/gopray/workflows/Deploy/badge.svg)  [![Report card](https://goreportcard.com/badge/github.com/escalopa/gopray)](https://goreportcard.com/report/github.com/escalopa/gopray)
-<img src="./cover.jpg">
+![Build status](https://github.com/escalopa/gopray/workflows/Deploy/badge.svg)
+[![wakatime](https://wakatime.com/badge/user/965e81db-2a88-4564-b236-537c4a901130/project/5b8bc34a-26b1-4a61-be8d-f9b854b1e43a.svg)](https://wakatime.com/badge/user/965e81db-2a88-4564-b236-537c4a901130/project/5b8bc34a-26b1-4a61-be8d-f9b854b1e43a)
+[![Report card](https://goreportcard.com/badge/github.com/escalopa/gopray)](https://goreportcard.com/report/github.com/escalopa/gopray)
+[![codecov](https://codecov.io/gh/escalopa/gopray/branch/v3/graph/badge.svg?token=xpSEiuk0s8)](https://codecov.io/gh/escalopa/gopray)<img src="./cover.jpg">
 
 ## Contributing 🤼
 
@@ -32,28 +34,38 @@ Also on friday the bot will remind the user to pray Gomaa prayer. at `7:00 PM` (
 
 ### How it works 🤔
 
-In order to implement this feature, We have to make to bot sleep until `20 min` before the prayer's time. And then send a notification to the subscribed users.
+In order to implement this feature, We have to make to bot wait until `20 min` are left before the prayer's time. And then send a notification to the subscribed users.
 
-Also when the time of the prayer's arrive we should also notify them.
+Also, when the time of the prayer's arrive we should also notify them.
 
-So for that I use simple `channels` to make the bot sleep until the time of the prayer's time.
+So for that I use simple `channels` to sleep the goroutine until the time is right to send the notification.
 
-The first sleep is until the `20 min` before the prayer's time. And the second sleep is until the prayer's time.
+The first sleep is until the `20 min` before the prayer's time. And the second is until the prayer's time.
 
-for more details check the [notifier code](https://github.com/escalopa/gopray/tree/main/telegram/internal/adapters/notifier/notifier.go).
+for more details check the [notifier code](./telegram/internal/adapters/notifier/notifier.go).
 
 ## Bot Options 🤖
+
+### Default Commands 📝
 
 | Command      | Description                                         |
 |--------------|-----------------------------------------------------|
 | /help        | Get help message showing all possible commands      |
 | /prayers     | Get prayers time                                    |
-| /prayersdate | Get prayers time by date                            |
+| /date        | Get prayers time by date                            |
 | /subscribe   | Subscribe to get notified on the prayers time       |
 | /unsubscribe | Unsubscribe to not get notified on the prayers time |
 | /lang        | Change the bot language (Default English)           |
 | /feedback    | Send feedback to the bot owner                      |
 | /bug         | Report a bug to the bot owner                       |
+
+### Admin Commands 📝
+
+| Command  | Description                        |
+|----------|------------------------------------|
+| /subs    | Get subscribers count              |
+| /sall    | Send message to all subscribers    |
+| /respond | Respond to feedback or bug message |
 
 ## References 📚
 
@@ -74,4 +86,13 @@ for more details check the [notifier code](https://github.com/escalopa/gopray/tr
 - [x] remind about gomaa prayer on friday
 
 ### Version 3 Milestones 🏁
+- [x] Add time keyboard to `/date` command
+- [x] Remove selection message for `/date` & `/lang` after the use interacts with the message or timeout
+- [x] On new user commands terminate other going channels that are listening to the chat
+- [x] Add feature to delete old prayer time message when new one is sent
+- [x] Add feature to send all subscribers a message from admin
+- [x] Add feature to get count of subscribers for admin
+- [x] Write more robust tests for core features
+
+### Version 4 Milestones 🏁
 - [ ] Add different languages support (AR, RU)

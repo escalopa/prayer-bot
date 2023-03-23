@@ -4,13 +4,16 @@ import (
 	"context"
 	"log"
 	"strconv"
+	"time"
+
+	redis2 "github.com/go-redis/redis/v9"
 
 	"github.com/escalopa/gopray/telegram/internal/adapters/memory"
 	"github.com/escalopa/gopray/telegram/internal/handler"
 
 	bt "github.com/SakoDroid/telego"
 	cfg "github.com/SakoDroid/telego/configs"
-	"github.com/escalopa/gopray/pkg/config"
+	"github.com/escalopa/goconfig"
 
 	gpe "github.com/escalopa/gopray/pkg/error"
 	"github.com/escalopa/gopray/telegram/internal/adapters/notifier"
@@ -20,59 +23,85 @@ import (
 )
 
 func main() {
+	c := goconfig.New()
 
-	c := config.NewConfig()
-
-	// TODO: Add a logger.
+	// Create a new bot instance.
 	bot, err := bt.NewBot(cfg.Default(c.Get("BOT_TOKEN")))
-	gpe.CheckError(err)
+	gpe.CheckError(err, "failed to create bot instance")
 
-	err = bot.Run()
-	gpe.CheckError(err)
+	// Parse bot owner id
+	ownerIDString := c.Get("BOT_OWNER_ID")
+	ownerID, err := strconv.Atoi(ownerIDString)
+	gpe.CheckError(err, "failed to parse BOT_OWNER_ID")
 
+	// Create base context.
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	// Load application time location.
+	loc, err := time.LoadLocation(c.Get("TIME_LOCATION"))
+	gpe.CheckError(err, "failed to load time location")
+	log.Printf("successfully loaded time zone: %s", loc)
+
 	// Set up the database.
 	r := redis.New(c.Get("CACHE_URL"))
-	defer r.Close()
+	defer func(r *redis2.Client) {
+		gpe.CheckError(r.Close(), "failed to close redis client")
+	}(r)
 	// pr := redis.NewPrayerRepository(r)
 	pr := memory.NewPrayerRepository() // Use memory for prayer repository. To not hit the cache on every reload.
 	sr := redis.NewSubscriberRepository(r)
 	lr := redis.NewLanguageRepository(r)
-	log.Println("Connected to Cache")
+	hr := redis.NewHistoryRepository(r)
+	log.Println("successfully connected to database")
 
 	// Create schedule parser & parse the schedule.
-	p := parser.New(c.Get("DATA_PATH"), pr)
-	err = p.ParseSchedule()
-	gpe.CheckError(err, "Error parsing schedule")
-	log.Println("Parsed & saved prayers schedule")
+	p := parser.New(c.Get("DATA_PATH"), parser.WithPrayerRepository(pr), parser.WithTimeLocation(loc))
+	gpe.CheckError(p.ParseSchedule(ctx), "failed to parse schedule")
+	log.Println("successfully parsed prayer's schedule")
+
+	// Parse upcoming reminder.
+	ur := c.Get("UPCOMING_REMINDER")
+	urDuration, err := time.ParseDuration(ur)
+	gpe.CheckError(err, "failed to parse UPCOMING_REMINDER")
+	log.Printf("successfully parsed upcoming reminder %s", ur)
+
+	// Parse gomaa notify hour.
+	gnh := c.Get("GOMAA_NOTIFY_HOUR")
+	gnhDuration, err := time.ParseDuration(gnh)
+	gpe.CheckError(err, "failed to parse GOMAA_NOTIFY_HOUR")
+	log.Printf("successfully parsed gomaa notify hour %s", gnh)
 
 	// Create notifier.
-	ur := c.Get("UPCOMING_REMINDER")
-	urInt, err := strconv.Atoi(ur)
-	gpe.CheckError(err, "UPCOMING_REMINDER must be an integer.")
-
-	gnh := c.Get("GOMAA_NOTIFY_HOUR")
-	gnhInt, err := strconv.Atoi(gnh)
-	gpe.CheckError(err, "GOMAA_NOTIFY_HOUR must be an integer.")
-
-	n, err := notifier.New(pr, sr, lr, urInt, gnhInt)
+	n, err := notifier.New(urDuration, gnhDuration,
+		notifier.WithPrayerRepository(pr),
+		notifier.WithSubscriberRepository(sr),
+		notifier.WithLanguageRepository(lr),
+		notifier.WithTimeLocation(loc),
+	)
 	gpe.CheckError(err)
-	log.Printf("Notifier created, ur: %dM, gnh: %dH.", urInt, gnhInt)
+	log.Printf("successfully created notifier with upcoming reminder: %s and gomaa notify hour: %s", ur, gnh)
 
-	a := application.New(n, pr, lr)
-	run(bot, a, ctx)
+	// Create use cases.
+	useCases := application.New(ctx,
+		application.WithNotifier(n),
+		application.WithTimeLocation(loc),
+		application.WithPrayerRepository(pr),
+		application.WithSubscriberRepository(sr),
+		application.WithLanguageRepository(lr),
+		application.WithHistoryRepository(hr),
+	)
+	log.Println("successfully created use cases")
+	run(ctx, bot, ownerID, useCases)
 }
 
-func run(b *bt.Bot, a *application.UseCase, ctx context.Context) {
-
+func run(ctx context.Context, b *bt.Bot, ownerID int, useCases *application.UseCase) {
+	// Create handler & start it.
+	h := handler.New(ctx, b, ownerID, useCases)
+	gpe.CheckError(h.Run(), "failed to start handler")
+	gpe.CheckError(b.Run(), "failed to run bot")
 	//The general update channel.
 	updateChannel := b.GetUpdateChannel()
-	h := handler.New(b, a, ctx)
-	h.Start()
-
-	//Monitors any other update.
 	for {
 		update := <-*updateChannel
 		if update.Message == nil {

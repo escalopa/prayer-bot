@@ -5,11 +5,15 @@ services:
     container_name: "cache"
     restart: unless-stopped
     image: redis:latest
-    volumes:
-      - ./data:/data
     command: redis-server --appendonly yes
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 1s
+      timeout: 2s
+      retries: 5
+
   gopray:
     container_name: "gopray"
     restart: unless-stopped
@@ -17,12 +21,18 @@ services:
       - .:/go/src/github.com/escalopa/gopray/
     environment:
       - BOT_TOKEN=${BOT_TOKEN}
+      - BOT_OWNER_ID=${BOT_OWNER_ID}
+
       - CACHE_URL=${CACHE_URL}
       - DATA_PATH=${DATA_PATH}
+
+      - TIME_LOCATION=${TIME_LOCATION}
       - UPCOMING_REMINDER=${UPCOMING_REMINDER}
       - GOMAA_NOTIFY_HOUR=${GOMAA_NOTIFY_HOUR}
     build:
       context: .
       dockerfile: ./Dockerfile
       target: development
-      no_cache: true
+    depends_on:
+      cache:
+        condition: service_healthy

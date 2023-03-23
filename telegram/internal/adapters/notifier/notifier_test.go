@@ -1,12 +1,33 @@
 package notifier
 
 import (
-	"math"
 	"testing"
 	"time"
+
+	"github.com/escalopa/gopray/telegram/internal/adapters/memory"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNotifier_New(t *testing.T) {
+	loc := time.FixedZone("UTC", 0)
+	pr := memory.NewPrayerRepository()
+	lr := memory.NewLanguageRepository()
+	sr := memory.NewSubscriberRepository()
+
+	// Nil location
+	var err error
+	_, err = New(30*time.Minute, 11*time.Hour, WithTimeLocation(nil), WithPrayerRepository(pr), WithLanguageRepository(lr), WithSubscriberRepository(sr))
+	require.Error(t, err, "expected error got nil")
+	// Nil prayer repository
+	_, err = New(30*time.Minute, 11*time.Hour, WithTimeLocation(loc), WithPrayerRepository(nil), WithLanguageRepository(lr), WithSubscriberRepository(sr))
+	require.Error(t, err, "expected error got nil")
+	// Nil language repository
+	_, err = New(30*time.Minute, 11*time.Hour, WithTimeLocation(loc), WithPrayerRepository(pr), WithLanguageRepository(nil), WithSubscriberRepository(sr))
+	require.Error(t, err, "expected error got nil")
+	// Nil subscriber repository
+	_, err = New(30*time.Minute, 11*time.Hour, WithTimeLocation(loc), WithPrayerRepository(pr), WithLanguageRepository(lr), WithSubscriberRepository(nil))
+	require.Error(t, err, "expected error got nil")
+
 	tests := []struct {
 		name    string
 		ur      int
@@ -62,11 +83,12 @@ func TestNotifier_New(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := New(nil, nil, nil, tt.ur, tt.gnh)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("New() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
+			_, err = New(time.Duration(tt.ur)*time.Minute, time.Duration(tt.gnh)*time.Hour,
+				WithTimeLocation(loc),
+				WithPrayerRepository(pr),
+				WithLanguageRepository(lr),
+				WithSubscriberRepository(sr))
+			require.Truef(t, (err != nil) == tt.wantErr, "New() error = %v, wantErr %v", err, tt.wantErr)
 		})
 	}
 }
@@ -75,7 +97,7 @@ func TestNotifier_CalculateTimeLeft(t *testing.T) {
 	tests := []struct {
 		name               string
 		prayerAfter        time.Duration
-		upcomingReminder   int
+		upcomingReminder   time.Duration
 		expectedUpcomingAt time.Duration
 		expectedStartsAt   time.Duration
 		expectedStartIn    int
@@ -83,7 +105,7 @@ func TestNotifier_CalculateTimeLeft(t *testing.T) {
 		{
 			name:               "Prayer is about to start, but the reminder is smaller than prayer time",
 			prayerAfter:        15 * time.Minute,
-			upcomingReminder:   10,
+			upcomingReminder:   10 * time.Minute,
 			expectedUpcomingAt: 5 * time.Minute,
 			expectedStartsAt:   10 * time.Minute,
 			expectedStartIn:    10,
@@ -91,7 +113,7 @@ func TestNotifier_CalculateTimeLeft(t *testing.T) {
 		{
 			name:               "Prayer is about to start, but reminder is bigger than prayer time",
 			prayerAfter:        15 * time.Minute,
-			upcomingReminder:   20,
+			upcomingReminder:   20 * time.Minute,
 			expectedUpcomingAt: 0 * time.Minute,
 			expectedStartsAt:   15 * time.Minute,
 			expectedStartIn:    15,
@@ -99,7 +121,7 @@ func TestNotifier_CalculateTimeLeft(t *testing.T) {
 		{
 			name:               "Prayer is about to start, but reminder is equal to prayer time",
 			prayerAfter:        15 * time.Minute,
-			upcomingReminder:   15,
+			upcomingReminder:   15 * time.Minute,
 			expectedUpcomingAt: 0 * time.Minute,
 			expectedStartsAt:   15 * time.Minute,
 			expectedStartIn:    15,
@@ -107,7 +129,7 @@ func TestNotifier_CalculateTimeLeft(t *testing.T) {
 		{
 			name:               "Prayer is about to start, but reminder is so small that it's equal to 0",
 			prayerAfter:        15 * time.Minute,
-			upcomingReminder:   1,
+			upcomingReminder:   1 * time.Minute,
 			expectedUpcomingAt: 14 * time.Minute,
 			expectedStartsAt:   1 * time.Minute,
 			expectedStartIn:    1,
@@ -115,7 +137,7 @@ func TestNotifier_CalculateTimeLeft(t *testing.T) {
 		{
 			name:               "Prayer is about to start, in 0 minutes",
 			prayerAfter:        0 * time.Minute,
-			upcomingReminder:   10,
+			upcomingReminder:   10 * time.Minute,
 			expectedUpcomingAt: 0 * time.Minute,
 			expectedStartsAt:   0 * time.Minute,
 			expectedStartIn:    0,
@@ -123,7 +145,7 @@ func TestNotifier_CalculateTimeLeft(t *testing.T) {
 		{
 			name:               "Prayer is about to start, in long time",
 			prayerAfter:        10 * time.Hour,
-			upcomingReminder:   20,
+			upcomingReminder:   20 * time.Minute,
 			expectedUpcomingAt: 9*time.Hour + 40*time.Minute,
 			expectedStartsAt:   20 * time.Minute,
 			expectedStartIn:    20,
@@ -132,25 +154,21 @@ func TestNotifier_CalculateTimeLeft(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			n, err := New(nil, nil, nil, tt.upcomingReminder, 7)
-			if err != nil {
-				t.Fatal(err)
-			}
-			now, err := n.now()
-			if err != nil {
-				t.Fatal(err)
-			}
-			upcomingAt, startsAt, startsIn := n.calculateLeftTime(now.Add(tt.prayerAfter))
+			loc, err := time.LoadLocation("Africa/Cairo")
+			require.NoError(t, err)
+			// Create a notifier with upcoming reminder equal `tt.upcomingReminder` and 1h for gomaa time.
+			// We use 1h because it's the least time that we can use.
+			n, err := New(tt.upcomingReminder, 1*time.Hour, WithTimeLocation(loc),
+				WithPrayerRepository(memory.NewPrayerRepository()),
+				WithLanguageRepository(memory.NewLanguageRepository()),
+				WithSubscriberRepository(memory.NewSubscriberRepository()))
+			require.NoError(t, err)
+
+			now := n.now()
+			upcomingAt, startsAt := n.timeLeft(now.Add(tt.prayerAfter))
 			// We compare the time difference with 1 minute because the time difference due to the `now`` function.
-			if upcomingAt != tt.expectedUpcomingAt && time.Duration(math.Abs(float64(upcomingAt-tt.expectedUpcomingAt))) != 1*time.Minute {
-				t.Errorf("Expected upcomingAt to be %v, got %v", tt.expectedUpcomingAt, upcomingAt)
-			}
-			if startsAt != tt.expectedStartsAt && time.Duration(math.Abs(float64(startsAt-tt.expectedStartsAt))) != 1*time.Minute {
-				t.Errorf("Expected startsAt to be %v, got %v", tt.expectedStartsAt, startsAt)
-			}
-			if startsIn != tt.expectedStartIn && tt.expectedStartIn-startsIn != 1 {
-				t.Errorf("Expected startsIn to be %v, got %v", tt.expectedStartIn, startsIn)
-			}
+			require.WithinDuration(t, now.Add(tt.expectedUpcomingAt), now.Add(upcomingAt), time.Second, "expected upcomingAt to be equal")
+			require.WithinDuration(t, now.Add(tt.expectedStartsAt), now.Add(startsAt), time.Second, "expected startsAt to be equal")
 		})
 	}
 }

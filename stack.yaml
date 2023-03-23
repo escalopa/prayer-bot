@@ -10,10 +10,14 @@ services:
       - gopray_cache_url
     environment:
       - BOT_TOKEN_FILE=/run/secrets/gopray_bot_token
+      - BOT_OWNER_ID=1385434843
+
       - CACHE_URL_FILE=/run/secrets/gopray_cache_url
       - DATA_PATH=/go/src/github.com/escalopa/gopray/times.csv
-      - UPCOMING_REMINDER=20
-      - GOMAA_NOTIFY_HOUR=7
+
+      - TIME_LOCATION=Europe/Moscow
+      - UPCOMING_REMINDER=20m
+      - GOMAA_NOTIFY_HOUR=8h
     extra_hosts:
       - "host.docker.internal:host-gateway"
 

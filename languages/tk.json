@@ -40,14 +40,13 @@
   "PrayerArrived": "<b>%s</b> namaz wagty gelýär.",
   "GomaaDay": "Salam aleýkim 👋! Bugün <b>Gomaa</b>\n Mesçitde namaza gitmäge üns beriň 🕌, Gomaa namazy <b>%s</b> wagtda başlanýar.",
 
-
   "Help": "As-salam alaykum! Sizə necə kömek edə bilərəm 😊?\n\nAşağıda mövcud əmrlər var: 👇\n\n<b>Namazlar</b>\n/today - Bugünkü namaz vaxtlarını alın ⏰\n/date - Bir tarix üçün namaz vaxtlarını alın 📅\n/subscribe - Namaz bildirişlərinə abunə olun 🔔\n/unsubscribe - Namaz bildirişlərindən imtina edin 🔕\n\n<b>Ayarlar</b>\n/lang - Bot dilini təyin edin 🌐\n\n<b>Dəstək</b>\n/help - Bu mesajı göstərin 📖\n/feedback bildirim - Geri bildirim göndərin 📩\n/bug - Xəta bildirin 🐞",
 
   "FeedbackStart": "Zəhmət olmasa, aşağıdakı mətn xətti kimi geri bildiriminizi göndərin.",
   "FeedbackSuccess": "Geribildiriminiz üçün təşəkkür edirik, %s 😊",
-  "FeedbackFail": "Произошла ошибка при отправке вашего отзыва, пожалуйста, попробуйте снова.",
+  "FeedbackFail": "Siz gönülden geçirijilik hatasyny ibererken hatanyňyz meýdana geldi, Täzeden synanyşyp görüň.",
 
-  "BugReportStart": "Пожалуйста, отправьте свой отчет об ошибке как текстовое сообщение ниже.",
-  "BugReportSuccess": "Спасибо за ваш отчет об ошибке %s\nМы исправим его 🛠️ как можно скорее.",
-  "BugReportFail": "Произошла ошибка при отправке вашего отчета об ошибке, пожалуйста, попробуйте снова."
+  "BugReportStart": "Aşakdaky tekst sanawy wezipesi bilen hatanyzy bildiriň.",
+  "BugReportSuccess": "Hatan ýola serpileniňiz üçin sag boluň %s\nHemme yagtylyklary çözüliň 🛠️.",
+  "BugReportFail": "Hatan ýola serpileniňiz üçin hatanyzy ýola serip bilmedi, Täzeden synanyşyp görüň."
 }

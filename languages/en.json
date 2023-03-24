@@ -44,9 +44,9 @@
 
   "FeedbackStart": "Please send your feedback as a text message below.",
   "FeedbackSuccess": "Thank you for your feedback, %s 😊",
-  "FeedbackFail": "Feedbackiňizi ugratmakda hatanyňyz boldy, gaýtadan synanyşyňyz.",
+  "FeedbackFail": "An error occurred while sending your feedback, Please try again.",
 
-  "BugReportStart": "Problemiňizi ýazmak üçin habarlandyrma derejesine ýazyň.",
-  "BugReportSuccess": "Problem barada habaryňyz üçin sag bolun, %s\nÝakyn wagtda düzeltýäris 🛠️",
-  "BugReportFail": "Problem habaryny ugratmakda hatanyňyz boldy, gaýtadan synanyşyňyz."
+  "BugReportStart": "Please send your bug report as a text message below.",
+  "BugReportSuccess": "Thank you for your bug report %s\nWe will fix it 🛠️ ASAP.",
+  "BugReportFail": "An error occurred while sending your bug report, Please try again."
 }

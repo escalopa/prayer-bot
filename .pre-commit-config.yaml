@@ -13,9 +13,9 @@ repos:
       - id: go-imports
       - id: no-go-testing
       - id: golangci-lint
-        stages: [ push ]
+        stages: [push, merge-commit]
       - id: go-unit-tests
-        stages: [ push ]
+        stages: [push, merge-commit]
       - id: validate-toml
   - repo: https://github.com/alessandrojcm/commitlint-pre-commit-hook
     rev: v8.0.0

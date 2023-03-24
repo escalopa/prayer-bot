@@ -46,39 +46,39 @@ func (h *Handler) Run() error {
 
 func (h *Handler) register() error {
 	var err error
-	err = h.b.AddHandler("/start", h.contextWrapper(h.Start), "all")
+	err = h.b.AddHandler("/start", h.contextWrapper(h.scriptWrapper(h.Start)), "all")
 	if err != nil {
 		return err
 	}
-	err = h.b.AddHandler("/help", h.contextWrapper(h.Help), "all")
+	err = h.b.AddHandler("/help", h.contextWrapper(h.scriptWrapper(h.Help)), "all")
 	if err != nil {
 		return err
 	}
-	err = h.b.AddHandler("/subscribe", h.contextWrapper(h.Subscribe), "all")
+	err = h.b.AddHandler("/subscribe", h.contextWrapper(h.scriptWrapper(h.Subscribe)), "all")
 	if err != nil {
 		return err
 	}
-	err = h.b.AddHandler("/unsubscribe", h.contextWrapper(h.Unsubscribe), "all")
+	err = h.b.AddHandler("/unsubscribe", h.contextWrapper(h.scriptWrapper(h.Unsubscribe)), "all")
 	if err != nil {
 		return err
 	}
-	err = h.b.AddHandler("/today", h.contextWrapper(h.GetPrayers), "all")
+	err = h.b.AddHandler("/today", h.contextWrapper(h.scriptWrapper(h.GetPrayers)), "all")
 	if err != nil {
 		return err
 	}
-	err = h.b.AddHandler("/date", h.contextWrapper(h.GetPrayersByDate), "all")
+	err = h.b.AddHandler("/date", h.contextWrapper(h.scriptWrapper(h.GetPrayersByDate)), "all")
 	if err != nil {
 		return err
 	}
-	err = h.b.AddHandler("/lang", h.contextWrapper(h.SetLang), "all")
+	err = h.b.AddHandler("/lang", h.contextWrapper(h.scriptWrapper(h.SetLang)), "all")
 	if err != nil {
 		return err
 	}
-	err = h.b.AddHandler("/feedback", h.contextWrapper(h.Feedback), "all")
+	err = h.b.AddHandler("/feedback", h.contextWrapper(h.scriptWrapper(h.Feedback)), "all")
 	if err != nil {
 		return err
 	}
-	err = h.b.AddHandler("/bug", h.contextWrapper(h.Bug), "all")
+	err = h.b.AddHandler("/bug", h.contextWrapper(h.scriptWrapper(h.Bug)), "all")
 	if err != nil {
 		return err
 	}
@@ -87,15 +87,15 @@ func (h *Handler) register() error {
 	///// Admin Commands /////
 	//////////////////////////
 
-	err = h.b.AddHandler("/respond", h.admin(h.contextWrapper(h.Respond)), "all")
+	err = h.b.AddHandler("/respond", h.admin(h.contextWrapper(h.scriptWrapper(h.Respond))), "all")
 	if err != nil {
 		return err
 	}
-	err = h.b.AddHandler("/subs", h.admin(h.contextWrapper(h.GetSubscribers)), "all")
+	err = h.b.AddHandler("/subs", h.admin(h.contextWrapper(h.scriptWrapper(h.GetSubscribers))), "all")
 	if err != nil {
 		return err
 	}
-	err = h.b.AddHandler("/sall", h.admin(h.contextWrapper(h.SendAll)), "all")
+	err = h.b.AddHandler("/sall", h.admin(h.contextWrapper(h.scriptWrapper(h.SendAll))), "all")
 	if err != nil {
 		return err
 	}

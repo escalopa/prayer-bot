@@ -114,6 +114,9 @@ func run(ctx context.Context, b *bt.Bot, ownerID int, useCases *application.UseC
 		if update.Message == nil {
 			continue
 		}
-		h.Help(update)
+		_, err := b.SendMessage(update.Message.Chat.Id, "/help", "", 0, false, false)
+		if err != nil {
+			log.Printf("failed to send message on unknown command, %v", err)
+		}
 	}
 }

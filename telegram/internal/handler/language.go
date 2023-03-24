@@ -35,7 +35,7 @@ func (h *Handler) SetLang(u *objs.Update) {
 			if err != nil {
 				log.Printf("failed to set lang to %s: %v", u.CallbackQuery.Data, err)
 				_, err = h.b.AdvancedMode().AAnswerCallbackQuery(u.CallbackQuery.Id,
-					fmt.Sprintf("Failed to set lang to %s, Please try again later", u.CallbackQuery.Data),
+					fmt.Sprintf(h.userScript[chatID].LanguageSelectionFail, u.CallbackQuery.Data),
 					true, "", 0)
 				if err != nil {
 					log.Printf("failed to send callback query on /lang: %s", err)
@@ -47,7 +47,7 @@ func (h *Handler) SetLang(u *objs.Update) {
 			if err != nil {
 				log.Printf("failed to get script for %s: %v", u.CallbackQuery.Data, err)
 				_, err = h.b.AdvancedMode().AAnswerCallbackQuery(u.CallbackQuery.Id,
-					fmt.Sprintf("Failed to set lang to %s, Please try again later", u.CallbackQuery.Data),
+					fmt.Sprintf(h.userScript[chatID].LanguageSelectionFail, u.CallbackQuery.Data),
 					true, "", 0)
 				if err != nil {
 					log.Printf("failed to send callback query on /lang: %s", err)
@@ -56,12 +56,26 @@ func (h *Handler) SetLang(u *objs.Update) {
 			}
 			// Update the user script.
 			h.userScript[chatID] = script
-			h.simpleSend(chatID, fmt.Sprintf("Successfully set lang to %s", u.CallbackQuery.Data), 0)
+			_, err = h.b.SendMessage(chatID, fmt.Sprintf(h.userScript[chatID].LanguageSelectionSuccess, u.CallbackQuery.Data), "HTML", 0, false, false)
+			if err != nil {
+				log.Printf("failed to send message on /lang: %s", err)
+			}
 		})
 	}
 
 	// Sends the message along with the keyboard.
-	r, err := h.b.AdvancedMode().ASendMessage(u.Message.Chat.Id, "Choose lang", "", u.Message.MessageId, false, false, nil, false, false, kb)
+	r, err := h.b.AdvancedMode().ASendMessage(
+		chatID,
+		h.userScript[chatID].LanguageSelectionStart,
+		"",
+		u.Message.MessageId,
+		false,
+		false,
+		nil,
+		false,
+		false,
+		kb,
+	)
 	if err != nil {
 		log.Printf("failed to send message on /lang: %s", err)
 	}

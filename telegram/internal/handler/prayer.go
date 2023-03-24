@@ -8,70 +8,60 @@ import (
 
 	objs "github.com/SakoDroid/telego/objects"
 	"github.com/escalopa/gopray/pkg/core"
-	"github.com/fbiville/markdown-table-formatter/pkg/markdown"
+	"github.com/olekukonko/tablewriter"
 )
 
 func (h *Handler) GetPrayers(u *objs.Update) {
 	// Get the prayers for today
+	chatID := u.Message.Chat.Id
 	prayers, err := h.u.GetPrayers()
 	if err != nil {
 		log.Printf("failed to get prayers /today: %s", err)
-		h.simpleSend(u.Message.Chat.Id, "An error occurred while getting prayers. Please try again later.", 0)
+		h.simpleSend(chatID, h.userScript[chatID].PrayerFail, 0)
 		return
 	}
 
 	// Send the prayers to the user
-	formattedTable, err := prayrify(prayers)
+	table := h.prayrify(chatID, prayers)
+	_, err = h.b.SendMessage(chatID, table, "MarkDownV2", 0, false, false)
 	if err != nil {
-		log.Printf("failed to format prayers table /today: %s", err)
-		h.simpleSend(u.Message.Chat.Id, "An error occurred while getting prayers. Please try again later.", 0)
-		return
-	}
-	message := fmt.Sprintf("```%s```", formattedTable)
-	_, err = h.b.SendMessage(u.Message.Chat.Id, message, "MarkDownV2", 0, false, false)
-	if err != nil {
-		log.Printf("failed to send the prayers table: %s", err)
+		log.Printf("failed to send the prayers prayerTable: %s", err)
 	}
 }
 
 func (h *Handler) GetPrayersByDate(u *objs.Update) {
-	ctx, cancel := context.WithTimeout(h.userCtx[u.Message.Chat.Id].ctx, 3*time.Minute)
+	chatID := u.Message.Chat.Id
+	ctx, cancel := context.WithTimeout(h.userCtx[chatID].ctx, 3*time.Minute)
 
 	var messageID int
 	// Delete the message after 3 minutes. This is to avoid the message being stuck in the chat.
 	go func() {
 		<-ctx.Done()
 		cancel()
-		h.deleteMessage(u.Message.Chat.Id, messageID)
+		h.deleteMessage(chatID, messageID)
 	}()
 
-	kb := h.newCalendar(u.Message.Chat.Id, func(day, month int) {
+	kb := h.newCalendar(chatID, func(day, month int) {
 		defer cancel()
 		prayers, err := h.u.GetPrayersDate(day, month)
 		if err != nil {
 			log.Printf("failed to get prayers on /date: %s", err)
-			h.simpleSend(u.Message.Chat.Id, "An error occurred while getting prayers. Please try again.", 0)
+			h.simpleSend(chatID, h.userScript[chatID].PrayerFail, 0)
 			return
 		}
 
 		// Send the prayers to the user
-		formattedTable, err := prayrify(prayers)
+		table := h.prayrify(chatID, prayers)
+		_, err = h.b.SendMessage(chatID, table, "MarkDownV2", 0, false, false)
 		if err != nil {
-			log.Printf("failed to format prayers table on /date: %s", err)
-			h.simpleSend(u.Message.Chat.Id, "An error occurred while getting prayers. Please try again.", 0)
-			return
-		}
-		message := fmt.Sprintf("```%s```", formattedTable)
-		_, err = h.b.SendMessage(u.Message.Chat.Id, message, "MarkDownV2", 0, false, false)
-		if err != nil {
-			log.Printf("failed to send the prayers table /date: %s", err)
+			log.Printf("failed to send the prayers prayerTable /date: %s", err)
 		}
 	})
 
 	// Send a message to the user to ask for the date
 	r, err := h.b.AdvancedMode().ASendMessage(
-		u.Message.Chat.Id,
-		"Please choose date",
+		chatID,
+		h.userScript[chatID].DataPickerStart,
 		"",
 		0,
 		false,
@@ -93,27 +83,40 @@ const (
 	prayerTimeFormat = "15:04"
 )
 
-// prayrify returns a string representation of the prayer times in a Markdown table format.
-func prayrify(p core.PrayerTimes) (string, error) {
-	// Create a Markdown table with the prayer times
-	basicTable, err := markdown.NewTableFormatterBuilder().
-		WithPrettyPrint().
-		Build("Prayer", "Time").
-		Format([][]string{
-			{"Fajr", p.Fajr.Format(prayerTimeFormat)},
-			{"Sunrise", p.Sunrise.Format(prayerTimeFormat)},
-			{"Dhuhr", p.Dhuhr.Format(prayerTimeFormat)},
-			{"Asr", p.Asr.Format(prayerTimeFormat)},
-			{"Maghrib", p.Maghrib.Format(prayerTimeFormat)},
-			{"Isha", p.Isha.Format(prayerTimeFormat)},
-		})
-	if err != nil {
-		log.Printf("failed to format the prayer times table: %s", err)
-		return "", err
+type prayerTable string
+
+func (t *prayerTable) Write(p []byte) (n int, err error) {
+	*t += prayerTable(p)
+	return len(p), nil
+}
+
+// prayrify returns a string representation of the prayer times in a Markdown prayerTable format.
+func (h *Handler) prayrify(chatID int, p core.PrayerTimes) string {
+	// Create a Markdown prayerTable with the prayer times
+	t := new(prayerTable)
+	tw := tablewriter.NewWriter(t)
+
+	// Define prayerTable headers and data
+	//header := []string{h.userScript[chatID].PrayrifyTablePrayer, h.userScript[chatID].PrayrifyTableTime}
+	data := [][]string{
+		{h.userScript[chatID].Fajr, p.Fajr.Format(prayerTimeFormat)},
+		{h.userScript[chatID].Sunrise, p.Sunrise.Format(prayerTimeFormat)},
+		{h.userScript[chatID].Dhuhr, p.Dhuhr.Format(prayerTimeFormat)},
+		{h.userScript[chatID].Asr, p.Asr.Format(prayerTimeFormat)},
+		{h.userScript[chatID].Maghrib, p.Maghrib.Format(prayerTimeFormat)},
+		{h.userScript[chatID].Isha, p.Isha.Format(prayerTimeFormat)},
 	}
-	// Return the formatted table
-	// Get the day and monthName
-	monthName := time.Month(p.Month).String()
-	formattedTable := fmt.Sprintf("\nDay %d %s 🕌\n>\n%s>", p.Day, monthName, basicTable)
-	return formattedTable, nil
+	//tw.SetHeader(header)
+	tw.AppendBulk(data)
+	tw.SetBorders(tablewriter.Border{Left: true, Right: true})
+	tw.SetCenterSeparator("|")
+	tw.Render()
+
+	formattedTable := fmt.Sprintf("```\n%s %d %s 🕌\n\n%s```\n/help",
+		h.userScript[chatID].PrayrifyTableDay,
+		p.Day,
+		h.userScript[chatID].GetMonthNames()[p.Month-1],
+		string(*t),
+	)
+	return formattedTable
 }

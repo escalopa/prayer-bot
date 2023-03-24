@@ -1,5 +1,7 @@
 package language
 
+import "strings"
+
 // Script is a struct that holds all the scripts for each language
 type Script struct {
 	DataPickerStart string `json:"DataPickerStart"`
@@ -55,7 +57,7 @@ type Script struct {
 }
 
 func (s *Script) GetPrayerByName(name string) string {
-	switch name {
+	switch strings.ToLower(name) {
 	case "fajr":
 		return s.Fajr
 	case "sunrise":

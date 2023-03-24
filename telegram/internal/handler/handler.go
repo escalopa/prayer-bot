@@ -4,6 +4,8 @@ import (
 	"context"
 	"log"
 
+	"github.com/escalopa/gopray/pkg/language"
+
 	"github.com/SakoDroid/telego"
 
 	"github.com/escalopa/gopray/telegram/internal/application"
@@ -16,15 +18,20 @@ type Handler struct {
 
 	botOwner int                 // Bot owner's ID.
 	userCtx  map[int]userContext // userID => latest user context
+
+	userScript map[int]*language.Script // userID => scripts for the user.
 }
 
 func New(ctx context.Context, b *telego.Bot, ownerID int, u *application.UseCase) *Handler {
 	return &Handler{
-		b:        b,
-		u:        u,
-		c:        ctx,
+		b: b,
+		u: u,
+		c: ctx,
+
 		botOwner: ownerID,
-		userCtx:  make(map[int]userContext),
+
+		userCtx:    make(map[int]userContext),
+		userScript: make(map[int]*language.Script),
 	}
 }
 
@@ -33,46 +40,45 @@ func (h *Handler) Run() error {
 	if err != nil {
 		return err
 	}
-	h.setupBundler()
 	go h.notifySubscribers() // Notify subscriber about the prayer times.
 	return nil
 }
 
 func (h *Handler) register() error {
 	var err error
-	err = h.b.AddHandler("/start", h.contextWrapper(h.Start), "all")
+	err = h.b.AddHandler("/start", h.contextWrapper(h.scriptWrapper(h.Start)), "all")
 	if err != nil {
 		return err
 	}
-	err = h.b.AddHandler("/help", h.contextWrapper(h.Help), "all")
+	err = h.b.AddHandler("/help", h.contextWrapper(h.scriptWrapper(h.Help)), "all")
 	if err != nil {
 		return err
 	}
-	err = h.b.AddHandler("/subscribe", h.contextWrapper(h.Subscribe), "all")
+	err = h.b.AddHandler("/subscribe", h.contextWrapper(h.scriptWrapper(h.Subscribe)), "all")
 	if err != nil {
 		return err
 	}
-	err = h.b.AddHandler("/unsubscribe", h.contextWrapper(h.Unsubscribe), "all")
+	err = h.b.AddHandler("/unsubscribe", h.contextWrapper(h.scriptWrapper(h.Unsubscribe)), "all")
 	if err != nil {
 		return err
 	}
-	err = h.b.AddHandler("/today", h.contextWrapper(h.GetPrayers), "all")
+	err = h.b.AddHandler("/today", h.contextWrapper(h.scriptWrapper(h.GetPrayers)), "all")
 	if err != nil {
 		return err
 	}
-	err = h.b.AddHandler("/date", h.contextWrapper(h.GetPrayersByDate), "all")
+	err = h.b.AddHandler("/date", h.contextWrapper(h.scriptWrapper(h.GetPrayersByDate)), "all")
 	if err != nil {
 		return err
 	}
-	err = h.b.AddHandler("/lang", h.contextWrapper(h.SetLang), "all")
+	err = h.b.AddHandler("/lang", h.contextWrapper(h.scriptWrapper(h.SetLang)), "all")
 	if err != nil {
 		return err
 	}
-	err = h.b.AddHandler("/feedback", h.contextWrapper(h.Feedback), "all")
+	err = h.b.AddHandler("/feedback", h.contextWrapper(h.scriptWrapper(h.Feedback)), "all")
 	if err != nil {
 		return err
 	}
-	err = h.b.AddHandler("/bug", h.contextWrapper(h.Bug), "all")
+	err = h.b.AddHandler("/bug", h.contextWrapper(h.scriptWrapper(h.Bug)), "all")
 	if err != nil {
 		return err
 	}
@@ -81,23 +87,20 @@ func (h *Handler) register() error {
 	///// Admin Commands /////
 	//////////////////////////
 
-	err = h.b.AddHandler("/respond", h.admin(h.contextWrapper(h.Respond)), "all")
+	err = h.b.AddHandler("/respond", h.admin(h.contextWrapper(h.scriptWrapper(h.Respond))), "all")
 	if err != nil {
 		return err
 	}
-	err = h.b.AddHandler("/subs", h.admin(h.contextWrapper(h.GetSubscribers)), "all")
+	err = h.b.AddHandler("/subs", h.admin(h.contextWrapper(h.scriptWrapper(h.GetSubscribers))), "all")
 	if err != nil {
 		return err
 	}
-	err = h.b.AddHandler("/sall", h.admin(h.contextWrapper(h.SendAll)), "all")
+	err = h.b.AddHandler("/sall", h.admin(h.contextWrapper(h.scriptWrapper(h.SendAll))), "all")
 	if err != nil {
 		return err
 	}
 	return nil
 }
-
-// TODO: Implement bundler for multi language support.
-func (h *Handler) setupBundler() {}
 
 // simpleSend sends a simple message to the chat with the given chatID & text and replyTo.
 func (h *Handler) simpleSend(chatID int, text string, replyTo int) (messageID int) {

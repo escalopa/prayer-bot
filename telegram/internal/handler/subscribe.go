@@ -8,64 +8,84 @@ import (
 )
 
 func (h *Handler) notifySubscribers() {
-	// store stores the new message id in the database.
-	// remove deletes the last message id from the database.
-	// I use these functions to avoid code duplication for the three notifications.
-	store := func(id int, message int) {
-		err := h.u.StorePrayerMessageID(h.c, id, message)
-		if err != nil {
-			log.Printf("failed to store message id /notify, Error: %s", err)
+	// replace is a helper function to delete the last message id and store the new one's id in the database.
+	replace := func(id int, message int) {
+		// Delete the last message id.
+		if err := h.c.Err(); err != nil {
+			return
 		}
-	}
-	remove := func(id int) {
 		lastMessageId, err := h.u.GetPrayerMessageID(h.c, id)
 		if err != nil {
 			log.Printf("failed to remove last message id /notify, Error: %s", err)
 		} else {
 			h.deleteMessage(id, lastMessageId)
 		}
+		// Store the new message id.
+		if err = h.c.Err(); err != nil {
+			return
+		}
+		err = h.u.StorePrayerMessageID(h.c, id, message)
+		if err != nil {
+			log.Printf("failed to replace message id /notify, Error: %s", err)
+		}
 	}
 
 	h.u.Notify(
+		// notifySoon
 		func(id int, prayer, time string) {
-			// notifySoon
-			go remove(id)
-			r, err := h.b.SendMessage(id, fmt.Sprintf("<b>%s</b> prayer starts in <b>%s</b> minutes.", prayer, time), "HTML", 0, false, false)
+			if err := h.setScript(id); err != nil {
+				log.Printf("failed to send notify message, user language not set on prayer soon /notify: %v", err)
+				return
+			}
+			message := fmt.Sprintf(h.userScript[id].PrayerSoon, h.userScript[id].GetPrayerByName(prayer), time)
+			r, err := h.b.SendMessage(id, message, "HTML", 0, false, false)
 			if err != nil {
 				log.Printf("failed to send message on notifySoon, Error: %s", err)
+				return
 			}
-			go store(id, r.Result.MessageId)
+			go replace(id, r.Result.MessageId)
 		},
+
+		// notifyNow
 		func(id int, prayer string) {
-			// notifyNow
-			go remove(id)
-			r, err := h.b.SendMessage(id, fmt.Sprintf("<b>%s</b> prayer time has arrived.", prayer), "HTML", 0, false, false)
+			if err := h.setScript(id); err != nil {
+				log.Printf("failed to send notify message, user language not set on prayer arrived /notify: %v", err)
+				return
+			}
+			message := fmt.Sprintf(h.userScript[id].PrayerArrived, h.userScript[id].GetPrayerByName(prayer))
+			r, err := h.b.SendMessage(id, message, "HTML", 0, false, false)
 			if err != nil {
 				log.Printf("failed to send message on notifyNow, Error: %s", err)
+				return
 			}
-			go store(id, r.Result.MessageId)
+			go replace(id, r.Result.MessageId)
 		},
+
+		// notifyGomaa
 		func(id int, time string) {
-			// notifyGomaa
-			go remove(id)
-			message := fmt.Sprintf(
-				"Assalamu Alaikum 👋!\nDon't forget today is <b>Gomaa</b>,make sure to attend prayers at the mosque! 🕌, Gomma today is at <b>%s</b>", time)
+			if err := h.setScript(id); err != nil {
+				log.Printf("failed to send notify message, user language not set on gomaa /notify: %v", err)
+				return
+			}
+			message := fmt.Sprintf(h.userScript[id].GomaaDay, time)
 			r, err := h.b.SendMessage(id, message, "HTML", 0, false, false)
 			if err != nil {
 				log.Printf("failed to send message on notifyGomaa, Error: %s", err)
+				return
 			}
-			go store(id, r.Result.MessageId)
+			go replace(id, r.Result.MessageId)
 		},
 	)
 }
 
 func (h *Handler) Subscribe(u *objs.Update) {
-	err := h.u.Subscribe(h.c, u.Message.Chat.Id)
+	chatID := u.Message.Chat.Id
+	err := h.u.Subscribe(h.c, chatID)
 	if err != nil {
-		h.simpleSend(u.Message.Chat.Id, "An error occurred while subscribing. Please try again later.", 0)
+		h.simpleSend(chatID, h.userScript[chatID].SubscriptionError, 0)
 		return
 	}
-	_, err = h.b.SendMessage(u.Message.Chat.Id, "You have been <b>Subscribed</b> to the daily prayers notifications. 🔔", "HTML", 0, false, false)
+	_, err = h.b.SendMessage(chatID, h.userScript[chatID].SubscriptionSuccess, "HTML", 0, false, false)
 	if err != nil {
 		log.Printf("failed to send subscribe message, Error: %s", err)
 		return
@@ -73,12 +93,13 @@ func (h *Handler) Subscribe(u *objs.Update) {
 }
 
 func (h *Handler) Unsubscribe(u *objs.Update) {
-	err := h.u.Unsubscribe(h.c, u.Message.Chat.Id)
+	chatID := u.Message.Chat.Id
+	err := h.u.Unsubscribe(h.c, chatID)
 	if err != nil {
-		h.simpleSend(u.Message.Chat.Id, "An error occurred while unsubscribing. Please try again later.", 0)
+		h.simpleSend(chatID, h.userScript[chatID].UnsubscriptionError, 0)
 		return
 	}
-	_, err = h.b.SendMessage(u.Message.Chat.Id, "You have been <b>Unsubscribed</b> from the daily prayers notifications. 🔕", "HTML", 0, false, false)
+	_, err = h.b.SendMessage(chatID, h.userScript[chatID].UnsubscriptionSuccess, "HTML", 0, false, false)
 	if err != nil {
 		log.Printf("failed to send unsubscribe message, Error: %s", err)
 		return

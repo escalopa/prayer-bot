@@ -216,7 +216,7 @@ func TestParser_ParseSchedule(t *testing.T) {
 				require.NoError(t, err)
 			}
 			// Create a parser with the path to the file
-			p := New(file.Name(), WithTimeLocation(loc), WithPrayerRepository(pr))
+			p := NewPrayerParser(file.Name(), WithTimeLocation(loc), WithPrayerRepository(pr))
 			// Parse the file
 			err = p.ParseSchedule(ctx)
 			require.Equal(t, tt.wantErr, err != nil)
@@ -237,7 +237,7 @@ func TestParser_ConvertToTime(t *testing.T) {
 		return
 	}
 
-	p := New("RANDOM_PATH", WithTimeLocation(loc))
+	p := NewPrayerParser("RANDOM_PATH", WithTimeLocation(loc))
 	tests := []struct {
 		name string
 		args input

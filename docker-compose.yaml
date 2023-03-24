@@ -4,6 +4,8 @@ services:
   cache:
     container_name: "cache"
     restart: unless-stopped
+    volumes:
+      - cache:/data
     image: redis:latest
     command: redis-server --appendonly yes
     ports:
@@ -25,6 +27,7 @@ services:
 
       - CACHE_URL=${CACHE_URL}
       - DATA_PATH=${DATA_PATH}
+      - LANGUAGES_PATH=${LANGUAGES_PATH}
 
       - TIME_LOCATION=${TIME_LOCATION}
       - UPCOMING_REMINDER=${UPCOMING_REMINDER}
@@ -36,3 +39,6 @@ services:
     depends_on:
       cache:
         condition: service_healthy
+
+volumes:
+  cache:

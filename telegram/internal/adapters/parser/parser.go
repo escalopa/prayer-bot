@@ -17,19 +17,19 @@ import (
 	"github.com/escalopa/gopray/telegram/internal/application"
 )
 
-// Parser is responsible for parsing the prayer schedule.
+// PrayerParser is responsible for parsing the prayer schedule.
 // It also saves the schedule to the database.
-type Parser struct {
+type PrayerParser struct {
 	path string // data path
 	pr   application.PrayerRepository
 	loc  *time.Location
 }
 
-// New returns a new Parser.
+// NewPrayerParser returns a new PrayerParser.
 // @param path: path to the data file.
 // @param pr: prayer repository.
-func New(path string, opts ...func(*Parser)) *Parser {
-	p := &Parser{path: path}
+func NewPrayerParser(path string, opts ...func(*PrayerParser)) *PrayerParser {
+	p := &PrayerParser{path: path}
 	for _, opt := range opts {
 		opt(p)
 	}
@@ -37,21 +37,21 @@ func New(path string, opts ...func(*Parser)) *Parser {
 }
 
 // WithPrayerRepository sets the prayer repository for the parser.
-func WithPrayerRepository(pr application.PrayerRepository) func(*Parser) {
-	return func(p *Parser) {
+func WithPrayerRepository(pr application.PrayerRepository) func(*PrayerParser) {
+	return func(p *PrayerParser) {
 		p.pr = pr
 	}
 }
 
 // WithTimeLocation sets the time location for the parser.
-func WithTimeLocation(loc *time.Location) func(*Parser) {
-	return func(p *Parser) {
+func WithTimeLocation(loc *time.Location) func(*PrayerParser) {
+	return func(p *PrayerParser) {
 		p.loc = loc
 	}
 }
 
 // ParseSchedule parses the prayer schedule and saves it to the database.
-func (p *Parser) ParseSchedule(ctx context.Context) error {
+func (p *PrayerParser) ParseSchedule(ctx context.Context) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -147,7 +147,7 @@ func (p *Parser) ParseSchedule(ctx context.Context) error {
 // saveSchedule saves the schedule to the database.
 // @param schedule: prayer times for all days of the year.
 // @return error: error if any.
-func (p *Parser) saveSchedule(ctx context.Context, schedule []core.PrayerTimes) error {
+func (p *PrayerParser) saveSchedule(ctx context.Context, schedule []core.PrayerTimes) error {
 	// Loop through all days of the schedule and save them to the database
 	for _, prayers := range schedule {
 		err := p.pr.StorePrayer(ctx, prayers)
@@ -161,7 +161,7 @@ func (p *Parser) saveSchedule(ctx context.Context, schedule []core.PrayerTimes) 
 // convertToTime converts a string from format `dd:mm` to time.Time.
 // @param str: string to convert.
 // @return time.Time: converted time.
-func (p *Parser) convertToTime(str string, day, month int) (time.Time, error) {
+func (p *PrayerParser) convertToTime(str string, day, month int) (time.Time, error) {
 	ss := strings.Split(str, ":")
 	if len(ss) != 2 {
 		return time.Time{}, errors.New(fmt.Sprintf("invalid time format, expected HH:MM, got %s", str))

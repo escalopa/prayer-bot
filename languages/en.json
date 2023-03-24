@@ -1,0 +1,52 @@
+{
+  "DataPickerStart": "Please pick a date.",
+
+  "January": "January",
+  "February": "February",
+  "March": "March",
+  "April": "April",
+  "May": "May",
+  "June": "June",
+  "July": "July",
+  "August": "August",
+  "September": "September",
+  "October": "October",
+  "November": "November",
+  "December": "December",
+
+  "LanguageSelectionStart": "Choose the new bot language",
+  "LanguageSelectionSuccess": "Successfully set language to <b>%s</b>.",
+  "LanguageSelectionFail": "Failed to set language to %s, Please try again.",
+
+  "Fajr": "Fajr",
+  "Sunrise": "Sunrise",
+  "Dhuhr": "Dhuhr",
+  "Asr": "Asr",
+  "Maghrib": "Maghrib",
+  "Isha": "Isha",
+
+  "PrayrifyTableDay": "Day",
+  "PrayrifyTablePrayer": "Prayer",
+  "PrayrifyTableTime": "Time",
+  "PrayerFail": "An error occurred while getting prayers, Please try again.",
+
+  "SubscriptionSuccess": "Successfully subscribed to prayer notifications. 🔔",
+  "SubscriptionError": "An error occurred while subscribing. Please try again.",
+
+  "UnsubscriptionSuccess": "Successfully unsubscribed from prayer notifications. 🔕",
+  "UnsubscriptionError": "An error occurred while unsubscribing. Please try again.",
+
+  "PrayerSoon": "<b>%s</b> prayer starts in <b>%s</b> minutes.",
+  "PrayerArrived": "<b>%s</b> prayer time has arrived.",
+  "GomaaDay": "Assalamu Alaikum 👋! It's <b>Gomaa</b>\nMake sure to attend prayers at the mosque 🕌, Gomaa prayer is at <b>%s</b>.",
+
+  "Help": "Assalamu alaykum! How can I assist you 😊?\n\nAvailable commands are below: 👇\n\n<b>Prayers</b>\n/today - Get prayer times for today ⏰\n/date - Get prayer times for a specific date 📅\n/subscribe - Subscribe to prayer notifications 🔔\n/unsubscribe - Unsubscribe from prayer notifications 🔕\n\n<b>Settings</b>\n/lang - Set bot language 🌐\n\n<b>Support</b>\n/help - Show this message 📖\n/feedback - Send feedback 📩\n/bug - Report a bug 🐞",
+
+  "FeedbackStart": "Please send your feedback as a text message below.",
+  "FeedbackSuccess": "Thank you for your feedback, %s 😊",
+  "FeedbackFail": "Feedbackiňizi ugratmakda hatanyňyz boldy, gaýtadan synanyşyňyz.",
+
+  "BugReportStart": "Problemiňizi ýazmak üçin habarlandyrma derejesine ýazyň.",
+  "BugReportSuccess": "Problem barada habaryňyz üçin sag bolun, %s\nÝakyn wagtda düzeltýäris 🛠️",
+  "BugReportFail": "Problem habaryny ugratmakda hatanyňyz boldy, gaýtadan synanyşyňyz."
+}

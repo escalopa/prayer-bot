@@ -95,4 +95,8 @@ for more details check the [notifier code](./telegram/internal/adapters/notifier
 - [x] Write more robust tests for core features
 
 ### Version 4 Milestones 🏁
-- [ ] Add different languages support (AR, RU)
+- [x] Add different languages support (AR, RU, TT, TR, UZ)
+- [x] Use script messages in the bot
+- [x] Set user script before command if nor set
+- [x] USe script commands in notifications
+- [x] Fix prayers timetable for other languages

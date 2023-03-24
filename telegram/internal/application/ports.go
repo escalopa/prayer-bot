@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/escalopa/gopray/pkg/core"
+	"github.com/escalopa/gopray/pkg/language"
 )
 
 type PrayerRepository interface {
@@ -29,6 +30,11 @@ type HistoryRepository interface {
 
 type Parser interface {
 	ParseSchedule(ctx context.Context) error
+}
+
+type ScriptRepository interface {
+	StoreScript(ctx context.Context, language string, script *language.Script) error
+	GetScript(ctx context.Context, language string) (*language.Script, error)
 }
 
 type Notifier interface {

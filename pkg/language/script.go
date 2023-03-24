@@ -54,6 +54,24 @@ type Script struct {
 	BugReportFail    string `json:"BugReportFail"`
 }
 
+func (s *Script) GetPrayerByName(name string) string {
+	switch name {
+	case "fajr":
+		return s.Fajr
+	case "sunrise":
+		return s.Sunrise
+	case "dhuhr":
+		return s.Dhuhr
+	case "asr":
+		return s.Asr
+	case "maghrib":
+		return s.Maghrib
+	case "isha":
+		return s.Isha
+	}
+	return ""
+}
+
 func (s *Script) GetMonthNames() [12]string {
 	return [12]string{
 		s.January,
@@ -69,37 +87,4 @@ func (s *Script) GetMonthNames() [12]string {
 		s.November,
 		s.December,
 	}
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-// Language is a struct that holds the long and short name of a language
-type Language struct {
-	Long  string
-	Short string
-}
-
-var (
-	Arabic  = Language{Long: "العربية", Short: "ar"}
-	English = Language{Long: "English", Short: "en"}
-	Russian = Language{Long: "Русский", Short: "ru"}
-)
-
-// IsValidLang returns true if the given language is valid
-func IsValidLang(l string) bool {
-	switch l {
-	case Arabic.Short, English.Short, Russian.Short:
-		return true
-	}
-	return false
-}
-
-// AvaliableLanguages returns all the avaliable languages for the application
-func AvaliableLanguages() []Language {
-	return []Language{Arabic, English, Russian}
-}
-
-// DefaultLang returns the default language for the application
-func DefaultLang() Language {
-	return English
 }

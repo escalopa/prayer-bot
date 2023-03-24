@@ -14,6 +14,7 @@ services:
 
       - CACHE_URL_FILE=/run/secrets/gopray_cache_url
       - DATA_PATH=/go/src/github.com/escalopa/gopray/times.csv
+      - LANGUAGES_PATH=/go/src/github.com/escalopa/gopray/languages
 
       - TIME_LOCATION=Europe/Moscow
       - UPCOMING_REMINDER=20m

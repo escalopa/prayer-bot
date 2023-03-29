@@ -4,7 +4,7 @@ import "strings"
 
 // Script is a struct that holds all the scripts for each language
 type Script struct {
-	DataPickerStart string `json:"DataPickerStart"`
+	DatePickerStart string `json:"DatePickerStart"`
 
 	January   string `json:"January"`
 	February  string `json:"February"`

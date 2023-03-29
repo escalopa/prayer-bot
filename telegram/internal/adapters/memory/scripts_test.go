@@ -54,7 +54,7 @@ func TestScripts(t *testing.T) {
 
 func randomScript() *language.Script {
 	return &language.Script{
-		DataPickerStart: gofakeit.InputName(),
+		DatePickerStart: gofakeit.InputName(),
 
 		January:   gofakeit.InputName(),
 		February:  gofakeit.InputName(),

@@ -14,24 +14,30 @@ import (
 func (h *Handler) newCalendar(chatID int, callBack func(int, int)) telego.MarkUps {
 	kb := h.b.CreateInlineKeyboard()
 	months := h.userScript[chatID].GetMonthNames()
-	for i := 1; i <= 12; i++ {
-		row := (i-1)/3 + 1 // 3 buttons(months) per row.
+	var i, j, row int
+	for i = 1; i <= 12; i++ {
+		row = (i-1)/3 + 1 // 3 buttons(months) per row.
 		kb.AddCallbackButtonHandler(months[i-1], strconv.Itoa(i), row, func(u1 *objs.Update) {
 			// Sets the language.
 			kb = h.b.CreateInlineKeyboard()
 			month, _ := strconv.Atoi(u1.CallbackQuery.Data)
 			daysInMonth := daysIn(time.Month(month), time.Now().Year())
-			for j := 1; j <= daysInMonth; j++ {
-				row := (j-1)/3 + 1 // 3 buttons(days) per row.
+			for j = 1; j <= daysInMonth; j++ {
+				row = (j-1)/5 + 1 // 5 buttons(days) per row.
 				kb.AddCallbackButtonHandler(strconv.Itoa(j), strconv.Itoa(j), row, func(u2 *objs.Update) {
 					day, _ := strconv.Atoi(u2.CallbackQuery.Data)
 					callBack(day, month)
 				})
 			}
+			// Add empty callback buttons
+			for (j-1)%5 != 0 {
+				kb.AddCallbackButtonHandler(" ", " ", row, func(u2 *objs.Update) {})
+				j++
+			}
 			editor := h.b.GetMsgEditor(u1.CallbackQuery.Message.Chat.Id)
 			_, err := editor.EditText(
 				u1.CallbackQuery.Message.MessageId,
-				h.userScript[chatID].DataPickerStart,
+				h.userScript[chatID].DatePickerStart,
 				"",
 				"",
 				nil,

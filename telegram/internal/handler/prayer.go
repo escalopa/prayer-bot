@@ -61,7 +61,7 @@ func (h *Handler) GetPrayersByDate(u *objs.Update) {
 	// Send a message to the user to ask for the date
 	r, err := h.b.AdvancedMode().ASendMessage(
 		chatID,
-		h.userScript[chatID].DataPickerStart,
+		h.userScript[chatID].DatePickerStart,
 		"",
 		0,
 		false,

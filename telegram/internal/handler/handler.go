@@ -87,15 +87,15 @@ func (h *Handler) register() error {
 	///// Admin Commands /////
 	//////////////////////////
 
-	err = h.b.AddHandler("/respond", h.admin(h.contextWrapper(h.scriptWrapper(h.Respond))), "all")
+	err = h.b.AddHandler("/respond", h.contextWrapper(h.scriptWrapper(h.admin(h.Respond))), "all")
 	if err != nil {
 		return err
 	}
-	err = h.b.AddHandler("/subs", h.admin(h.contextWrapper(h.scriptWrapper(h.GetSubscribers))), "all")
+	err = h.b.AddHandler("/subs", h.contextWrapper(h.scriptWrapper(h.admin(h.GetSubscribers))), "all")
 	if err != nil {
 		return err
 	}
-	err = h.b.AddHandler("/sall", h.admin(h.contextWrapper(h.scriptWrapper(h.SendAll))), "all")
+	err = h.b.AddHandler("/sall", h.contextWrapper(h.scriptWrapper(h.admin(h.SendAll))), "all")
 	if err != nil {
 		return err
 	}

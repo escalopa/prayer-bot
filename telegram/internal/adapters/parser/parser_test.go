@@ -15,6 +15,7 @@ func TestParser_ParseSchedule(t *testing.T) {
 	loc, err := time.LoadLocation("Europe/Moscow")
 	require.NoError(t, err)
 
+	days := "День,ФАЖР,ВОСХОД,ЗУХР,АСР,МАГРИБ,ИША"
 	pr := memory.NewPrayerRepository()
 	tests := []struct {
 		name    string
@@ -24,7 +25,7 @@ func TestParser_ParseSchedule(t *testing.T) {
 		{
 			name: "Test 1",
 			data: []string{
-				"День,ФАЖР,ВОСХОД,ЗУХР,АСР,МАГРИБ,ИША\n",
+				days + "\n",
 				"1/1,5:53,8:13,11:47,13:34,15:21,17:18\n",
 				"2/1,5:53,8:13,11:47,13:34,15:21,17:18\n",
 			},
@@ -33,7 +34,7 @@ func TestParser_ParseSchedule(t *testing.T) {
 		{
 			name: "Test 2",
 			data: []string{
-				"День,ФАЖР,ВОСХОД,ЗУХР,АСР,МАГРИБ,ИША\n",
+				days + "\n",
 				"1/1,5:53,8:13,11:47,13:34,15:21,1718\n", // wrong time
 			},
 			wantErr: true,
@@ -41,7 +42,7 @@ func TestParser_ParseSchedule(t *testing.T) {
 		{
 			name: "Test 3",
 			data: []string{
-				"День,ФАЖР,ВОСХОД,ЗУХР,АСР,МАГРИБ,ИША\n",
+				days + "\n",
 				"1/,5:53,8:13,11:47,13:34,15:21,17:18\n", // wrong month
 			},
 			wantErr: true,
@@ -49,7 +50,7 @@ func TestParser_ParseSchedule(t *testing.T) {
 		{
 			name: "Test 4",
 			data: []string{
-				"День,ФАЖР,ВОСХОД,ЗУХР,АСР,МАГРИБ,ИША\n",
+				days + "\n",
 				"1/1,5:53,8:13,11:4713:34,15:21,17:18\n", // wrong separator
 			},
 			wantErr: true,
@@ -57,7 +58,7 @@ func TestParser_ParseSchedule(t *testing.T) {
 		{
 			name: "Test 5",
 			data: []string{
-				"День,ФАЖР,ВОСХОД,ЗУХР,АСР,МАГРИБ,ИША\n",
+				days + "\n",
 				"1/1,5:53,8:13,11:47,13:34,15:21,17:18\n",
 				"2/1,5:53,8:13,11:47,13:34,15:21,17:70\n", // wrong time, minutes > 59
 			},
@@ -66,7 +67,7 @@ func TestParser_ParseSchedule(t *testing.T) {
 		{
 			name: "Test 6",
 			data: []string{
-				"День,ФАЖР,ВОСХОД,ЗУХР,АСР,МАГРИБ,ИША\n",
+				days + "\n",
 				"1/1,5:53,8:13,11:47,13:34,15:21,17:-1\n", // wrong time, minutes < 0
 			},
 			wantErr: true,
@@ -74,7 +75,7 @@ func TestParser_ParseSchedule(t *testing.T) {
 		{
 			name: "Test 7",
 			data: []string{
-				"День,ФАЖР,ВОСХОД,ЗУХР,АСР,МАГРИБ,ИША\n",
+				days + "\n",
 				"1/1,5:53,8:13,11:47,13:34,15:21,24:18\n", // wrong time, hours > 23
 			},
 			wantErr: true,
@@ -82,7 +83,7 @@ func TestParser_ParseSchedule(t *testing.T) {
 		{
 			name: "Test 8",
 			data: []string{
-				"День,ФАЖР,ВОСХОД,ЗУХР,АСР,МАГРИБ,ИША\n",
+				days + "\n",
 				"1/1,5:53,8:13,11:47,13:34,15:21,-1:18\n", // wrong time, hours < 0
 			},
 			wantErr: true,
@@ -90,7 +91,7 @@ func TestParser_ParseSchedule(t *testing.T) {
 		{
 			name: "Test 9",
 			data: []string{
-				"День,ФАЖР,ВОСХОД,ЗУХР,АСР,МАГРИБ,ИША\n",
+				days + "\n",
 				"1/1,5:53,8:13,11:47,13:34,15:21,17;18\n", // wrong separator in time, used ; instead of :
 			},
 			wantErr: true,
@@ -98,7 +99,7 @@ func TestParser_ParseSchedule(t *testing.T) {
 		{
 			name: "Test 10",
 			data: []string{
-				"День,ФАЖР,ВОСХОД,ЗУХР,АСР,МАГРИБ,ИША\n",
+				days + "\n",
 				"1/15:53,8:13,11:47,13:34,15:21,17:18\n", // removed one comma
 			},
 			wantErr: true,
@@ -106,7 +107,7 @@ func TestParser_ParseSchedule(t *testing.T) {
 		{
 			name: "Test 11",
 			data: []string{
-				"День,ФАЖР,ВОСХОД,ЗУХР,АСР,МАГРИБ,ИША\n",
+				days + "\n",
 				"1/1,5:53,8:13,11:47,13:34,15:21,1s:18\n", // wrong time, s instead of a number in hour
 			},
 			wantErr: true,
@@ -114,7 +115,7 @@ func TestParser_ParseSchedule(t *testing.T) {
 		{
 			name: "Test 12",
 			data: []string{
-				"День,ФАЖР,ВОСХОД,ЗУХР,АСР,МАГРИБ,ИША\n",
+				days + "\n",
 				"1/1,5:53,8:13,11:47,13:34,15:21,17:1s\n", // wrong time, s instead of a number in minutes
 			},
 			wantErr: true,
@@ -122,7 +123,7 @@ func TestParser_ParseSchedule(t *testing.T) {
 		{
 			name: "Test 13",
 			data: []string{
-				"День,ФАЖР,ВОСХОД,ЗУХР,АСР,МАГРИБ,ИША\n",
+				days + "\n",
 				"s/1,5:53,8:13,11:47,13:34,15:21,17:18\n", // wrong day, s instead of a number
 			},
 			wantErr: true,
@@ -130,7 +131,7 @@ func TestParser_ParseSchedule(t *testing.T) {
 		{
 			name: "Test 14",
 			data: []string{
-				"День,ФАЖР,ВОСХОД,ЗУХР,АСР,МАГРИБ,ИША\n",
+				days + "\n",
 				"1/s,5:53,8:13,11:47,13:34,15:21,17:18\n", // wrong month, s instead of a number
 			},
 			wantErr: true,
@@ -138,7 +139,7 @@ func TestParser_ParseSchedule(t *testing.T) {
 		{
 			name: "Test 15",
 			data: []string{
-				"День,ФАЖР,ВОСХОД,ЗУХР,АСР,МАГРИБ,ИША\n",
+				days + "\n",
 				"1/1,5:53,8:13'10:47,13:34,15:21,17:18\n", // wrong separator in time, used ' instead of :
 			},
 			wantErr: true,
@@ -146,7 +147,7 @@ func TestParser_ParseSchedule(t *testing.T) {
 		{
 			name: "Test 16",
 			data: []string{
-				"День,ФАЖР,ВОСХОД,ЗУХР,АСР,МАГРИБ,ИША\n",
+				days + "\n",
 				"1/1,5:53,8:13,11:47,13:34,15:21,17:18,1:2:3\n", // too many columns
 			},
 			wantErr: true,
@@ -154,7 +155,7 @@ func TestParser_ParseSchedule(t *testing.T) {
 		{
 			name: "Test 17",
 			data: []string{
-				"День,ФАЖР,ВОСХОД,ЗУХР,АСР,МАГРИБ,ИША\n",
+				days + "\n",
 				"1/1,50:53,8:13,11:47,13:34,16:21,17:18\n", // wrong time for fajr, hours > 24
 			},
 			wantErr: true,
@@ -162,7 +163,7 @@ func TestParser_ParseSchedule(t *testing.T) {
 		{
 			name: "Test 18",
 			data: []string{
-				"День,ФАЖР,ВОСХОД,ЗУХР,АСР,МАГРИБ,ИША\n",
+				days + "\n",
 				"1/1,5:53,80:13,11:47,13:34,15:21,17:18\n", // wrong time for sunrise, hours > 24
 			},
 			wantErr: true,
@@ -170,7 +171,7 @@ func TestParser_ParseSchedule(t *testing.T) {
 		{
 			name: "Test 19",
 			data: []string{
-				"День,ФАЖР,ВОСХОД,ЗУХР,АСР,МАГРИБ,ИША\n",
+				days + "\n",
 				"1/1,5:53,8:13,35:47,13:34,15:21,17:18\n", // wrong time for dhuhr, hours > 24
 			},
 			wantErr: true,
@@ -178,7 +179,7 @@ func TestParser_ParseSchedule(t *testing.T) {
 		{
 			name: "Test 20",
 			data: []string{
-				"День,ФАЖР,ВОСХОД,ЗУХР,АСР,МАГРИБ,ИША\n",
+				days + "\n",
 				"1/1,5:53,8:13,11:47,134:34,15:21,17:18\n", // wrong time for asr, hours > 24
 			},
 			wantErr: true,
@@ -186,7 +187,7 @@ func TestParser_ParseSchedule(t *testing.T) {
 		{
 			name: "Test 21",
 			data: []string{
-				"День,ФАЖР,ВОСХОД,ЗУХР,АСР,МАГРИБ,ИША\n",
+				days + "\n",
 				"1/1,5:53,8:13,11:47,13:34,155:21,17:18\n", // wrong time for maghrib, hours > 24
 			},
 			wantErr: true,
@@ -194,7 +195,7 @@ func TestParser_ParseSchedule(t *testing.T) {
 		{
 			name: "Test 22",
 			data: []string{
-				"День,ФАЖР,ВОСХОД,ЗУХР,АСР,МАГРИБ,ИША\n",
+				days + "\n",
 				"1/1,5:53,8:13,11:47,13:34,15:21,177:18\n", // wrong time for isha, hours > 24
 			},
 			wantErr: true,

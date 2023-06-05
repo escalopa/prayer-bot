@@ -115,6 +115,8 @@ func (p *PrayerParser) ParseSchedule(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+		// Add 20 min  since dohaa is 20 min after sunrise
+		sunrise = sunrise.Add(20 * time.Minute)
 		dhuhr, err := p.convertToTime(record[3], day, month)
 		if err != nil {
 			return err

@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"net/http"
 	"strconv"
 	"time"
 
@@ -21,8 +23,11 @@ import (
 	"github.com/escalopa/gopray/telegram/internal/application"
 )
 
+var (
+	c = goconfig.New()
+)
+
 func main() {
-	c := goconfig.New()
 
 	// Create a new bot instance.
 	bot, err := bt.NewBot(cfg.Default(c.Get("BOT_TOKEN")))
@@ -108,6 +113,8 @@ func run(ctx context.Context, b *bt.Bot, ownerID int, useCases *application.UseC
 	checkError(b.Run(), "failed to run bot")
 	//The general update channel.
 	updateChannel := b.GetUpdateChannel()
+
+	go health()
 	for {
 		update := <-*updateChannel
 		if update.Message == nil {
@@ -118,6 +125,19 @@ func run(ctx context.Context, b *bt.Bot, ownerID int, useCases *application.UseC
 			log.Printf("failed to send message on unknown command, %v", err)
 		}
 	}
+}
+
+func health() {
+	port := c.Get("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK"))
+	})
+	log.Printf("starting server on port: %s", port)
+	checkError(http.ListenAndServe(fmt.Sprintf(":%s", port), nil))
 }
 
 func checkError(err error, message ...string) {

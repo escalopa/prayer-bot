@@ -23,6 +23,7 @@ type Notifier struct {
 
 const (
 	defaultTimeFormat = "2006-01-02 15:04:05"
+	sleepDuration     = 30 * time.Second
 )
 
 // New creates a new Notifier.
@@ -85,13 +86,14 @@ func (n *Notifier) NotifyPrayers(ctx context.Context, notifySoon func([]int, str
 	for {
 		prayerName, prayerAfter, err := n.getClosestPrayer(ctx)
 		if err != nil {
-			log.Printf("failed to get closest prayer on /notify: %s", err)
-			break
+			log.Printf("notifyPrayer: failed to get closest prayer: %s", err)
+			time.Sleep(sleepDuration)
+			continue
 		}
 
 		upcomingAt, startsAt := n.timeLeft(prayerAfter)
 		// logs for debugging
-		log.Printf("Prayer: %s | upcoming: %s(%d) | starts: %s(%d)", prayerName,
+		log.Printf("Prayer: %s | upcoming: %s(%d) | starts: %s(%d)\n", prayerName,
 			n.now().Add(upcomingAt).Format(defaultTimeFormat), int(upcomingAt.Minutes()), // upcoming status
 			n.now().Add(startsAt).Add(upcomingAt).Format(defaultTimeFormat), int((startsAt + upcomingAt).Minutes()), // start status
 		)
@@ -107,8 +109,9 @@ func (n *Notifier) NotifyPrayers(ctx context.Context, notifySoon func([]int, str
 		}
 		ids, err := n.sr.GetSubscribers(ctx)
 		if err != nil {
-			log.Printf("notifyPrayer: failed to get subscribers, err: %s", err)
-			break
+			log.Printf("notifyPrayer: failed to get subscribers: %s", err)
+			time.Sleep(sleepDuration)
+			continue
 		}
 		notifySoon(ids, prayerName, strconv.Itoa(int(startsAt.Minutes())))
 
@@ -122,7 +125,8 @@ func (n *Notifier) NotifyPrayers(ctx context.Context, notifySoon func([]int, str
 		ids, err = n.sr.GetSubscribers(ctx)
 		if err != nil {
 			log.Printf("notifyPrayer: failed to get subscribers, %s", err)
-			break
+			time.Sleep(sleepDuration)
+			continue
 		}
 		notifyStart(ids, prayerName)
 	}
@@ -142,14 +146,16 @@ func (n *Notifier) NotifyGomaa(ctx context.Context, notifyGomaa func([]int, stri
 		// Get the subscribers
 		ids, err := n.sr.GetSubscribers(ctx)
 		if err != nil {
-			log.Printf("notifyGomma: failed to get subscribers, err: %s", err)
-			break
+			log.Printf("notifyGomma: failed to get subscribers: %s", err)
+			time.Sleep(sleepDuration)
+			continue
 		}
 		// Get the prayer time for the gomaa
 		prayers, err := n.pr.GetPrayer(ctx, gomaa.Day(), int(gomaa.Month()))
 		if err != nil {
-			log.Printf("notifyGomma: failed to get prayers for gomaa, err: %s", err)
-			break
+			log.Printf("notifyGomma: failed to get prayers for gomaa: %s", err)
+			time.Sleep(sleepDuration)
+			continue
 		}
 		// Notify the subscribers
 		notifyGomaa(ids, prayers.Dhuhr.Format("15:04"))

@@ -15,7 +15,6 @@ import (
 	cfg "github.com/SakoDroid/telego/configs"
 	"github.com/escalopa/goconfig"
 
-	gpe "github.com/escalopa/gopray/pkg/error"
 	"github.com/escalopa/gopray/telegram/internal/adapters/notifier"
 	"github.com/escalopa/gopray/telegram/internal/adapters/parser"
 	"github.com/escalopa/gopray/telegram/internal/adapters/redis"
@@ -27,12 +26,12 @@ func main() {
 
 	// Create a new bot instance.
 	bot, err := bt.NewBot(cfg.Default(c.Get("BOT_TOKEN")))
-	gpe.CheckError(err, "failed to create bot instance")
+	checkError(err, "failed to create bot instance")
 
 	// Parse bot owner id
 	ownerIDString := c.Get("BOT_OWNER_ID")
 	ownerID, err := strconv.Atoi(ownerIDString)
-	gpe.CheckError(err, "failed to parse BOT_OWNER_ID")
+	checkError(err, "failed to parse BOT_OWNER_ID")
 
 	// Create base context.
 	ctx, cancel := context.WithCancel(context.Background())
@@ -40,13 +39,13 @@ func main() {
 
 	// Load application time location.
 	loc, err := time.LoadLocation(c.Get("TIME_LOCATION"))
-	gpe.CheckError(err, "failed to load time location")
+	checkError(err, "failed to load time location")
 	log.Printf("successfully loaded time zone: %s", loc)
 
 	// Set up the database.
 	r := redis.New(c.Get("CACHE_URL"))
 	defer func(r *redis2.Client) {
-		gpe.CheckError(r.Close(), "failed to close redis client")
+		checkError(r.Close(), "failed to close redis client")
 	}(r)
 	// pr := redis.NewPrayerRepository(r)
 	pr := memory.NewPrayerRepository() // Use memory for prayer repository. To not hit the cache on every reload.
@@ -58,24 +57,24 @@ func main() {
 
 	// Create schedule parser & parse the schedule.
 	pp := parser.NewPrayerParser(c.Get("DATA_PATH"), parser.WithPrayerRepository(pr), parser.WithTimeLocation(loc))
-	gpe.CheckError(pp.ParseSchedule(ctx), "failed to parse schedule")
+	checkError(pp.ParseSchedule(ctx), "failed to parse schedule")
 	log.Println("successfully parsed prayer's schedule")
 
 	// Create language parser & parse the languages.
 	lp := parser.NewScriptParser(c.Get("LANGUAGES_PATH"), parser.WithScriptRepository(scr))
-	gpe.CheckError(lp.ParseScripts(ctx), "failed to parse languages")
+	checkError(lp.ParseScripts(ctx), "failed to parse languages")
 	log.Println("successfully parsed languages")
 
 	// Parse upcoming reminder.
 	ur := c.Get("UPCOMING_REMINDER")
 	urDuration, err := time.ParseDuration(ur)
-	gpe.CheckError(err, "failed to parse UPCOMING_REMINDER")
+	checkError(err, "failed to parse UPCOMING_REMINDER")
 	log.Printf("successfully parsed upcoming reminder %s", ur)
 
 	// Parse gomaa notify hour.
 	gnh := c.Get("GOMAA_NOTIFY_HOUR")
 	gnhDuration, err := time.ParseDuration(gnh)
-	gpe.CheckError(err, "failed to parse GOMAA_NOTIFY_HOUR")
+	checkError(err, "failed to parse GOMAA_NOTIFY_HOUR")
 	log.Printf("successfully parsed gomaa notify hour %s", gnh)
 
 	// Create notifier.
@@ -85,7 +84,7 @@ func main() {
 		notifier.WithLanguageRepository(lr),
 		notifier.WithTimeLocation(loc),
 	)
-	gpe.CheckError(err)
+	checkError(err)
 	log.Printf("successfully created notifier with upcoming reminder: %s and gomaa notify hour: %s", ur, gnh)
 
 	// Create use cases.
@@ -105,8 +104,8 @@ func main() {
 func run(ctx context.Context, b *bt.Bot, ownerID int, useCases *application.UseCase) {
 	// Create handler & start it.
 	h := handler.New(ctx, b, ownerID, useCases)
-	gpe.CheckError(h.Run(), "failed to start handler")
-	gpe.CheckError(b.Run(), "failed to run bot")
+	checkError(h.Run(), "failed to start handler")
+	checkError(b.Run(), "failed to run bot")
 	//The general update channel.
 	updateChannel := b.GetUpdateChannel()
 	for {
@@ -118,5 +117,11 @@ func run(ctx context.Context, b *bt.Bot, ownerID int, useCases *application.UseC
 		if err != nil {
 			log.Printf("failed to send message on unknown command, %v", err)
 		}
+	}
+}
+
+func checkError(err error, message ...string) {
+	if err != nil {
+		log.Fatal(err, message)
 	}
 }

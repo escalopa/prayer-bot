@@ -16,5 +16,7 @@ RUN go build -o /go/bin/gopray ./telegram/cmd
 
 FROM alpine:latest AS production
 RUN apk add --no-cache tzdata
+COPY ./times.csv /go/src/github.com/escalopa/gopray/times.csv
+COPY ./languages /go/src/github.com/escalopa/gopray/languages
 COPY --from=builder /go/bin/gopray /go/bin/gopray
 ENTRYPOINT ["/go/bin/gopray"]

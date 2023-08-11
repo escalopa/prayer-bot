@@ -1,3 +1,5 @@
+TAG=latest
+
 deploy:
 	echo "Building image..."
 	docker build -f ./Dockerfile -t dekuyo/gopray:${TAG} --target=production --no-cache .

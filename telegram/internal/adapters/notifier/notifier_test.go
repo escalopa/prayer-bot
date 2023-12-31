@@ -8,25 +8,24 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNotifier_New(t *testing.T) {
-	loc := time.FixedZone("UTC", 0)
+func TestNotifierNew(t *testing.T) {
 	pr := memory.NewPrayerRepository()
 	lr := memory.NewLanguageRepository()
 	sr := memory.NewSubscriberRepository()
 
-	// Nil location
-	var err error
-	_, err = New(30*time.Minute, 11*time.Hour, WithTimeLocation(nil), WithPrayerRepository(pr), WithLanguageRepository(lr), WithSubscriberRepository(sr))
-	require.Error(t, err, "expected error got nil")
+	var (
+		err        error
+		errMessage = "expected error got nil"
+	)
 	// Nil prayer repository
-	_, err = New(30*time.Minute, 11*time.Hour, WithTimeLocation(loc), WithPrayerRepository(nil), WithLanguageRepository(lr), WithSubscriberRepository(sr))
-	require.Error(t, err, "expected error got nil")
+	_, err = New(30*time.Minute, 11*time.Hour, WithPrayerRepository(nil), WithLanguageRepository(lr), WithSubscriberRepository(sr))
+	require.Error(t, err, errMessage)
 	// Nil language repository
-	_, err = New(30*time.Minute, 11*time.Hour, WithTimeLocation(loc), WithPrayerRepository(pr), WithLanguageRepository(nil), WithSubscriberRepository(sr))
-	require.Error(t, err, "expected error got nil")
+	_, err = New(30*time.Minute, 11*time.Hour, WithPrayerRepository(pr), WithLanguageRepository(nil), WithSubscriberRepository(sr))
+	require.Error(t, err, errMessage)
 	// Nil subscriber repository
-	_, err = New(30*time.Minute, 11*time.Hour, WithTimeLocation(loc), WithPrayerRepository(pr), WithLanguageRepository(lr), WithSubscriberRepository(nil))
-	require.Error(t, err, "expected error got nil")
+	_, err = New(30*time.Minute, 11*time.Hour, WithPrayerRepository(pr), WithLanguageRepository(lr), WithSubscriberRepository(nil))
+	require.Error(t, err, errMessage)
 
 	tests := []struct {
 		name    string
@@ -84,7 +83,6 @@ func TestNotifier_New(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err = New(time.Duration(tt.ur)*time.Minute, time.Duration(tt.gnh)*time.Hour,
-				WithTimeLocation(loc),
 				WithPrayerRepository(pr),
 				WithLanguageRepository(lr),
 				WithSubscriberRepository(sr))
@@ -93,7 +91,7 @@ func TestNotifier_New(t *testing.T) {
 	}
 }
 
-func TestNotifier_CalculateTimeLeft(t *testing.T) {
+func TestNotifierCalculateTimeLeft(t *testing.T) {
 	tests := []struct {
 		name               string
 		prayerAfter        time.Duration
@@ -154,11 +152,9 @@ func TestNotifier_CalculateTimeLeft(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			loc, err := time.LoadLocation("Africa/Cairo")
-			require.NoError(t, err)
 			// Create a notifier with upcoming reminder equal `tt.upcomingReminder` and 1h for gomaa time.
 			// We use 1h because it's the least time that we can use.
-			n, err := New(tt.upcomingReminder, 1*time.Hour, WithTimeLocation(loc),
+			n, err := New(tt.upcomingReminder, 1*time.Hour,
 				WithPrayerRepository(memory.NewPrayerRepository()),
 				WithLanguageRepository(memory.NewLanguageRepository()),
 				WithSubscriberRepository(memory.NewSubscriberRepository()))

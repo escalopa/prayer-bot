@@ -8,10 +8,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestPrayerTimes_Marshal(t *testing.T) {
-	p1 := New(
-		1,
-		1,
+func TestPrayerTimesMarshal(t *testing.T) {
+	p1 := NewPrayerTime(
+		DefaultTime(1, 1, 2023),
 		time.Now().Add(time.Hour*1),
 		time.Now().Add(time.Hour*2),
 		time.Now().Add(time.Hour*3),
@@ -25,14 +24,13 @@ func TestPrayerTimes_Marshal(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	p2 := PrayerTimes{}
+	p2 := PrayerTime{}
 	require.NoError(t, json.Unmarshal(b, &p2))
 
 	// Compare p1 and p2
-	require.Equal(t, p1.Day, p2.Day)
-	require.Equal(t, p1.Month, p2.Month)
+	require.WithinDurationf(t, p1.Day, p2.Day, time.Second, "Day")
 	require.WithinDurationf(t, p1.Fajr, p2.Fajr, time.Second, "Fajr")
-	require.WithinDurationf(t, p1.Sunrise, p2.Sunrise, time.Second, "Sunrise")
+	require.WithinDurationf(t, p1.Dohaa, p2.Dohaa, time.Second, "Dohaa")
 	require.WithinDurationf(t, p1.Dhuhr, p2.Dhuhr, time.Second, "Dhuhr")
 	require.WithinDurationf(t, p1.Asr, p2.Asr, time.Second, "Asr")
 	require.WithinDurationf(t, p1.Maghrib, p2.Maghrib, time.Second, "Maghrib")

@@ -5,23 +5,32 @@ import (
 	"time"
 )
 
-type PrayerTimes struct {
-	Day     int       `json:"day"`
-	Month   int       `json:"month"`
+type Prayer string
+
+const (
+	Fajr    Prayer = "fajr"
+	Dohaa   Prayer = "dohaa"
+	Dhuhr   Prayer = "dhuhr"
+	Asr     Prayer = "asr"
+	Maghrib Prayer = "maghrib"
+	Isha    Prayer = "isha"
+)
+
+type PrayerTime struct {
+	Day     time.Time `json:"day"`
 	Fajr    time.Time `json:"fajr"`
-	Sunrise time.Time `json:"sunrise"`
+	Dohaa   time.Time `json:"dohaa"`
 	Dhuhr   time.Time `json:"dhuhr"`
 	Asr     time.Time `json:"asr"`
 	Maghrib time.Time `json:"maghrib"`
 	Isha    time.Time `json:"isha"`
 }
 
-func New(day, month int, fajr, sunrise, dhuhr, asr, maghrib, isha time.Time) PrayerTimes {
-	return PrayerTimes{
+func NewPrayerTime(day, fajr, dohaa, dhuhr, asr, maghrib, isha time.Time) PrayerTime {
+	return PrayerTime{
 		Day:     day,
-		Month:   month,
 		Fajr:    fajr,
-		Sunrise: sunrise,
+		Dohaa:   dohaa,
 		Dhuhr:   dhuhr,
 		Asr:     asr,
 		Maghrib: maghrib,
@@ -29,10 +38,10 @@ func New(day, month int, fajr, sunrise, dhuhr, asr, maghrib, isha time.Time) Pra
 	}
 }
 
-func (p PrayerTimes) MarshalBinary() ([]byte, error) {
+func (p PrayerTime) MarshalBinary() ([]byte, error) {
 	return json.Marshal(p)
 }
 
-func (p PrayerTimes) UnmarshalBinary(data []byte) error {
+func (p PrayerTime) UnmarshalBinary(data []byte) error {
 	return json.Unmarshal(data, &p)
 }

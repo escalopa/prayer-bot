@@ -10,6 +10,7 @@ import (
 
 	redis2 "github.com/go-redis/redis/v9"
 
+	"github.com/escalopa/gopray/pkg/core"
 	"github.com/escalopa/gopray/telegram/internal/adapters/memory"
 	"github.com/escalopa/gopray/telegram/internal/handler"
 
@@ -46,12 +47,14 @@ func main() {
 	loc, err := time.LoadLocation(c.Get("TIME_LOCATION"))
 	checkError(err, "failed to load time location")
 	log.Printf("successfully loaded time zone: %s", loc)
+	core.SetLocation(loc)
 
 	// Set up the database.
 	r := redis.New(c.Get("CACHE_URL"))
 	defer func(r *redis2.Client) {
 		checkError(r.Close(), "failed to close redis client")
 	}(r)
+
 	// pr := redis.NewPrayerRepository(r)
 	pr := memory.NewPrayerRepository() // Use memory for prayer repository. To not hit the cache on every reload.
 	sr := redis.NewSubscriberRepository(r)
@@ -61,7 +64,7 @@ func main() {
 	log.Println("successfully connected to database")
 
 	// Create schedule parser & parse the schedule.
-	pp := parser.NewPrayerParser(c.Get("DATA_PATH"), parser.WithPrayerRepository(pr), parser.WithTimeLocation(loc))
+	pp := parser.NewPrayerParser(c.Get("DATA_PATH"), parser.WithPrayerRepository(pr))
 	checkError(pp.ParseSchedule(ctx), "failed to parse schedule")
 	log.Println("successfully parsed prayer's schedule")
 
@@ -87,7 +90,6 @@ func main() {
 		notifier.WithPrayerRepository(pr),
 		notifier.WithSubscriberRepository(sr),
 		notifier.WithLanguageRepository(lr),
-		notifier.WithTimeLocation(loc),
 	)
 	checkError(err)
 	log.Printf("successfully created notifier with upcoming reminder: %s and gomaa notify hour: %s", ur, gnh)
@@ -95,7 +97,6 @@ func main() {
 	// Create use cases.
 	useCases := application.New(ctx,
 		application.WithNotifier(n),
-		application.WithTimeLocation(loc),
 		application.WithPrayerRepository(pr),
 		application.WithSubscriberRepository(sr),
 		application.WithLanguageRepository(lr),
@@ -137,7 +138,10 @@ func health() {
 		w.Write([]byte("OK"))
 	})
 	log.Printf("starting server on port: %s", port)
-	checkError(http.ListenAndServe(fmt.Sprintf(":%s", port), nil))
+	err := http.ListenAndServe(fmt.Sprintf(":%s", port), nil)
+	if err != nil && err != http.ErrServerClosed {
+		log.Fatal(err)
+	}
 }
 
 func checkError(err error, message ...string) {

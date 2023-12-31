@@ -74,7 +74,7 @@ func randomScript() *language.Script {
 		LanguageSelectionFail:    gofakeit.InputName(),
 
 		Fajr:    gofakeit.InputName(),
-		Sunrise: gofakeit.InputName(),
+		Dohaa:   gofakeit.InputName(),
 		Dhuhr:   gofakeit.InputName(),
 		Asr:     gofakeit.InputName(),
 		Maghrib: gofakeit.InputName(),

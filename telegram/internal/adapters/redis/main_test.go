@@ -5,7 +5,7 @@ import (
 	"log"
 	"testing"
 
-	"github.com/escalopa/gopray/pkg/testcon"
+	"github.com/escalopa/gopray/telegram/test/testcon"
 )
 
 var testRedisURL string

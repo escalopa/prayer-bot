@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/escalopa/gopray/pkg/core"
 	app "github.com/escalopa/gopray/telegram/internal/application"
 	"github.com/pkg/errors"
 )
@@ -18,7 +19,6 @@ type Notifier struct {
 	lr  app.LanguageRepository
 	ur  time.Duration // upcoming reminder in minutes
 	gnh time.Duration // gomaa notify hour in hours
-	loc *time.Location
 }
 
 const (
@@ -39,9 +39,6 @@ func New(upcomingReminder, gomaaNotifyHour time.Duration, opts ...func(*Notifier
 	}
 	if n.gnh.Hours() <= 0 || n.gnh.Hours() >= 12 {
 		return nil, errors.New("GOMAA_NOTIFY_HOUR must be between 0 and 11")
-	}
-	if n.loc == nil {
-		return nil, errors.New("location is nil")
 	}
 	if n.pr == nil {
 		return nil, errors.New("prayer repository is nil")
@@ -70,12 +67,6 @@ func WithSubscriberRepository(sr app.SubscriberRepository) func(*Notifier) {
 func WithLanguageRepository(lr app.LanguageRepository) func(*Notifier) {
 	return func(n *Notifier) {
 		n.lr = lr
-	}
-}
-
-func WithTimeLocation(loc *time.Location) func(*Notifier) {
-	return func(n *Notifier) {
-		n.loc = loc
 	}
 }
 
@@ -151,7 +142,7 @@ func (n *Notifier) NotifyGomaa(ctx context.Context, notifyGomaa func([]int, stri
 			continue
 		}
 		// Get the prayer time for the gomaa
-		prayers, err := n.pr.GetPrayer(ctx, gomaa.Day(), int(gomaa.Month()))
+		prayers, err := n.pr.GetPrayer(ctx, gomaa)
 		if err != nil {
 			log.Printf("notifyGomma: failed to get prayers for gomaa: %s", err)
 			time.Sleep(sleepDuration)
@@ -169,7 +160,7 @@ func (n *Notifier) NotifyGomaa(ctx context.Context, notifyGomaa func([]int, stri
 func (n *Notifier) getClosestPrayer(ctx context.Context) (prayerName string, prayerTime time.Time, err error) {
 	// Get the prayer times for today.
 	now := n.now()
-	p, err := n.pr.GetPrayer(ctx, now.Day(), int(now.Month()))
+	p, err := n.pr.GetPrayer(ctx, now)
 	if err != nil {
 		return "", time.Time{}, err
 	}
@@ -178,8 +169,8 @@ func (n *Notifier) getClosestPrayer(ctx context.Context) (prayerName string, pra
 	// and convert the result to minutes.
 	if p.Fajr.After(now) {
 		return "Fajr", p.Fajr, nil
-	} else if p.Sunrise.After(now) {
-		return "Sunrise", p.Sunrise, nil
+	} else if p.Dohaa.After(now) {
+		return "Dohaa", p.Dohaa, nil
 	} else if p.Dhuhr.After(now) {
 		return "Dhuhr", p.Dhuhr, nil
 	} else if p.Asr.After(now) {
@@ -193,7 +184,7 @@ func (n *Notifier) getClosestPrayer(ctx context.Context) (prayerName string, pra
 	// If reach this block, it means that the current time is after Isha.
 	// Get the first prayer time for the next day(Fajr).
 	tomorrow := now.AddDate(0, 0, 1)
-	p, err = n.pr.GetPrayer(ctx, tomorrow.Day(), int(tomorrow.Month()))
+	p, err = n.pr.GetPrayer(ctx, tomorrow)
 	if err != nil {
 		return "", time.Time{}, err
 	}
@@ -208,7 +199,7 @@ func (n *Notifier) getClosestGomaa() time.Time {
 	for day.Weekday() != time.Friday {
 		day = day.AddDate(0, 0, 1)
 	}
-	day = time.Date(day.Year(), day.Month(), day.Day(), int(n.gnh.Hours()), 0, 0, 0, n.loc)
+	day = time.Date(day.Year(), day.Month(), day.Day(), int(n.gnh.Hours()), 0, 0, 0, core.GetLocation())
 	return day
 }
 
@@ -233,6 +224,6 @@ func (n *Notifier) timeLeft(t time.Time) (upcomingAt, startsAt time.Duration) {
 
 // now returns the current time in the notifier's location.
 func (n *Notifier) now() time.Time {
-	now := time.Now().In(n.loc)
+	now := time.Now().In(core.GetLocation())
 	return now
 }

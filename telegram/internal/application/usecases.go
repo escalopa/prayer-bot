@@ -16,7 +16,6 @@ type UseCase struct {
 	lr  LanguageRepository
 	hr  HistoryRepository
 	scr ScriptRepository
-	loc *time.Location
 	ctx context.Context
 }
 
@@ -31,12 +30,6 @@ func New(ctx context.Context, opts ...func(*UseCase)) *UseCase {
 func WithNotifier(n Notifier) func(*UseCase) {
 	return func(uc *UseCase) {
 		uc.n = n
-	}
-}
-
-func WithTimeLocation(loc *time.Location) func(*UseCase) {
-	return func(uc *UseCase) {
-		uc.loc = loc
 	}
 }
 
@@ -70,17 +63,17 @@ func WithScriptRepository(scr ScriptRepository) func(*UseCase) {
 	}
 }
 
-func (uc *UseCase) GetPrayers() (core.PrayerTimes, error) {
-	now := time.Now().In(uc.loc)
-	p, err := uc.pr.GetPrayer(uc.ctx, now.Day(), int(now.Month()))
+func (uc *UseCase) GetPrayers() (core.PrayerTime, error) {
+	now := time.Now().In(core.GetLocation())
+	p, err := uc.pr.GetPrayer(uc.ctx, now)
 	if err != nil {
-		return core.PrayerTimes{}, err
+		return core.PrayerTime{}, err
 	}
 	return p, nil
 }
 
-func (uc *UseCase) GetPrayersDate(day, month int) (core.PrayerTimes, error) {
-	p, err := uc.pr.GetPrayer(uc.ctx, day, month)
+func (uc *UseCase) GetPrayersDate(day time.Time) (core.PrayerTime, error) {
+	p, err := uc.pr.GetPrayer(uc.ctx, day)
 	return p, err
 }
 
@@ -98,6 +91,7 @@ func (uc *UseCase) Notify(
 				}
 			})
 	}()
+
 	// Notify prayers
 	go func() {
 		uc.n.NotifyPrayers(uc.ctx,
@@ -114,41 +108,33 @@ func (uc *UseCase) Notify(
 }
 
 func (uc *UseCase) Subscribe(ctx context.Context, id int) error {
-	err := uc.sr.StoreSubscriber(ctx, id)
-	return err
+	return uc.sr.StoreSubscriber(ctx, id)
 }
 
 func (uc *UseCase) Unsubscribe(ctx context.Context, id int) error {
-	err := uc.sr.RemoveSubscribe(ctx, id)
-	return err
+	return uc.sr.RemoveSubscribe(ctx, id)
 }
 
 func (uc *UseCase) GetSubscribers(ctx context.Context) ([]int, error) {
-	ids, err := uc.sr.GetSubscribers(ctx)
-	return ids, err
+	return uc.sr.GetSubscribers(ctx)
 }
 
 func (uc *UseCase) SetLang(ctx context.Context, id int, lang string) error {
-	err := uc.lr.SetLang(ctx, id, lang)
-	return err
+	return uc.lr.SetLang(ctx, id, lang)
 }
 
 func (uc *UseCase) GetLang(ctx context.Context, id int) (string, error) {
-	language, err := uc.lr.GetLang(ctx, id)
-	return language, err
+	return uc.lr.GetLang(ctx, id)
 }
 
 func (uc *UseCase) GetPrayerMessageID(ctx context.Context, userID int) (int, error) {
-	id, err := uc.hr.GetPrayerMessageID(ctx, userID)
-	return id, err
+	return uc.hr.GetPrayerMessageID(ctx, userID)
 }
 
 func (uc *UseCase) StorePrayerMessageID(ctx context.Context, userID int, messageID int) error {
-	err := uc.hr.StorePrayerMessageID(ctx, userID, messageID)
-	return err
+	return uc.hr.StorePrayerMessageID(ctx, userID, messageID)
 }
 
 func (uc *UseCase) GetScript(ctx context.Context, language string) (*language.Script, error) {
-	script, err := uc.scr.GetScript(ctx, language)
-	return script, err
+	return uc.scr.GetScript(ctx, language)
 }

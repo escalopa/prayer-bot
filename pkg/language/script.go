@@ -24,7 +24,7 @@ type Script struct {
 	LanguageSelectionFail    string `json:"LanguageSelectionFail"`
 
 	Fajr    string `json:"Fajr"`
-	Sunrise string `json:"Sunrise"`
+	Dohaa   string `json:"Dohaa"`
 	Dhuhr   string `json:"Dhuhr"`
 	Asr     string `json:"Asr"`
 	Maghrib string `json:"Maghrib"`
@@ -60,8 +60,8 @@ func (s *Script) GetPrayerByName(name string) string {
 	switch strings.ToLower(name) {
 	case "fajr":
 		return s.Fajr
-	case "sunrise":
-		return s.Sunrise
+	case "dohaa":
+		return s.Dohaa
 	case "dhuhr":
 		return s.Dhuhr
 	case "asr":

@@ -7,11 +7,12 @@ import (
 
 	"github.com/SakoDroid/telego"
 	objs "github.com/SakoDroid/telego/objects"
+	"github.com/escalopa/gopray/pkg/core"
 )
 
 // newCalendar creates a new calendar. The callback function is called when the user selects a date.
 // The date is passed as two integers, day and month.
-func (h *Handler) newCalendar(chatID int, callBack func(int, int)) telego.MarkUps {
+func (h *Handler) newCalendar(chatID int, callBack func(time.Time)) telego.MarkUps {
 	kb := h.b.CreateInlineKeyboard()
 	months := h.userScript[chatID].GetMonthNames()
 	var i, j, row int
@@ -26,12 +27,12 @@ func (h *Handler) newCalendar(chatID int, callBack func(int, int)) telego.MarkUp
 				row = (j-1)/5 + 1 // 5 buttons(days) per row.
 				kb.AddCallbackButtonHandler(strconv.Itoa(j), strconv.Itoa(j), row, func(u2 *objs.Update) {
 					day, _ := strconv.Atoi(u2.CallbackQuery.Data)
-					callBack(day, month)
+					callBack(core.DefaultTime(day, month, time.Now().In(core.GetLocation()).Year()))
 				})
 			}
 			// Add empty callback buttons
 			for (j-1)%5 != 0 {
-				kb.AddCallbackButtonHandler(" ", " ", row, func(u2 *objs.Update) {})
+				kb.AddCallbackButtonHandler(" ", " ", row, func(u2 *objs.Update) { /* empty button to fill row */ })
 				j++
 			}
 			editor := h.b.GetMsgEditor(u1.CallbackQuery.Message.Chat.Id)
@@ -46,7 +47,7 @@ func (h *Handler) newCalendar(chatID int, callBack func(int, int)) telego.MarkUp
 			)
 			if err != nil {
 				log.Printf("failed to edit message in calendar /date : %s", err)
-				callBack(0, 0) // Cancel the calendar.
+				callBack(time.Time{}) // Cancel the calendar.
 			}
 		})
 	}

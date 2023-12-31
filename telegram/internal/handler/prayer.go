@@ -41,9 +41,9 @@ func (h *Handler) GetPrayersByDate(u *objs.Update) {
 		h.deleteMessage(chatID, messageID)
 	}()
 
-	kb := h.newCalendar(chatID, func(day, month int) {
+	kb := h.newCalendar(chatID, func(day time.Time) {
 		defer cancel()
-		prayers, err := h.u.GetPrayersDate(day, month)
+		prayers, err := h.u.GetPrayersDate(day)
 		if err != nil {
 			log.Printf("failed to get prayers on /date: %s", err)
 			h.simpleSend(chatID, h.userScript[chatID].PrayerFail, 0)
@@ -91,7 +91,7 @@ func (t *prayerTable) Write(p []byte) (n int, err error) {
 }
 
 // prayrify returns a string representation of the prayer times in a Markdown prayerTable format.
-func (h *Handler) prayrify(chatID int, p core.PrayerTimes) string {
+func (h *Handler) prayrify(chatID int, p core.PrayerTime) string {
 	// Create a Markdown prayerTable with the prayer times
 	t := new(prayerTable)
 	tw := tablewriter.NewWriter(t)
@@ -100,7 +100,7 @@ func (h *Handler) prayrify(chatID int, p core.PrayerTimes) string {
 	//header := []string{h.userScript[chatID].PrayrifyTablePrayer, h.userScript[chatID].PrayrifyTableTime}
 	data := [][]string{
 		{h.userScript[chatID].Fajr, p.Fajr.Format(prayerTimeFormat)},
-		{h.userScript[chatID].Sunrise, p.Sunrise.Format(prayerTimeFormat)},
+		{h.userScript[chatID].Dohaa, p.Dohaa.Format(prayerTimeFormat)},
 		{h.userScript[chatID].Dhuhr, p.Dhuhr.Format(prayerTimeFormat)},
 		{h.userScript[chatID].Asr, p.Asr.Format(prayerTimeFormat)},
 		{h.userScript[chatID].Maghrib, p.Maghrib.Format(prayerTimeFormat)},
@@ -114,8 +114,8 @@ func (h *Handler) prayrify(chatID int, p core.PrayerTimes) string {
 
 	formattedTable := fmt.Sprintf("```\n%s %d %s 🕌\n\n%s```\n/help",
 		h.userScript[chatID].PrayrifyTableDay,
-		p.Day,
-		h.userScript[chatID].GetMonthNames()[p.Month-1],
+		p.Day.Day(),
+		h.userScript[chatID].GetMonthNames()[p.Day.Month()-1],
 		string(*t),
 	)
 	return formattedTable

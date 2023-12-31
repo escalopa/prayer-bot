@@ -15,15 +15,13 @@ func TestPrayerRepository(t *testing.T) {
 
 	tests := []struct {
 		name  string
-		day   int
-		month int
-		times core.PrayerTimes
+		day   time.Time
+		times core.PrayerTime
 	}{
 		{
-			name:  "test prayer times",
-			day:   1,
-			month: 1,
-			times: core.New(1, 1,
+			name: "test prayer times",
+			day:  core.DefaultTime(1, 1, 2023),
+			times: core.NewPrayerTime(core.DefaultTime(1, 1, 2023),
 				time.Now().Add(2*time.Second),
 				time.Now().Add(3*time.Second),
 				time.Now().Add(4*time.Second),
@@ -37,17 +35,19 @@ func TestPrayerRepository(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Store prayer times
 			err := pr.StorePrayer(ctx, tt.times)
-			require.NoError(t, err, "expected no error, got %v", err)
+			require.NoError(t, err, "expected no error but got %v", err)
 			// Get prayer times
-			got, err := pr.GetPrayer(ctx, tt.day, tt.month)
-			require.NoError(t, err, "expected no error, got %v", err)
+			got, err := pr.GetPrayer(ctx, tt.day)
+			require.NoError(t, err, "expected no error but got %v", err)
 			// Compare times
-			require.WithinDurationf(t, tt.times.Fajr, got.Fajr, 1*time.Second, "expected %v, got %v", tt.times.Fajr, got.Fajr)
-			require.WithinDurationf(t, tt.times.Sunrise, got.Sunrise, 1*time.Second, "expected %v, got %v", tt.times.Sunrise, got.Sunrise)
-			require.WithinDurationf(t, tt.times.Dhuhr, got.Dhuhr, 1*time.Second, "expected %v, got %v", tt.times.Dhuhr, got.Dhuhr)
-			require.WithinDurationf(t, tt.times.Asr, got.Asr, 1*time.Second, "expected %v, got %v", tt.times.Asr, got.Asr)
-			require.WithinDurationf(t, tt.times.Maghrib, got.Maghrib, 1*time.Second, "expected %v, got %v", tt.times.Maghrib, got.Maghrib)
-			require.WithinDurationf(t, tt.times.Isha, got.Isha, 1*time.Second, "expected %v, got %v", tt.times.Isha, got.Isha)
+
+			const errorFormat = "expected %v | got %v"
+			require.WithinDurationf(t, tt.times.Fajr, got.Fajr, 1*time.Second, errorFormat, tt.times.Fajr, got.Fajr)
+			require.WithinDurationf(t, tt.times.Dohaa, got.Dohaa, 1*time.Second, errorFormat, tt.times.Dohaa, got.Dohaa)
+			require.WithinDurationf(t, tt.times.Dhuhr, got.Dhuhr, 1*time.Second, errorFormat, tt.times.Dhuhr, got.Dhuhr)
+			require.WithinDurationf(t, tt.times.Asr, got.Asr, 1*time.Second, errorFormat, tt.times.Asr, got.Asr)
+			require.WithinDurationf(t, tt.times.Maghrib, got.Maghrib, 1*time.Second, errorFormat, tt.times.Maghrib, got.Maghrib)
+			require.WithinDurationf(t, tt.times.Isha, got.Isha, 1*time.Second, errorFormat, tt.times.Isha, got.Isha)
 		})
 	}
 
@@ -56,9 +56,9 @@ func TestPrayerRepository(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := pr.StorePrayer(ctx, tt.times)
-			require.Error(t, err, "expected error, got nil")
-			got, err := pr.GetPrayer(ctx, tt.day, tt.month)
-			require.Error(t, err, "expected error, got nil")
+			require.Error(t, err, "expected error | got nil")
+			got, err := pr.GetPrayer(ctx, tt.day)
+			require.Error(t, err, "expected error | got nil")
 			require.Emptyf(t, got, "expected empty PrayerTimes, got %v", got)
 		})
 	}

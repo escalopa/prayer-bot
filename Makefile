@@ -7,6 +7,6 @@ deploy:
 	docker image push dekuyo/gopray:${TAG}
 
 test:
-	go test -coverprofile=coverage.txt  -covermode=count ./...
+	go test -cover -coverprofile=coverage.txt  -covermode=count ./... | gocol 
 
 .PHONY: deploy test

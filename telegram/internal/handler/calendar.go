@@ -7,51 +7,68 @@ import (
 
 	"github.com/SakoDroid/telego"
 	objs "github.com/SakoDroid/telego/objects"
-	"github.com/escalopa/gopray/pkg/core"
+	"github.com/escalopa/gopray/telegram/internal/domain"
 )
 
 // newCalendar creates a new calendar. The callback function is called when the user selects a date.
 // The date is passed as two integers, day and month.
 func (h *Handler) newCalendar(chatID int, callBack func(time.Time)) telego.MarkUps {
-	kb := h.b.CreateInlineKeyboard()
-	months := h.userScript[chatID].GetMonthNames()
-	var i, j, row int
-	for i = 1; i <= 12; i++ {
-		row = (i-1)/3 + 1 // 3 buttons(months) per row.
-		kb.AddCallbackButtonHandler(months[i-1], strconv.Itoa(i), row, func(u1 *objs.Update) {
-			// Sets the language.
-			kb = h.b.CreateInlineKeyboard()
-			month, _ := strconv.Atoi(u1.CallbackQuery.Data)
-			daysInMonth := daysIn(time.Month(month), time.Now().Year())
-			for j = 1; j <= daysInMonth; j++ {
-				row = (j-1)/5 + 1 // 5 buttons(days) per row.
-				kb.AddCallbackButtonHandler(strconv.Itoa(j), strconv.Itoa(j), row, func(u2 *objs.Update) {
-					day, _ := strconv.Atoi(u2.CallbackQuery.Data)
-					callBack(core.DefaultTime(day, month, time.Now().In(core.GetLocation()).Year()))
-				})
-			}
-			// Add empty callback buttons
-			for (j-1)%5 != 0 {
-				kb.AddCallbackButtonHandler(" ", " ", row, func(u2 *objs.Update) { /* empty button to fill row */ })
-				j++
-			}
-			editor := h.b.GetMsgEditor(u1.CallbackQuery.Message.Chat.Id)
-			_, err := editor.EditText(
-				u1.CallbackQuery.Message.MessageId,
-				h.userScript[chatID].DatePickerStart,
-				"",
-				"",
-				nil,
-				false,
-				kb,
-			)
-			if err != nil {
-				log.Printf("failed to edit message in calendar /date : %s", err)
-				callBack(time.Time{}) // Cancel the calendar.
-			}
-		})
+	kb := h.bot.CreateInlineKeyboard()
+	months := h.getChatScript(chatID).GetMonthNames()
+
+	for i, month := range months {
+		row := (i / 3) + 1 // 3 buttons(months) per row.
+		kb.AddCallbackButtonHandler(month, strconv.Itoa(i+1), row, h.getCalendarKeyboardCallback(chatID, callBack))
 	}
+
 	return kb
+}
+
+func (h *Handler) getCalendarKeyboardCallback(chatID int, callBack func(time.Time)) func(update *objs.Update) {
+	return func(u *objs.Update) {
+		var (
+			kb = h.bot.CreateInlineKeyboard()
+
+			monthDigit, _ = strconv.Atoi(u.CallbackQuery.Data)
+			month         = time.Month(monthDigit)
+
+			daysInMonth = daysIn(month, time.Now().Year())
+		)
+
+		var (
+			j   int
+			row int
+		)
+
+		for j = range daysInMonth {
+			row = (j / 5) + 1 // 5 buttons(days) per row.
+			kb.AddCallbackButtonHandler(strconv.Itoa(j), strconv.Itoa(j), row, func(u1 *objs.Update) {
+				day, _ := strconv.Atoi(u1.CallbackQuery.Data)
+				callBack(domain.Time(day, month, h.uc.Loc()))
+			})
+		}
+
+		// Add empty callback buttons
+		for (j-1)%5 != 0 {
+			kb.AddCallbackButtonHandler(" ", " ", row, func(_ *objs.Update) { /* empty button to fill row */ })
+			j++
+		}
+
+		editor := h.bot.GetMsgEditor(u.CallbackQuery.Message.Chat.Id)
+		_, err := editor.EditText(
+			u.CallbackQuery.Message.MessageId,
+			h.getChatScript(chatID).DatePickerStart,
+			"",
+			"",
+			nil,
+			false,
+			kb,
+		)
+		if err != nil {
+			log.Printf("failed to edit message in calendar /date : %s", err)
+			callBack(time.Time{}) // Cancel the calendar.
+		}
+	}
 }
 
 func daysIn(m time.Month, year int) int {

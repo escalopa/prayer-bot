@@ -135,7 +135,7 @@ func (p *PrayerParser) parseDate(line string) (time.Time, error) {
 	if err != nil {
 		return time.Time{}, fmt.Errorf("PrayerParser.parseDate[%s]: %v", line, err)
 	}
-	return domain.Time(t, p.loc), nil
+	return domain.Time(t.Day(), t.Month(), p.loc), nil
 }
 
 // parsePrayer parses all day's prayers

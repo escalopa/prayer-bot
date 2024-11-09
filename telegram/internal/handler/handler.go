@@ -2,133 +2,85 @@ package handler
 
 import (
 	"context"
-	"log"
-
-	"github.com/escalopa/gopray/pkg/language"
+	"sync"
 
 	"github.com/SakoDroid/telego"
-
-	"github.com/escalopa/gopray/telegram/internal/application"
+	app "github.com/escalopa/gopray/telegram/internal/application"
+	"github.com/escalopa/gopray/telegram/internal/domain"
 )
 
 type Handler struct {
-	c context.Context
-	b *telego.Bot
-	u *application.UseCase
+	ctx context.Context
+	bot *telego.Bot
+	uc  *app.UseCase
 
-	botOwner int                 // Bot owner's ID.
-	userCtx  map[int]userContext // userID => latest user context
+	botOwner int // Bot owner's ID.
 
-	userScript map[int]*language.Script // userID => scripts for the user.
+	chatCtx   map[int]userContext // chatID => latest chat context
+	chatCtxMu sync.RWMutex
+
+	chatScript   map[int]*domain.Script // chatID => scripts for this chat.
+	chatScriptMu sync.RWMutex
 }
 
-func New(ctx context.Context, b *telego.Bot, ownerID int, u *application.UseCase) *Handler {
+func New(bot *telego.Bot, ownerID int, uc *app.UseCase) *Handler {
 	return &Handler{
-		b: b,
-		u: u,
-		c: ctx,
+		bot: bot,
+		uc:  uc,
 
 		botOwner: ownerID,
 
-		userCtx:    make(map[int]userContext),
-		userScript: make(map[int]*language.Script),
+		chatCtx:    make(map[int]userContext),
+		chatScript: make(map[int]*domain.Script),
 	}
 }
 
-func (h *Handler) Run() error {
-	err := h.register()
-	if err != nil {
+func (h *Handler) Run(ctx context.Context) error {
+	h.ctx = ctx
+
+	if err := h.register(); err != nil {
 		return err
 	}
-	go h.notifySubscribers() // Notify subscriber about the prayer times.
+
+	go h.uc.SchedulePrayers(&notifier{h})
 	return nil
 }
 
 func (h *Handler) register() error {
-	var err error
-	err = h.b.AddHandler("/start", h.contextWrapper(h.scriptWrapper(h.Start)), "all")
-	if err != nil {
-		return err
-	}
-	err = h.b.AddHandler("/help", h.contextWrapper(h.scriptWrapper(h.Help)), "all")
-	if err != nil {
-		return err
-	}
-	err = h.b.AddHandler("/subscribe", h.contextWrapper(h.scriptWrapper(h.Subscribe)), "all")
-	if err != nil {
-		return err
-	}
-	err = h.b.AddHandler("/unsubscribe", h.contextWrapper(h.scriptWrapper(h.Unsubscribe)), "all")
-	if err != nil {
-		return err
-	}
-	err = h.b.AddHandler("/today", h.contextWrapper(h.scriptWrapper(h.GetPrayers)), "all")
-	if err != nil {
-		return err
-	}
-	err = h.b.AddHandler("/date", h.contextWrapper(h.scriptWrapper(h.GetPrayersByDate)), "all")
-	if err != nil {
-		return err
-	}
-	err = h.b.AddHandler("/lang", h.contextWrapper(h.scriptWrapper(h.SetLang)), "all")
-	if err != nil {
-		return err
-	}
-	err = h.b.AddHandler("/feedback", h.contextWrapper(h.scriptWrapper(h.Feedback)), "all")
-	if err != nil {
-		return err
-	}
-	err = h.b.AddHandler("/bug", h.contextWrapper(h.scriptWrapper(h.Bug)), "all")
-	if err != nil {
-		return err
+	registers := []error{
+		//////////////////////////
+		///// User Commands //////
+		//////////////////////////
+
+		h.bot.AddHandler("/start", h.useContext(h.useScript(h.Start)), "all"),
+		h.bot.AddHandler("/help", h.useContext(h.useScript(h.Help)), "all"),
+		h.bot.AddHandler("/subscribe", h.useContext(h.useScript(h.Subscribe)), "all"),
+		h.bot.AddHandler("/unsubscribe", h.useContext(h.useScript(h.Unsubscribe)), "all"),
+		h.bot.AddHandler("/today", h.useContext(h.useScript(h.GetPrayers)), "all"),
+		h.bot.AddHandler("/date", h.useContext(h.useScript(h.GetPrayersByDate)), "all"),
+		h.bot.AddHandler("/lang", h.useContext(h.useScript(h.SetLang)), "all"),
+		h.bot.AddHandler("/feedback", h.useContext(h.useScript(h.Feedback)), "all"),
+		h.bot.AddHandler("/bug", h.useContext(h.useScript(h.Bug)), "all"),
+
+		//////////////////////////
+		///// Admin Commands /////
+		//////////////////////////
+
+		h.bot.AddHandler("/respond", h.useContext(h.useScript(h.useAdmin(h.Respond))), "all"),
+		h.bot.AddHandler("/subs", h.useContext(h.useScript(h.useAdmin(h.GetSubscribers))), "all"),
+		h.bot.AddHandler("/sall", h.useContext(h.useScript(h.useAdmin(h.SendAll))), "all"),
 	}
 
-	//////////////////////////
-	///// Admin Commands /////
-	//////////////////////////
+	for _, err := range registers {
+		if err != nil {
+			return err
+		}
+	}
 
-	err = h.b.AddHandler("/respond", h.contextWrapper(h.scriptWrapper(h.admin(h.Respond))), "all")
-	if err != nil {
-		return err
-	}
-	err = h.b.AddHandler("/subs", h.contextWrapper(h.scriptWrapper(h.admin(h.GetSubscribers))), "all")
-	if err != nil {
-		return err
-	}
-	err = h.b.AddHandler("/sall", h.contextWrapper(h.scriptWrapper(h.admin(h.SendAll))), "all")
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
-// simpleSend sends a simple message to the chat with the given chatID & text and replyTo.
-func (h *Handler) simpleSend(chatID int, text string, replyTo int) (messageID int) {
-	r, err := h.b.SendMessage(chatID, text, "", replyTo, false, false)
-	if err != nil {
-		log.Printf("failed to send message on simpleSend: %s", err)
-		return 0
-	}
-	return r.Result.MessageId
-}
-
-// cancelOperation checks if the message is /cancel and sends a response.
-// Returns true if the message is /cancel.
-func (h *Handler) cancelOperation(message, response string, chatID int) bool {
-	if message == "/cancel" {
-		h.simpleSend(chatID, response, 0)
-		return true
-	}
-	return false
-}
-
-// deleteMessage deletes the message with the given chatID & messageID.
-// If error occurs, it will be logged.
-func (h *Handler) deleteMessage(chatID, messageID int) {
-	editor := h.b.GetMsgEditor(chatID)
-	_, err := editor.DeleteMessage(messageID)
-	if err != nil {
-		log.Printf("failed to delete message: %s", err)
-		return
-	}
+func (h *Handler) Stop() {
+	h.bot.Stop()
+	h.uc.Close()
 }

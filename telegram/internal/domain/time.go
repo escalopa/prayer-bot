@@ -4,8 +4,9 @@ import (
 	"time"
 )
 
-func Time(day time.Time, loc *time.Location) time.Time {
-	return time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, loc)
+func Time(day int, month time.Month, loc *time.Location) time.Time {
+	year := time.Now().In(loc).Year()
+	return time.Date(year, month, day, 0, 0, 0, 0, loc)
 }
 
 func Date(day time.Time, clock time.Time, loc *time.Location) time.Time {

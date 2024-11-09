@@ -12,20 +12,31 @@ type userContext struct {
 	cancel func()
 }
 
-// contextWrapper is a wrapper for user commands to create a new context for each user
+// useAdmin is a wrapper for useAdmin commands to check if the user is the bot owner
+func (h *Handler) useAdmin(command func(u *objs.Update)) func(u *objs.Update) {
+	return func(u *objs.Update) {
+		if u.Message.From.Id == h.botOwner {
+			command(u)
+		} else {
+			h.Help(u)
+		}
+	}
+}
+
+// useContext is a wrapper for user commands to create a new context for each user
 // and cancel the previous context if exists
-func (h *Handler) contextWrapper(command func(u *objs.Update)) func(update *objs.Update) {
+func (h *Handler) useContext(command func(u *objs.Update)) func(update *objs.Update) {
 	return func(update *objs.Update) {
 		// Create new context for user
-		newCtx, cancel := context.WithCancel(h.c)
+		newCtx, cancel := context.WithCancel(h.ctx)
 
 		// Cancel previous context if exists
-		if uc, ok := h.userCtx[update.Message.Chat.Id]; ok {
+		if uc, ok := h.chatCtx[update.Message.Chat.Id]; ok {
 			uc.cancel()
 		}
 
 		// Set new context
-		h.userCtx[update.Message.Chat.Id] = userContext{
+		h.chatCtx[update.Message.Chat.Id] = userContext{
 			ctx:    newCtx,
 			cancel: cancel,
 		}
@@ -35,15 +46,18 @@ func (h *Handler) contextWrapper(command func(u *objs.Update)) func(update *objs
 	}
 }
 
-// scriptWrapper is a wrapper for user commands to load user script if not loaded
-func (h *Handler) scriptWrapper(command func(u *objs.Update)) func(u *objs.Update) {
+// useScript is a wrapper for user commands to load user script if not loaded
+func (h *Handler) useScript(command func(u *objs.Update)) func(u *objs.Update) {
 	return func(u *objs.Update) {
-		err := h.setScript(u.Message.Chat.Id)
+		chatID := getChatID(u)
+
+		err := h.setScript(chatID)
 		if err != nil {
-			log.Printf("failed to set script on scriptWrapper: %v", err)
-			h.simpleSend(u.Message.Chat.Id, "unexpected error, Use /bug to report the error if it remains", 0)
+			log.Printf("Handler.useScript: %v", err)
+			h.simpleSend(chatID, unexpectedErrMsg, 0)
 			return
 		}
+
 		command(u)
 	}
 

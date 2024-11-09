@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"strconv"
 	"time"
@@ -10,11 +9,18 @@ import (
 	objs "github.com/SakoDroid/telego/objects"
 )
 
+const adminProcessTimeout = 5 * time.Minute
+
 // Respond to a user's feedback or bug report
 func (h *Handler) Respond(u *objs.Update) {
-	chatID := strconv.Itoa(u.Message.Chat.Id)
-	ch, err := h.b.AdvancedMode().RegisterChannel(chatID, "message")
-	defer h.b.AdvancedMode().UnRegisterChannel(chatID, "message")
+	var (
+		chatID    = getChatID(u)
+		chatIDStr = strconv.Itoa(chatID)
+	)
+
+	ch, err := h.bot.AdvancedMode().RegisterChannel(chatIDStr, "message")
+	defer h.bot.AdvancedMode().UnRegisterChannel(chatIDStr, "message")
+
 	if err != nil {
 		log.Printf("failed to register channel for /respond: %s", err)
 		return
@@ -22,23 +28,23 @@ func (h *Handler) Respond(u *objs.Update) {
 
 	// Check if reply message is provided
 	if u.Message.ReplyToMessage == nil {
-		h.simpleSend(u.Message.Chat.Id, "No reply message provided, /respond", 0)
+		h.simpleSend(chatID, respondNoReplyMsg, 0)
 		return
 	}
 
-	// Read userID, messageID, username from the old message that will be replied to
-	userID, responseMessageID, _, ok := parseUserMessage(u.Message.ReplyToMessage.Text)
+	// Read userChatID, messageID, username from the old message that will be replied to
+	userChatID, responseMessageID, _, ok := parseUserMessage(u.Message.ReplyToMessage.Text)
 	if !ok {
-		h.simpleSend(u.Message.Chat.Id, "Invalid message.", 0)
+		h.simpleSend(chatID, respondInvalidMsg, 0)
 		return
 	}
 
 	// Read response message
-	messageID := h.simpleSend(u.Message.Chat.Id, "Send your response message, Or /cancel", 0)
-	defer h.deleteMessage(u.Message.Chat.Id, messageID)
+	messageID := h.simpleSend(chatID, respondStart, 0)
+	defer h.deleteMessage(chatID, messageID)
 
 	// Create new command context
-	ctx, cancel := context.WithTimeout(h.userCtx[u.Message.Chat.Id].ctx, 1*time.Minute)
+	ctx, cancel := context.WithTimeout(h.getChatCtx(chatID), adminProcessTimeout)
 	defer cancel()
 
 	select {
@@ -47,67 +53,77 @@ func (h *Handler) Respond(u *objs.Update) {
 	case u = <-*ch:
 	}
 
-	if h.cancelOperation(u.Message.Text, "Canceled response.", u.Message.Chat.Id) {
+	if h.isCancelOperation(chatID, u.Message.Text) {
 		return
 	}
 
 	// Send response message to user
-	_, err = h.b.SendMessage(userID, u.Message.Text, "", responseMessageID, false, false)
+	_, err = h.bot.SendMessage(userChatID, u.Message.Text, "", responseMessageID, false, false)
 	if err != nil {
-		h.simpleSend(u.Message.Chat.Id, "Failed to send response.", 0)
+		h.simpleSend(chatID, respondErr, 0)
 		log.Printf("failed to respond on user's message on : %s", err)
 		return
 	}
 
-	h.simpleSend(u.Message.Chat.Id, "Response sent successfully.", 0)
+	h.simpleSend(chatID, respondSuccess, 0)
 }
 
 // GetSubscribers returns the number of subscribers to the bot
 func (h *Handler) GetSubscribers(u *objs.Update) {
-	ids, err := h.u.GetSubscribers(h.c)
+	chatID := getChatID(u)
+
+	ids, err := h.uc.GetSubscribers(h.getChatCtx(chatID))
 	if err != nil {
-		h.simpleSend(u.Message.Chat.Id, "Failed to get subscribers.", 0)
+		h.simpleSend(chatID, getSubscribersErr, 0)
 		log.Printf("failed to get subscribers on /subs : %s", err)
 		return
 	}
-	h.simpleSend(u.Message.Chat.Id, fmt.Sprintf("Subscribers: %d", len(ids)), 0)
+
+	h.simpleSend(chatID, strconv.Itoa(len(ids)), 0)
 }
 
 // SendAll broadcasts a message to all subscribers
 func (h *Handler) SendAll(u *objs.Update) {
-	// Register channel to receive messages
-	chatID := u.Message.Chat.Id
-	ch, err := h.b.AdvancedMode().RegisterChannel(strconv.Itoa(u.Message.Chat.Id), "message")
-	defer h.b.AdvancedMode().UnRegisterChannel(strconv.Itoa(u.Message.Chat.Id), "message")
+	var (
+		chatID    = getChatID(u)
+		chatIDStr = strconv.Itoa(chatID)
+	)
+
+	ch, err := h.bot.AdvancedMode().RegisterChannel(chatIDStr, "message")
+	defer h.bot.AdvancedMode().UnRegisterChannel(chatIDStr, "message")
 	if err != nil {
 		log.Printf("failed to register channel for /sendall: %s", err)
 		return
 	}
 
 	// Wait for message or timeout after 2 minutes
-	messageID := h.simpleSend(chatID, "Send your message, Or /cancel", 0)
+	messageID := h.simpleSend(chatID, sendAllStart, 0)
 	defer h.deleteMessage(chatID, messageID)
 
-	ctx1, cancel1 := context.WithTimeout(h.userCtx[chatID].ctx, 1*time.Minute)
+	ctx1, cancel1 := context.WithTimeout(h.getChatCtx(chatID), adminProcessTimeout)
 	defer cancel1()
 
 	select {
-	case u = <-*ch:
 	case <-ctx1.Done():
 		return
+	case u = <-*ch:
 	}
-	broadcastMessage := u.Message.Text
 
-	if h.cancelOperation(u.Message.Text, "Canceled broadcast.", chatID) {
+	var (
+		broadcastMessageID   = u.Message.MessageId
+		broadcastMessageText = u.Message.Text
+	)
+
+	if h.isCancelOperation(chatID, broadcastMessageText) {
 		return
 	}
 
 	// Double check that the owner still wants to send the message
-	messageID = h.simpleSend(chatID, "Use /confirm to send the message, Or /cancel", 0)
+	messageID = h.simpleSend(chatID, sendAllConfirm, 0)
 	defer h.deleteMessage(chatID, messageID)
 
 	// Wait for confirmation message or timeout after 5 minutes
-	ctx2, cancel2 := context.WithTimeout(h.userCtx[chatID].ctx, 1*time.Minute)
+	ctx2, cancel2 := context.WithTimeout(h.getChatCtx(chatID), adminProcessTimeout)
 	defer cancel2()
 
 	select {
@@ -119,22 +135,22 @@ func (h *Handler) SendAll(u *objs.Update) {
 	// Delete the bot message if the user sends the message or if the context times out
 	defer h.deleteMessage(chatID, u.Message.MessageId)
 
-	if u.Message.Text != "/confirm" || h.cancelOperation(u.Message.Text, "Canceled broadcast.", chatID) {
+	if h.isCancelOperation(chatID, u.Message.Text) {
 		return
 	}
-	// Send message to all subscribers in a goroutine
+
+	chatIDs, err := h.uc.GetSubscribers(h.getChatCtx(chatID))
+	if err != nil {
+		h.simpleSend(chatID, sendAllErr, 0)
+		log.Printf("failed to send message subscribers on /sendall : %s", err)
+		return
+	}
+
+	// Send message to all subscribers asynchronously
 	go func() {
-		// Get all subscribers
-		ids, err := h.u.GetSubscribers(h.c)
-		if err != nil {
-			h.simpleSend(chatID, "Failed to send message.", 0)
-			log.Printf("failed to send message subscribers on /sendall : %s", err)
-			return
+		for _, userChatID := range chatIDs {
+			h.simpleSend(userChatID, broadcastMessageText, 0)
 		}
-		// Send message to all subscribers
-		for _, id := range ids {
-			h.simpleSend(id, broadcastMessage, 0)
-		}
-		h.simpleSend(chatID, "Message sent successfully.", 0)
+		h.simpleSend(chatID, sendAllSuccess, broadcastMessageID)
 	}()
 }

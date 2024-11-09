@@ -90,6 +90,12 @@ func (uc *UseCase) GetScript(ctx context.Context, language string) (*domain.Scri
 	return uc.scr.GetScript(ctx, language)
 }
 
+func (uc *UseCase) Loc() *time.Location {
+	return uc.loc
+}
+
+func (uc *UseCase) Close() {}
+
 func (uc *UseCase) now() time.Time {
 	return time.Now().In(uc.loc)
 }

@@ -8,63 +8,62 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/escalopa/gopray/pkg/language"
 	"github.com/escalopa/gopray/telegram/internal/application"
+	"github.com/escalopa/gopray/telegram/internal/domain"
 	"github.com/pkg/errors"
 )
 
 type ScriptParser struct {
+	ctx context.Context
+
 	path string
-	sr   application.ScriptRepository
+	scr  application.ScriptRepository
 }
 
-func NewScriptParser(path string, opts ...func(*ScriptParser)) *ScriptParser {
-	p := &ScriptParser{
+func NewScriptParser(path string, scr application.ScriptRepository) *ScriptParser {
+	return &ScriptParser{
+		ctx:  context.Background(),
 		path: path,
-	}
-	for _, opt := range opts {
-		opt(p)
-	}
-	return p
-}
-
-func WithScriptRepository(sr application.ScriptRepository) func(*ScriptParser) {
-	return func(p *ScriptParser) {
-		p.sr = sr
+		scr:  scr,
 	}
 }
 
-func (p *ScriptParser) ParseScripts(ctx context.Context) error {
-	log.Printf("parsing scripts from path: %s", p.path)
-	// read all scripts from path and set the key to the script name
-	err := filepath.Walk(p.path, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return errors.Wrap(err, "error reading script file")
-		}
-		if !info.IsDir() && filepath.Ext(path) == ".json" {
-			fileName := strings.TrimSuffix(info.Name(), filepath.Ext(info.Name()))
-			// read file
-			date, err := os.ReadFile(path)
-			if err != nil {
-				return errors.Wrap(err, "error reading script file")
-			}
-			// unmarshal json
-			var script language.Script
-			err = json.Unmarshal(date, &script)
-			if err != nil {
-				return errors.Wrap(err, "error unmarshalling script")
-			}
-			// save script
-			err = p.sr.StoreScript(ctx, fileName, &script)
-			if err != nil {
-				return errors.Wrap(err, "error saving script")
-			}
-			log.Printf("successfully parsed script: %s", fileName)
-		}
-		return nil
-	})
+func (p *ScriptParser) Parse() error {
+	return filepath.Walk(p.path, p.process)
+}
+
+func (p *ScriptParser) process(path string, info os.FileInfo, err error) error {
 	if err != nil {
-		return errors.Wrap(err, "error reading scripts")
+		return errors.Wrap(err, "error reading script file")
 	}
+
+	// check if it's a file and has json extension, otherwise skip
+	if info.IsDir() || filepath.Ext(path) != ".json" {
+		return nil
+	}
+
+	fileName := strings.TrimSuffix(info.Name(), filepath.Ext(info.Name()))
+
+	// read file
+	date, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	// unmarshal json
+	var script domain.Script
+	err = json.Unmarshal(date, &script)
+	if err != nil {
+		return err
+	}
+
+	// save script
+	err = p.scr.StoreScript(p.ctx, fileName, &script)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("successfully parsed script: %s", fileName)
+
 	return nil
 }

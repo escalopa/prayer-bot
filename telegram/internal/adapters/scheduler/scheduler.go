@@ -1,25 +1,25 @@
-package notifier
+package scheduler
 
 import (
 	"context"
 	"log"
 	"strconv"
+	"sync"
 	"time"
 
-	"github.com/escalopa/gopray/pkg/core"
 	app "github.com/escalopa/gopray/telegram/internal/application"
-	"github.com/pkg/errors"
 )
 
-// Notifier is responsible for notifying subscribers about the upcoming prayer.
+// Scheduler is responsible for notifying subscribers about the upcoming prayer.
 // It also notifies subscribers when the prayer has started.
-type Notifier struct {
-	pr app.PrayerRepository
-	sr app.SubscriberRepository
-	lr app.LanguageRepository
-
+type Scheduler struct {
 	ur  time.Duration // upcoming reminder in minutes
-	gnh time.Duration // gomaa notify hour in hours
+	jr  time.Duration // gomaa notify hour in hours
+	loc *time.Location
+	pr  app.PrayerRepository
+	sr  app.SubscriberRepository
+
+	once sync.Once
 }
 
 const (
@@ -27,67 +27,50 @@ const (
 	sleepDuration     = 30 * time.Second
 )
 
-// New creates a new Notifier.
-// @param upcomingReminder is the number of minutes before the prayer starts to notify subscribers.
-// @param gomaaNotifyHour is the hour of the day to notify subscribers about the gomaa prayer.
-func New(upcomingReminder, gomaaNotifyHour time.Duration, opts ...func(*Notifier)) (*Notifier, error) {
-	n := &Notifier{ur: upcomingReminder, gnh: gomaaNotifyHour}
-	for _, opt := range opts {
-		opt(n)
-	}
-	if n.ur.Minutes() <= 0 || n.ur.Minutes() >= 60 {
-		return nil, errors.New("UPCOMING_REMINDER must be between 1 and 59")
-	}
-	if n.gnh.Hours() <= 0 || n.gnh.Hours() >= 12 {
-		return nil, errors.New("GOMAA_NOTIFY_HOUR must be between 0 and 11")
-	}
-	if n.pr == nil {
-		return nil, errors.New("prayer repository is nil")
-	}
-	if n.sr == nil {
-		return nil, errors.New("subscriber repository is nil")
-	}
-	if n.lr == nil {
-		return nil, errors.New("language repository is nil")
-	}
-	return n, nil
-}
-
-func WithPrayerRepository(pr app.PrayerRepository) func(*Notifier) {
-	return func(n *Notifier) {
-		n.pr = pr
+func New(
+	upcomingReminder time.Duration,
+	jummahReminder time.Duration,
+	location *time.Location,
+	prayerRepository app.PrayerRepository,
+	subscriberRepository app.SubscriberRepository,
+) *Scheduler {
+	return &Scheduler{
+		ur:  upcomingReminder,
+		jr:  jummahReminder,
+		loc: location,
+		pr:  prayerRepository,
+		sr:  subscriberRepository,
 	}
 }
 
-func WithSubscriberRepository(sr app.SubscriberRepository) func(*Notifier) {
-	return func(n *Notifier) {
-		n.sr = sr
-	}
+func (s *Scheduler) Run(ctx context.Context, notifier app.Notifier) {
+	s.once.Do(func() {
+		go s.notifyPrayers(ctx, notifier.PrayerSoon, notifier.PrayerNow)
+		go s.notifyJummah(ctx, notifier.PrayerJummah)
+	})
 }
 
-func WithLanguageRepository(lr app.LanguageRepository) func(*Notifier) {
-	return func(n *Notifier) {
-		n.lr = lr
-	}
-}
-
-func (n *Notifier) NotifyPrayers(ctx context.Context, notifySoon func([]int, string, string), notifyStart func([]int, string)) {
+func (s *Scheduler) notifyPrayers(
+	ctx context.Context,
+	notifySoon func(ctx context.Context, userIDs []int, prayer string, time string),
+	notifyStart func(ctx context.Context, userIDs []int, prayer string),
+) {
 	// Note that ticker is reset every time a prayer is about to start or has started.
 	// So we can create a single ticker with any value and reuse it
 	tick := time.NewTicker(time.Hour)
 	for {
-		prayerName, prayerAfter, err := n.getClosestPrayer(ctx)
+		prayerName, prayerAfter, err := s.getClosestPrayer(ctx)
 		if err != nil {
 			log.Printf("notifyPrayer: failed to get closest prayer: %s", err)
 			time.Sleep(sleepDuration)
 			continue
 		}
 
-		upcomingAt, startsAt := n.timeLeft(prayerAfter)
+		upcomingAt, startsAt := s.timeLeft(prayerAfter)
 		// logs for debugging
 		log.Printf("Prayer: %s | upcoming: %s(%d) | starts: %s(%d)\n", prayerName,
-			n.now().Add(upcomingAt).Format(defaultTimeFormat), int(upcomingAt.Minutes()), // upcoming status
-			n.now().Add(startsAt).Add(upcomingAt).Format(defaultTimeFormat), int((startsAt + upcomingAt).Minutes()), // start status
+			s.now().Add(upcomingAt).Format(defaultTimeFormat), int(upcomingAt.Minutes()), // upcoming status
+			s.now().Add(startsAt).Add(upcomingAt).Format(defaultTimeFormat), int((startsAt + upcomingAt).Minutes()), // start status
 		)
 
 		////////////////////////////////////////////////////////////////
@@ -95,17 +78,19 @@ func (n *Notifier) NotifyPrayers(ctx context.Context, notifySoon func([]int, str
 		////////////////////////////////////////////////////////////////
 
 		// Wait until the prayer is about to start, & notify subscribers about the upcoming prayer.
-		if upcomingAt > 0 { // if upcomingAt is 0, then the prayer is about to start in `startAt` minutes.
+		// If upcomingAt is 0, then the prayer is about to start in `startAt` minutes.
+		if upcomingAt > 0 {
 			tick.Reset(upcomingAt)
 			<-tick.C
 		}
-		ids, err := n.sr.GetSubscribers(ctx)
+
+		userIDs, err := s.sr.GetSubscribers(ctx)
 		if err != nil {
 			log.Printf("notifyPrayer: failed to get subscribers: %s", err)
 			time.Sleep(sleepDuration)
 			continue
 		}
-		notifySoon(ids, prayerName, strconv.Itoa(int(startsAt.Minutes())))
+		notifySoon(ctx, userIDs, prayerName, strconv.Itoa(int(startsAt.Minutes())))
 
 		////////////////////////////////////////////////////////////////
 		/// Notify subscribers when the prayer has started.
@@ -114,43 +99,43 @@ func (n *Notifier) NotifyPrayers(ctx context.Context, notifySoon func([]int, str
 		tick.Reset(startsAt)
 		<-tick.C
 		// Get the subscribers
-		ids, err = n.sr.GetSubscribers(ctx)
+		userIDs, err = s.sr.GetSubscribers(ctx)
 		if err != nil {
 			log.Printf("notifyPrayer: failed to get subscribers, %s", err)
 			time.Sleep(sleepDuration)
 			continue
 		}
-		notifyStart(ids, prayerName)
+		notifyStart(ctx, userIDs, prayerName)
 	}
 }
 
-func (n *Notifier) NotifyGomaa(ctx context.Context, notifyGomaa func([]int, string)) {
+func (s *Scheduler) notifyJummah(ctx context.Context, notifyGomaa func(context.Context, []int, string)) {
 	// Note that ticker is reset every time a prayer is about to start or has started.
 	// So we can create a single ticker with any value and reuse it
 	tick := time.NewTicker(1 * time.Hour)
 	for {
-		gomaa := n.getClosestGomaa()
+		gomaa := s.getClosestGomaa()
 		log.Printf("Gomaa: %s", gomaa.Format(defaultTimeFormat))
 		// Wait until the gomaa is about to start
-		wait := gomaa.Sub(n.now())
+		wait := gomaa.Sub(s.now())
 		tick.Reset(wait)
 		<-tick.C
 		// Get the subscribers
-		ids, err := n.sr.GetSubscribers(ctx)
+		ids, err := s.sr.GetSubscribers(ctx)
 		if err != nil {
 			log.Printf("notifyGomma: failed to get subscribers: %s", err)
 			time.Sleep(sleepDuration)
 			continue
 		}
 		// Get the prayer time for the gomaa
-		prayers, err := n.pr.GetPrayer(ctx, gomaa)
+		prayers, err := s.pr.GetPrayer(ctx, gomaa)
 		if err != nil {
 			log.Printf("notifyGomma: failed to get prayers for gomaa: %s", err)
 			time.Sleep(sleepDuration)
 			continue
 		}
 		// Notify the subscribers
-		notifyGomaa(ids, prayers.Dhuhr.Format("15:04"))
+		notifyGomaa(ctx, ids, prayers.Dhuhr.Format("15:04"))
 	}
 }
 
@@ -158,10 +143,10 @@ func (n *Notifier) NotifyGomaa(ctx context.Context, notifyGomaa func([]int, stri
 // @return prayerName string - the name of the closest prayer
 // @return prayerAfter int - the time left in minutes until the closest prayer starts
 // @return err error - any error that might have occurred
-func (n *Notifier) getClosestPrayer(ctx context.Context) (prayerName string, prayerTime time.Time, err error) {
+func (s *Scheduler) getClosestPrayer(ctx context.Context) (prayerName string, prayerTime time.Time, err error) {
 	// Get the prayer times for today.
-	now := n.now()
-	p, err := n.pr.GetPrayer(ctx, now)
+	now := s.now()
+	p, err := s.pr.GetPrayer(ctx, now)
 	if err != nil {
 		return "", time.Time{}, err
 	}
@@ -185,7 +170,7 @@ func (n *Notifier) getClosestPrayer(ctx context.Context) (prayerName string, pra
 	// If reach this block, it means that the current time is after Isha.
 	// Get the first prayer time for the next day(Fajr).
 	tomorrow := now.AddDate(0, 0, 1)
-	p, err = n.pr.GetPrayer(ctx, tomorrow)
+	p, err = s.pr.GetPrayer(ctx, tomorrow)
 	if err != nil {
 		return "", time.Time{}, err
 	}
@@ -194,13 +179,14 @@ func (n *Notifier) getClosestPrayer(ctx context.Context) (prayerName string, pra
 
 // getClosestGomaa returns the time of the next gomaa
 // @return day time.Time - the time of the next gomaa
-func (n *Notifier) getClosestGomaa() time.Time {
-	// `day` defaults to tomorrow. So that if the current date is Friday, we add 1 day to get the next Friday (the next gomaa).
-	day := n.now().AddDate(0, 0, 1)
+func (s *Scheduler) getClosestGomaa() time.Time {
+	// `day` defaults to tomorrow. So that if the current date is Friday,
+	// we add 1 day to get the next Friday (the next gomaa).
+	day := s.now().AddDate(0, 0, 1)
 	for day.Weekday() != time.Friday {
 		day = day.AddDate(0, 0, 1)
 	}
-	day = time.Date(day.Year(), day.Month(), day.Day(), int(n.gnh.Hours()), 0, 0, 0, core.GetLocation())
+	day = time.Date(day.Year(), day.Month(), day.Day(), int(s.jr.Hours()), 0, 0, 0, s.loc)
 	return day
 }
 
@@ -209,22 +195,21 @@ func (n *Notifier) getClosestGomaa() time.Time {
 // @return upcomingAt time.Duration - the time left in minutes until the prayer starts subtracted from the user reminder time `UPCOMING_REMINDER`
 // if the time left is less than the reminder time, then the `upcomingAt` is 0
 // @return startsAt time.Duration - the time to wait in minutes until the prayer starts, after the upcoming reminder has passed
-func (n *Notifier) timeLeft(t time.Time) (upcomingAt, startsAt time.Duration) {
-	left := t.Sub(n.now())
+func (s *Scheduler) timeLeft(t time.Time) (upcomingAt, startsAt time.Duration) {
+	left := t.Sub(s.now())
 	// if `left` is less than the `UPCOMING_REMINDER`, then set `upcomingAt` to 0 & `startsAt` to the `left`
 	// else, set the `upcomingAt` to `left` - `UPCOMING_REMINDER`, and `startsAt` to `UPCOMING_REMINDER`
-	if left < n.ur {
+	if left < s.ur {
 		upcomingAt = 0
 		startsAt = left
 	} else {
-		upcomingAt = left - n.ur
-		startsAt = n.ur
+		upcomingAt = left - s.ur
+		startsAt = s.ur
 	}
 	return
 }
 
 // now returns the current time in the notifier's location.
-func (n *Notifier) now() time.Time {
-	now := time.Now().In(core.GetLocation())
-	return now
+func (s *Scheduler) now() time.Time {
+	return time.Now().In(s.loc)
 }

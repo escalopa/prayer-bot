@@ -11,8 +11,7 @@ import (
 )
 
 func TestScripts(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	src := NewScriptRepository()
+	t.Parallel()
 
 	tests := []struct {
 		name   string
@@ -33,21 +32,26 @@ func TestScripts(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := src.StoreScript(ctx, tt.lang, tt.script)
-			require.NoError(t, err)
-			script, err := src.GetScript(ctx, tt.lang)
-			require.NoError(t, err)
-			require.True(t, reflect.DeepEqual(tt.script, script))
-		})
-	}
+			t.Parallel()
 
-	cancel()
+			var (
+				ctx = context.Background()
+				src = NewScriptRepository()
+			)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+			// Get script
 			script, err := src.GetScript(ctx, tt.lang)
 			require.Error(t, err)
 			require.Nil(t, script)
+
+			// Store script
+			err = src.StoreScript(ctx, tt.lang, tt.script)
+			require.NoError(t, err)
+
+			// Get script
+			script, err = src.GetScript(ctx, tt.lang)
+			require.NoError(t, err)
+			require.True(t, reflect.DeepEqual(tt.script, script))
 		})
 	}
 }

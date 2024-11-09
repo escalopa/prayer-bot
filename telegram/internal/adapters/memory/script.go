@@ -2,13 +2,15 @@ package memory
 
 import (
 	"context"
+	"github.com/escalopa/gopray/telegram/internal/domain"
+	"sync"
 
 	"github.com/escalopa/gopray/pkg/language"
-	"github.com/pkg/errors"
 )
 
 type ScriptRepository struct {
 	scripts map[string]*language.Script
+	mu      sync.RWMutex
 }
 
 func NewScriptRepository() *ScriptRepository {
@@ -17,21 +19,23 @@ func NewScriptRepository() *ScriptRepository {
 	}
 }
 
-func (r *ScriptRepository) StoreScript(ctx context.Context, language string, script *language.Script) error {
-	if ctx.Err() != nil {
-		return ctx.Err()
-	}
+func (r *ScriptRepository) StoreScript(_ context.Context, language string, script *language.Script) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
 	r.scripts[language] = script
+
 	return nil
 }
 
-func (r *ScriptRepository) GetScript(ctx context.Context, language string) (*language.Script, error) {
-	if ctx.Err() != nil {
-		return nil, ctx.Err()
-	}
+func (r *ScriptRepository) GetScript(_ context.Context, language string) (*language.Script, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
 	script, ok := r.scripts[language]
-	if !ok {
-		return nil, errors.New("script not found")
+	if !ok || script == nil {
+		return nil, domain.ErrNotFound
 	}
+
 	return script, nil
 }

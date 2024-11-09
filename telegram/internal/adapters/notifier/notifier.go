@@ -14,9 +14,10 @@ import (
 // Notifier is responsible for notifying subscribers about the upcoming prayer.
 // It also notifies subscribers when the prayer has started.
 type Notifier struct {
-	pr  app.PrayerRepository
-	sr  app.SubscriberRepository
-	lr  app.LanguageRepository
+	pr app.PrayerRepository
+	sr app.SubscriberRepository
+	lr app.LanguageRepository
+
 	ur  time.Duration // upcoming reminder in minutes
 	gnh time.Duration // gomaa notify hour in hours
 }

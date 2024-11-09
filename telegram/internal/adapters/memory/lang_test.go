@@ -2,49 +2,51 @@ package memory
 
 import (
 	"context"
-	"testing"
-
 	"github.com/stretchr/testify/require"
+	"testing"
 )
 
 func TestLanguageRepository(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	lr := NewLanguageRepository()
+	t.Parallel()
+
+	const (
+		defaultLang = "en"
+	)
 
 	tests := []struct {
+		name string
 		id   int
 		lang string
 	}{
-		{1, "en"},
-		{2, "ar"},
-		{3, "ru"},
+		{
+			name: "default",
+			id:   1,
+			lang: "ar",
+		},
 	}
 
 	for _, tt := range tests {
-		err := lr.SetLang(ctx, tt.id, tt.lang)
-		if err != nil {
-			t.Errorf("failed to set language: %v", err)
-		}
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
-		lang, err := lr.GetLang(ctx, tt.id)
-		if err != nil {
-			t.Errorf("failed to get language: %v", err)
-		}
+			var (
+				ctx = context.Background()
+				lr  = NewLanguageRepository()
+			)
 
-		if lang != tt.lang {
-			t.Errorf("expected %s, got %s", tt.lang, lang)
-		}
-	}
+			// GetLang
+			lang, err := lr.GetLang(ctx, tt.id)
+			require.NoError(t, err)
+			require.Equal(t, defaultLang, lang)
 
-	cancel()
+			// SetLang
+			err = lr.SetLang(ctx, tt.id, tt.lang)
+			require.NoError(t, err)
 
-	for _, tt := range tests {
-		// Set language
-		err := lr.SetLang(ctx, tt.id, tt.lang)
-		require.Error(t, err, "expected error, got nil")
-		// Get language
-		lang, err := lr.GetLang(ctx, tt.id)
-		require.Error(t, err, "expected error, got nil")
-		require.Equal(t, "", lang, "expected empty string, got %s", lang)
+			// GetLang
+			lang, err = lr.GetLang(ctx, tt.id)
+			require.NoError(t, err)
+			require.Equal(t, tt.lang, lang)
+		})
 	}
 }

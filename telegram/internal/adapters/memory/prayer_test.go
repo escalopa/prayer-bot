@@ -5,21 +5,19 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/escalopa/gopray/pkg/core"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPrayerRepository(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	pr := NewPrayerRepository()
+	t.Parallel()
 
 	tests := []struct {
 		name   string
-		prayer core.PrayerTime
+		prayer *core.PrayerTime
 	}{
 		{
-			name: "Test 1",
+			name: "default",
 			prayer: core.NewPrayerTime(
 				time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), // Day
 				time.Now().Add(1*time.Hour),                 // Fajr
@@ -34,30 +32,26 @@ func TestPrayerRepository(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Store prayer
-			err := pr.StorePrayer(ctx, tt.prayer)
-			require.NoError(t, err, "failed to store prayer")
+			t.Parallel()
+
+			var (
+				ctx = context.Background()
+				pr  = NewPrayerRepository()
+			)
+
 			// Get prayer
 			p, err := pr.GetPrayer(ctx, tt.prayer.Day)
-			require.NoError(t, err, "failed to get prayer")
-			// Compare
-			require.Equal(t, tt.prayer, p, "prayer not equal")
-		})
-	}
+			require.Error(t, err)
+			require.Nil(t, p)
 
-	// Test cancel
-	cancel()
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
 			// Store prayer
-			err := pr.StorePrayer(ctx, tt.prayer)
-			require.Error(t, err, "error expected")
+			err = pr.StorePrayer(ctx, tt.prayer)
+			require.NoError(t, err)
+
 			// Get prayer
-			p, err := pr.GetPrayer(ctx, tt.prayer.Day)
-			require.Error(t, err, "error expected")
-			// Compare
-			require.NotEqual(t, tt.prayer, p, "prayer equal")
+			p, err = pr.GetPrayer(ctx, tt.prayer.Day)
+			require.NoError(t, err)
+			require.Equal(t, tt.prayer, p)
 		})
 	}
 }

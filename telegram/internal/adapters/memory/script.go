@@ -2,8 +2,9 @@ package memory
 
 import (
 	"context"
-	"github.com/escalopa/gopray/telegram/internal/domain"
 	"sync"
+
+	"github.com/escalopa/gopray/telegram/internal/domain"
 
 	"github.com/escalopa/gopray/pkg/language"
 )

@@ -5,7 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/escalopa/gopray/pkg/core"
+	"github.com/escalopa/gopray/telegram/internal/domain"
+
 	"github.com/stretchr/testify/require"
 )
 
@@ -14,11 +15,11 @@ func TestPrayerRepository(t *testing.T) {
 
 	tests := []struct {
 		name   string
-		prayer *core.PrayerTime
+		prayer *domain.PrayerTime
 	}{
 		{
 			name: "default",
-			prayer: core.NewPrayerTime(
+			prayer: domain.NewPrayerTime(
 				time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), // Day
 				time.Now().Add(1*time.Hour),                 // Fajr
 				time.Now().Add(2*time.Hour),                 // Sunrise

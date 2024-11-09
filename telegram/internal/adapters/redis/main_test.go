@@ -24,3 +24,7 @@ func TestMain(m *testing.M) {
 	}()
 	m.Run()
 }
+
+func testContext() (context.Context, context.CancelFunc) {
+	return context.WithCancel(context.Background())
+}

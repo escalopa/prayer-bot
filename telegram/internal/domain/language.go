@@ -24,8 +24,8 @@ func IsValidLang(l string) bool {
 	return false
 }
 
-// AvaliableLanguages returns all the avaliable languages for the application
-func AvaliableLanguages() []Language {
+// AvailableLanguages returns all the available languages for the application
+func AvailableLanguages() []Language {
 	return []Language{Arabic, English, Russian, Tatar, Uzbek, Turkmen}
 }
 

@@ -2,43 +2,49 @@ package redis
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
+	"github.com/escalopa/gopray/telegram/internal/domain"
 	"github.com/go-redis/redis/v9"
 	"github.com/pkg/errors"
 )
 
 type HistoryRepository struct {
-	r *redis.Client
+	client *redis.Client
+	prefix string
 }
 
-func NewHistoryRepository(c *redis.Client) *HistoryRepository {
-	return &HistoryRepository{r: c}
-}
-
-func (h *HistoryRepository) GetPrayerMessageID(ctx context.Context, userID int) (int, error) {
-	result, err := h.r.Get(ctx, h.formatPrayerKey(userID)).Result()
-	if err != nil {
-		return 0, errors.Wrap(err, "failed to get prayer message id from redis")
+func NewHistoryRepository(client *redis.Client, prefix string) *HistoryRepository {
+	return &HistoryRepository{
+		client: client,
+		prefix: prefix,
 	}
-	id, err := strconv.Atoi(result)
-	if err != nil {
-		return 0, errors.Wrap(err, "failed to convert prayer message id to int in redis")
-	}
-	return id, nil
 }
 
 func (h *HistoryRepository) StorePrayerMessageID(ctx context.Context, userID int, messageID int) error {
-	if userID == 0 {
-		return errors.New("prayer message id can't be stored with 0 user id")
-	}
-	err := h.r.Set(ctx, h.formatPrayerKey(userID), messageID, 0).Err()
+	err := h.client.Set(ctx, h.formatPrayerKey(userID), messageID, 0).Err()
 	if err != nil {
-		return errors.Wrap(err, "failed to store prayer message id in redis")
+		return errors.Errorf("StorePrayerMessageID: %v", err)
 	}
 	return nil
 }
 
+func (h *HistoryRepository) GetPrayerMessageID(ctx context.Context, userID int) (int, error) {
+	result, err := h.client.Get(ctx, h.formatPrayerKey(userID)).Result()
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return 0, domain.ErrNotFound
+		}
+		return 0, errors.Errorf("GetPrayerMessageID: %v", err)
+	}
+	id, err := strconv.Atoi(result)
+	if err != nil {
+		return 0, errors.Errorf("GetPrayerMessageID: %v", err)
+	}
+	return id, nil
+}
+
 func (h *HistoryRepository) formatPrayerKey(userID int) string {
-	return "gopray_prayer_message_id:" + strconv.Itoa(userID)
+	return fmt.Sprintf("%s_gopray_prayer_message_id:%d", h.prefix, userID)
 }

@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
 	"github.com/pkg/errors"
@@ -9,43 +10,48 @@ import (
 	"github.com/go-redis/redis/v9"
 )
 
-const sk = "gopraySubscribers" // subscribers list key
+const listKey = "gopraySubscribers" // subscribers list key
 
 type SubscriberRepository struct {
-	r *redis.Client
+	client  *redis.Client
+	listKey string
 }
 
-func NewSubscriberRepository(r *redis.Client) *SubscriberRepository {
-	return &SubscriberRepository{r: r}
+func NewSubscriberRepository(client *redis.Client, prefix string) *SubscriberRepository {
+	return &SubscriberRepository{
+		client:  client,
+		listKey: fmt.Sprintf("%s:%s", prefix, listKey),
+	}
 }
 
 func (s *SubscriberRepository) StoreSubscriber(ctx context.Context, id int) error {
-	err := s.r.SAdd(ctx, sk, id).Err()
+	err := s.client.SAdd(ctx, s.listKey, id).Err()
 	if err != nil {
-		return errors.Wrap(err, "failed to store subscriber in redis")
+		return errors.Errorf("StoreSubscriber: %v", err)
 	}
 	return nil
 }
 
 func (s *SubscriberRepository) RemoveSubscribe(ctx context.Context, id int) error {
-	err := s.r.SRem(ctx, sk, id).Err()
+	err := s.client.SRem(ctx, s.listKey, id).Err()
 	if err != nil {
-		return errors.Wrap(err, "failed to remove subscriber from redis")
+		return errors.Errorf("RemoveSubscribe: %v", err)
 	}
 	return nil
 }
 
 func (s *SubscriberRepository) GetSubscribers(ctx context.Context) ([]int, error) {
-	sIds, err := s.r.SMembers(ctx, sk).Result()
+	setIDs, err := s.client.SMembers(ctx, s.listKey).Result()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get subscribers from redis")
+		return nil, errors.Errorf("GetSubscribers: %v", err)
 	}
+
 	// Convert string ids to int
-	ids := make([]int, len(sIds))
-	for i, sId := range sIds {
-		ids[i], err = strconv.Atoi(sId)
+	ids := make([]int, len(setIDs))
+	for i, id := range setIDs {
+		ids[i], err = strconv.Atoi(id)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to convert subscriber id to int")
+			return nil, errors.Errorf("GetSubscribers: %v", err)
 		}
 	}
 	return ids, nil

@@ -5,8 +5,9 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/escalopa/gopray/telegram/internal/domain"
+
 	"github.com/brianvoe/gofakeit/v6"
-	"github.com/escalopa/gopray/pkg/language"
 	"github.com/stretchr/testify/require"
 )
 
@@ -16,7 +17,7 @@ func TestScripts(t *testing.T) {
 	tests := []struct {
 		name   string
 		lang   string
-		script *language.Script
+		script *domain.Script
 	}{
 		{
 			name:   "en",
@@ -56,8 +57,8 @@ func TestScripts(t *testing.T) {
 	}
 }
 
-func randomScript() *language.Script {
-	return &language.Script{
+func randomScript() *domain.Script {
+	return &domain.Script{
 		DatePickerStart: gofakeit.InputName(),
 
 		January:   gofakeit.InputName(),

@@ -14,20 +14,20 @@ func NewLanguageRepository() *LanguageRepository {
 	return &LanguageRepository{languages: make(map[int]string)}
 }
 
-func (l *LanguageRepository) SetLang(_ context.Context, id int, lang string) error {
-	l.mu.Lock()
-	defer l.mu.Unlock()
+func (lr *LanguageRepository) SetLang(_ context.Context, id int, lang string) error {
+	lr.mu.Lock()
+	defer lr.mu.Unlock()
 
-	l.languages[id] = lang
+	lr.languages[id] = lang
 
 	return nil
 }
 
-func (l *LanguageRepository) GetLang(_ context.Context, id int) (string, error) {
-	l.mu.RLock()
-	defer l.mu.RUnlock()
+func (lr *LanguageRepository) GetLang(_ context.Context, id int) (string, error) {
+	lr.mu.RLock()
+	defer lr.mu.RUnlock()
 
-	lang, ok := l.languages[id]
+	lang, ok := lr.languages[id]
 	if !ok || lang == "" {
 		return "en", nil
 	}

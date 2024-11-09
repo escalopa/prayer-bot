@@ -13,6 +13,8 @@ import (
 func TestPrayerRepository(t *testing.T) {
 	t.Parallel()
 
+	now := time.Now()
+
 	tests := []struct {
 		name   string
 		prayer *domain.PrayerTime
@@ -20,13 +22,13 @@ func TestPrayerRepository(t *testing.T) {
 		{
 			name: "default",
 			prayer: domain.NewPrayerTime(
-				time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), // Day
-				time.Now().Add(1*time.Hour),                 // Fajr
-				time.Now().Add(2*time.Hour),                 // Sunrise
-				time.Now().Add(3*time.Hour),                 // Dhuhr
-				time.Now().Add(4*time.Hour),                 // Asr
-				time.Now().Add(5*time.Hour),                 // Maghrib
-				time.Now().Add(6*time.Hour),                 // Isha
+				now,
+				now.Add(1*time.Hour),
+				now.Add(2*time.Hour),
+				now.Add(3*time.Hour),
+				now.Add(4*time.Hour),
+				now.Add(5*time.Hour),
+				now.Add(6*time.Hour),
 			),
 		},
 	}

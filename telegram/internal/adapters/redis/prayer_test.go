@@ -14,6 +14,8 @@ func TestPrayerRepository(t *testing.T) {
 	client, errRedis := New(testRedisURL)
 	require.NoError(t, errRedis)
 
+	now := time.Now()
+
 	tests := []struct {
 		name  string
 		day   time.Time
@@ -21,14 +23,14 @@ func TestPrayerRepository(t *testing.T) {
 	}{
 		{
 			name: "default",
-			day:  domain.DefaultTime(1, 1, 2023),
-			times: domain.NewPrayerTime(domain.DefaultTime(1, 1, 2023),
-				time.Now().Add(2*time.Second),
-				time.Now().Add(3*time.Second),
-				time.Now().Add(4*time.Second),
-				time.Now().Add(5*time.Second),
-				time.Now().Add(6*time.Second),
-				time.Now().Add(7*time.Second)),
+			day:  now,
+			times: domain.NewPrayerTime(now,
+				now.Add(2*time.Second),
+				now.Add(3*time.Second),
+				now.Add(4*time.Second),
+				now.Add(5*time.Second),
+				now.Add(6*time.Second),
+				now.Add(7*time.Second)),
 		},
 	}
 

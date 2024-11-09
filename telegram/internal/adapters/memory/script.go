@@ -5,35 +5,33 @@ import (
 	"sync"
 
 	"github.com/escalopa/gopray/telegram/internal/domain"
-
-	"github.com/escalopa/gopray/pkg/language"
 )
 
 type ScriptRepository struct {
-	scripts map[string]*language.Script
+	scripts map[string]*domain.Script
 	mu      sync.RWMutex
 }
 
 func NewScriptRepository() *ScriptRepository {
 	return &ScriptRepository{
-		scripts: make(map[string]*language.Script),
+		scripts: make(map[string]*domain.Script),
 	}
 }
 
-func (r *ScriptRepository) StoreScript(_ context.Context, language string, script *language.Script) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+func (scr *ScriptRepository) StoreScript(_ context.Context, language string, script *domain.Script) error {
+	scr.mu.Lock()
+	defer scr.mu.Unlock()
 
-	r.scripts[language] = script
+	scr.scripts[language] = script
 
 	return nil
 }
 
-func (r *ScriptRepository) GetScript(_ context.Context, language string) (*language.Script, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+func (scr *ScriptRepository) GetScript(_ context.Context, language string) (*domain.Script, error) {
+	scr.mu.RLock()
+	defer scr.mu.RUnlock()
 
-	script, ok := r.scripts[language]
+	script, ok := scr.scripts[language]
 	if !ok || script == nil {
 		return nil, domain.ErrNotFound
 	}

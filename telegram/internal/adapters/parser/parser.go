@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/escalopa/gopray/telegram/internal/application"
+	app "github.com/escalopa/gopray/telegram/internal/application"
 	"github.com/escalopa/gopray/telegram/internal/domain"
 	"github.com/pkg/errors"
 )
@@ -22,13 +22,13 @@ var (
 // It also saves the schedule to the database.
 type PrayerParser struct {
 	path string // data-path
-	pr   application.PrayerRepository
+	pr   app.PrayerRepository
 	loc  *time.Location
 }
 
 func NewPrayerParser(
 	path string,
-	pr application.PrayerRepository,
+	pr app.PrayerRepository,
 	loc *time.Location,
 ) *PrayerParser {
 	return &PrayerParser{

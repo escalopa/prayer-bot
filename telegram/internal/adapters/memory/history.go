@@ -16,20 +16,20 @@ func NewHistoryRepository() *HistoryRepository {
 	return &HistoryRepository{prayers: make(map[int]int)}
 }
 
-func (hr *HistoryRepository) StorePrayerMessageID(_ context.Context, userID int, messageID int) error {
+func (hr *HistoryRepository) StorePrayerMessageID(_ context.Context, chatID int, messageID int) error {
 	hr.mu.Lock()
 	defer hr.mu.Unlock()
 
-	hr.prayers[userID] = messageID
+	hr.prayers[chatID] = messageID
 
 	return nil
 }
 
-func (hr *HistoryRepository) GetPrayerMessageID(_ context.Context, userID int) (int, error) {
+func (hr *HistoryRepository) GetPrayerMessageID(_ context.Context, chatID int) (int, error) {
 	hr.mu.RLock()
 	defer hr.mu.RUnlock()
 
-	messageID, ok := hr.prayers[userID]
+	messageID, ok := hr.prayers[chatID]
 	if !ok || messageID == 0 {
 		return 0, domain.ErrNotFound
 	}

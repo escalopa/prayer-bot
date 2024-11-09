@@ -22,16 +22,16 @@ func NewHistoryRepository(client *redis.Client, prefix string) *HistoryRepositor
 	}
 }
 
-func (h *HistoryRepository) StorePrayerMessageID(ctx context.Context, userID int, messageID int) error {
-	err := h.client.Set(ctx, h.formatPrayerKey(userID), messageID, 0).Err()
+func (h *HistoryRepository) StorePrayerMessageID(ctx context.Context, chatID int, messageID int) error {
+	err := h.client.Set(ctx, h.formatPrayerKey(chatID), messageID, 0).Err()
 	if err != nil {
 		return errors.Errorf("StorePrayerMessageID: %v", err)
 	}
 	return nil
 }
 
-func (h *HistoryRepository) GetPrayerMessageID(ctx context.Context, userID int) (int, error) {
-	result, err := h.client.Get(ctx, h.formatPrayerKey(userID)).Result()
+func (h *HistoryRepository) GetPrayerMessageID(ctx context.Context, chatID int) (int, error) {
+	result, err := h.client.Get(ctx, h.formatPrayerKey(chatID)).Result()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
 			return 0, domain.ErrNotFound
@@ -45,6 +45,6 @@ func (h *HistoryRepository) GetPrayerMessageID(ctx context.Context, userID int) 
 	return id, nil
 }
 
-func (h *HistoryRepository) formatPrayerKey(userID int) string {
-	return fmt.Sprintf("%s_gopray_prayer_message_id:%d", h.prefix, userID)
+func (h *HistoryRepository) formatPrayerKey(chatID int) string {
+	return fmt.Sprintf("%s_gopray_prayer_message_id:%d", h.prefix, chatID)
 }

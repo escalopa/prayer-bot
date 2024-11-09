@@ -12,12 +12,12 @@ func TestHistoryRepository(t *testing.T) {
 
 	tests := []struct {
 		name      string
-		userID    int
+		chatID    int
 		messageID int
 	}{
 		{
 			name:      "default",
-			userID:    1,
+			chatID:    1,
 			messageID: 1,
 		},
 	}
@@ -32,16 +32,16 @@ func TestHistoryRepository(t *testing.T) {
 			)
 
 			// Get message id
-			messageID, err := hr.GetPrayerMessageID(ctx, tt.userID)
+			messageID, err := hr.GetPrayerMessageID(ctx, tt.chatID)
 			require.Error(t, err)
 			require.Equal(t, 0, messageID)
 
 			// Store message id
-			err = hr.StorePrayerMessageID(ctx, tt.userID, tt.messageID)
+			err = hr.StorePrayerMessageID(ctx, tt.chatID, tt.messageID)
 			require.NoError(t, err)
 
 			// Re-get message id
-			messageID, err = hr.GetPrayerMessageID(ctx, tt.userID)
+			messageID, err = hr.GetPrayerMessageID(ctx, tt.chatID)
 			require.NoError(t, err)
 			require.Equal(t, tt.messageID, messageID)
 		})

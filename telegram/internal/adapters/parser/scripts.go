@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/escalopa/gopray/telegram/internal/application"
+	app "github.com/escalopa/gopray/telegram/internal/application"
 	"github.com/escalopa/gopray/telegram/internal/domain"
 	"github.com/pkg/errors"
 )
@@ -17,10 +17,10 @@ type ScriptParser struct {
 	ctx context.Context
 
 	path string
-	scr  application.ScriptRepository
+	scr  app.ScriptRepository
 }
 
-func NewScriptParser(path string, scr application.ScriptRepository) *ScriptParser {
+func NewScriptParser(path string, scr app.ScriptRepository) *ScriptParser {
 	return &ScriptParser{
 		ctx:  context.Background(),
 		path: path,

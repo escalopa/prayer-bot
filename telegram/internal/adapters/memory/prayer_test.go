@@ -5,59 +5,56 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
+	"github.com/escalopa/gopray/telegram/internal/domain"
 
-	"github.com/escalopa/gopray/pkg/core"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPrayerRepository(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	pr := NewPrayerRepository()
+	t.Parallel()
+
+	now := time.Now()
 
 	tests := []struct {
 		name   string
-		prayer core.PrayerTime
+		prayer *domain.PrayerTime
 	}{
 		{
-			name: "Test 1",
-			prayer: core.NewPrayerTime(
-				time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), // Day
-				time.Now().Add(1*time.Hour),                 // Fajr
-				time.Now().Add(2*time.Hour),                 // Sunrise
-				time.Now().Add(3*time.Hour),                 // Dhuhr
-				time.Now().Add(4*time.Hour),                 // Asr
-				time.Now().Add(5*time.Hour),                 // Maghrib
-				time.Now().Add(6*time.Hour),                 // Isha
+			name: "default",
+			prayer: domain.NewPrayerTime(
+				now,
+				now.Add(1*time.Hour),
+				now.Add(2*time.Hour),
+				now.Add(3*time.Hour),
+				now.Add(4*time.Hour),
+				now.Add(5*time.Hour),
+				now.Add(6*time.Hour),
 			),
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Store prayer
-			err := pr.StorePrayer(ctx, tt.prayer)
-			require.NoError(t, err, "failed to store prayer")
+			t.Parallel()
+
+			var (
+				ctx = context.Background()
+				pr  = NewPrayerRepository()
+			)
+
 			// Get prayer
 			p, err := pr.GetPrayer(ctx, tt.prayer.Day)
-			require.NoError(t, err, "failed to get prayer")
-			// Compare
-			require.Equal(t, tt.prayer, p, "prayer not equal")
-		})
-	}
+			require.Error(t, err)
+			require.Nil(t, p)
 
-	// Test cancel
-	cancel()
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
 			// Store prayer
-			err := pr.StorePrayer(ctx, tt.prayer)
-			require.Error(t, err, "error expected")
+			err = pr.StorePrayer(ctx, tt.prayer)
+			require.NoError(t, err)
+
 			// Get prayer
-			p, err := pr.GetPrayer(ctx, tt.prayer.Day)
-			require.Error(t, err, "error expected")
-			// Compare
-			require.NotEqual(t, tt.prayer, p, "prayer equal")
+			p, err = pr.GetPrayer(ctx, tt.prayer.Day)
+			require.NoError(t, err)
+			require.Equal(t, tt.prayer, p)
 		})
 	}
 }

@@ -2,32 +2,35 @@ package memory
 
 import (
 	"context"
-
-	"github.com/pkg/errors"
+	"sync"
 )
 
 type LanguageRepository struct {
-	m map[int]string
+	languages map[int]string
+	mu        sync.RWMutex
 }
 
 func NewLanguageRepository() *LanguageRepository {
-	return &LanguageRepository{m: make(map[int]string)}
+	return &LanguageRepository{languages: make(map[int]string)}
 }
 
-func (l *LanguageRepository) GetLang(ctx context.Context, id int) (string, error) {
-	if err := ctx.Err(); err != nil {
-		return "", err
-	}
-	if _, ok := l.m[id]; !ok {
-		return "", errors.New("language not found")
-	}
-	return l.m[id], nil
-}
+func (lr *LanguageRepository) SetLang(_ context.Context, id int, lang string) error {
+	lr.mu.Lock()
+	defer lr.mu.Unlock()
 
-func (l *LanguageRepository) SetLang(ctx context.Context, id int, lang string) error {
-	if err := ctx.Err(); err != nil {
-		return err
-	}
-	l.m[id] = lang
+	lr.languages[id] = lang
+
 	return nil
+}
+
+func (lr *LanguageRepository) GetLang(_ context.Context, id int) (string, error) {
+	lr.mu.RLock()
+	defer lr.mu.RUnlock()
+
+	lang, ok := lr.languages[id]
+	if !ok || lang == "" {
+		return "en", nil
+	}
+
+	return lang, nil
 }

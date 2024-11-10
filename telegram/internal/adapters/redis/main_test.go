@@ -2,8 +2,9 @@ package redis
 
 import (
 	"context"
-	"log"
 	"testing"
+
+	log "github.com/catalystgo/logger/cli"
 
 	"github.com/escalopa/gopray/telegram/test/testcon"
 )
@@ -23,4 +24,8 @@ func TestMain(m *testing.M) {
 		}
 	}()
 	m.Run()
+}
+
+func testContext() (context.Context, context.CancelFunc) {
+	return context.WithCancel(context.Background())
 }

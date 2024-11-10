@@ -1,21 +1,17 @@
 package redis
 
 import (
-	"context"
 	"testing"
 
+	"github.com/escalopa/gopray/telegram/internal/domain"
 	"github.com/stretchr/testify/require"
 )
 
 func TestNewLanguageRepository(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	t.Parallel()
 
-	c := New(testRedisURL)
-	lr := NewLanguageRepository(c)
-	require.NotNil(t, lr)
-	defer func() {
-		require.NoError(t, c.Close())
-	}()
+	client, errRedis := New(testRedisURL)
+	require.NoError(t, errRedis)
 
 	tests := []struct {
 		name string
@@ -23,39 +19,43 @@ func TestNewLanguageRepository(t *testing.T) {
 		lang string
 	}{
 		{
-			name: "Test 1",
+			name: "default",
 			id:   1,
 			lang: "en",
 		},
-		{
-			name: "Test 2",
-			id:   2,
-			lang: "ar",
-		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := lr.SetLang(ctx, tt.id, tt.lang)
-			require.NoError(t, err, "expected no error, got %v", err)
-			lang, err := lr.GetLang(ctx, tt.id)
-			require.NoError(t, err, "expected no error, got %v", err)
-			require.Equal(t, tt.lang, lang, "expected %s, got %s", tt.lang, lang)
-		})
-	}
+			t.Parallel()
 
-	// Test cancel
-	cancel()
+			lr := NewLanguageRepository(client, tt.name)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Set language
-			err := lr.SetLang(ctx, tt.id, tt.lang)
-			require.Error(t, err, "expected error, got nil")
+			ctx, cancel := testContext()
+
 			// Get language
 			lang, err := lr.GetLang(ctx, tt.id)
-			require.Error(t, err, "expected error, got nil")
-			require.Equal(t, "", lang, "expected empty string, got %s", lang)
+			require.Empty(t, lang)
+			require.ErrorIs(t, err, domain.ErrNotFound)
+
+			// Set language
+			err = lr.SetLang(ctx, tt.id, tt.lang)
+			require.NoError(t, err)
+
+			// Get language
+			lang, err = lr.GetLang(ctx, tt.id)
+			require.NoError(t, err)
+			require.Equal(t, tt.lang, lang)
+
+			cancel()
+
+			// Set language
+			err = lr.SetLang(ctx, tt.id, tt.lang)
+			require.Error(t, err)
+
+			// Get language
+			_, err = lr.GetLang(ctx, tt.id)
+			require.Error(t, err)
 		})
 	}
 }

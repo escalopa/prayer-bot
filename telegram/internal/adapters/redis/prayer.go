@@ -6,44 +6,46 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/pkg/errors"
-
-	"github.com/escalopa/gopray/pkg/core"
+	"github.com/escalopa/gopray/telegram/internal/domain"
 	"github.com/go-redis/redis/v9"
+	"github.com/pkg/errors"
 )
 
 type PrayerRepository struct {
-	r *redis.Client
+	client *redis.Client
+	prefix string
 }
 
-func NewPrayerRepository(r *redis.Client) *PrayerRepository {
-	return &PrayerRepository{r: r}
+func NewPrayerRepository(client *redis.Client, prefix string) *PrayerRepository {
+	return &PrayerRepository{
+		client: client,
+		prefix: prefix,
+	}
 }
 
-func (p *PrayerRepository) StorePrayer(ctx context.Context, pt core.PrayerTime) error {
-	_, err := p.r.Set(ctx, p.formatKey(pt.Day), pt, 0).Result()
+func (p *PrayerRepository) StorePrayer(ctx context.Context, pt *domain.PrayerTime) error {
+	_, err := p.client.Set(ctx, p.formatKey(pt.Day), pt, 0).Result()
 	if err != nil {
-		return fmt.Errorf("failed to set prayer in redis for %+v: %v", pt, err)
+		return errors.Errorf("StorePrayer: %v", err)
 	}
 	return nil
 }
 
-func (p *PrayerRepository) GetPrayer(ctx context.Context, day time.Time) (core.PrayerTime, error) {
-	bytes, err := p.r.Get(ctx, p.formatKey(day)).Result()
+func (p *PrayerRepository) GetPrayer(ctx context.Context, day time.Time) (*domain.PrayerTime, error) {
+	bytes, err := p.client.Get(ctx, p.formatKey(day)).Result()
 	if err != nil {
-		if err == redis.Nil {
-			return core.PrayerTime{}, errors.New(fmt.Sprintf("prayer not found for %s", day))
+		if errors.Is(err, redis.Nil) {
+			return nil, domain.ErrNotFound
 		}
-		return core.PrayerTime{}, fmt.Errorf("failed to get prayer from redis")
+		return nil, errors.Errorf("GetPrayer: %v", err)
 	}
-	// Unmarshal
-	var pt core.PrayerTime
+	var pt domain.PrayerTime
 	if err = json.Unmarshal([]byte(bytes), &pt); err != nil {
-		return core.PrayerTime{}, fmt.Errorf("failed to unmarshal prayer from redis")
+		return nil, errors.Errorf("GetPrayer: %v", err)
 	}
-	return pt, nil
+	return &pt, nil
 }
 
 func (p *PrayerRepository) formatKey(day time.Time) string {
-	return fmt.Sprintf("gopray_prayer_time:%d/%d/%d", day.Day(), int(day.Month()), day.Year())
+	return fmt.Sprintf("%s:prayer_time:%d/%d/%d", p.prefix, day.Day(), int(day.Month()), day.Year())
 }

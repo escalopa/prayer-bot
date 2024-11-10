@@ -1,4 +1,4 @@
-package language
+package domain
 
 // Language is a struct that holds the long and short name of a language
 type Language struct {
@@ -17,15 +17,16 @@ var (
 
 // IsValidLang returns true if the given language is valid
 func IsValidLang(l string) bool {
-	switch l {
-	case Arabic.Short, English.Short, Russian.Short, Tatar.Short, Uzbek.Short, Turkmen.Short:
-		return true
+	for _, lang := range AvailableLanguages() {
+		if lang.Short == l {
+			return true
+		}
 	}
 	return false
 }
 
-// AvaliableLanguages returns all the avaliable languages for the application
-func AvaliableLanguages() []Language {
+// AvailableLanguages returns all the available languages for the application
+func AvailableLanguages() []Language {
 	return []Language{Arabic, English, Russian, Tatar, Uzbek, Turkmen}
 }
 

@@ -1,19 +1,8 @@
-package core
+package domain
 
 import (
 	"encoding/json"
 	"time"
-)
-
-type Prayer string
-
-const (
-	Fajr    Prayer = "fajr"
-	Dohaa   Prayer = "dohaa"
-	Dhuhr   Prayer = "dhuhr"
-	Asr     Prayer = "asr"
-	Maghrib Prayer = "maghrib"
-	Isha    Prayer = "isha"
 )
 
 type PrayerTime struct {
@@ -26,8 +15,8 @@ type PrayerTime struct {
 	Isha    time.Time `json:"isha"`
 }
 
-func NewPrayerTime(day, fajr, dohaa, dhuhr, asr, maghrib, isha time.Time) PrayerTime {
-	return PrayerTime{
+func NewPrayerTime(day, fajr, dohaa, dhuhr, asr, maghrib, isha time.Time) *PrayerTime {
+	return &PrayerTime{
 		Day:     day,
 		Fajr:    fajr,
 		Dohaa:   dohaa,

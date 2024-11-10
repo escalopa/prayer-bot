@@ -2,40 +2,37 @@ package memory
 
 import (
 	"context"
-	"errors"
-	"fmt"
+	"sync"
+
+	"github.com/escalopa/gopray/telegram/internal/domain"
 )
 
 type HistoryRepository struct {
 	prayers map[int]int
-	gomaa   map[int]int
+	mu      sync.RWMutex
 }
 
 func NewHistoryRepository() *HistoryRepository {
-	return &HistoryRepository{
-		prayers: make(map[int]int),
-		gomaa:   make(map[int]int),
-	}
+	return &HistoryRepository{prayers: make(map[int]int)}
 }
 
-func (h *HistoryRepository) GetPrayerMessageID(ctx context.Context, userID int) (int, error) {
-	if err := ctx.Err(); err != nil {
-		return 0, err
-	}
-	messageID, ok := h.prayers[userID]
-	if !ok {
-		return 0, fmt.Errorf("message id for user %d not found", userID)
-	}
-	return messageID, nil
-}
+func (hr *HistoryRepository) StorePrayerMessageID(_ context.Context, chatID int, messageID int) error {
+	hr.mu.Lock()
+	defer hr.mu.Unlock()
 
-func (h *HistoryRepository) StorePrayerMessageID(ctx context.Context, userID int, messageID int) error {
-	if err := ctx.Err(); err != nil {
-		return err
-	}
-	if userID == 0 {
-		return errors.New("user id cannot be 0")
-	}
-	h.prayers[userID] = messageID
+	hr.prayers[chatID] = messageID
+
 	return nil
+}
+
+func (hr *HistoryRepository) GetPrayerMessageID(_ context.Context, chatID int) (int, error) {
+	hr.mu.RLock()
+	defer hr.mu.RUnlock()
+
+	messageID, ok := hr.prayers[chatID]
+	if !ok || messageID == 0 {
+		return 0, domain.ErrNotFound
+	}
+
+	return messageID, nil
 }

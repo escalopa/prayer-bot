@@ -11,197 +11,202 @@ import (
 )
 
 func TestParserParseSchedule(t *testing.T) {
-	ctx := context.Background()
+	t.Parallel()
 
-	days := "День,ФАЖР,ВОСХОД,ЗУХР,АСР,МАГРИБ,ИША"
-	pr := memory.NewPrayerRepository()
+	const days = "День,ФАЖР,ВОСХОД,ЗУХР,АСР,МАГРИБ,ИША"
+
 	tests := []struct {
-		name    string
-		data    []string
-		wantErr bool
+		name  string
+		data  []string
+		check func(t *testing.T, err error)
 	}{
 		{
-			name: "Test 1",
+			name: "success",
 			data: []string{
 				days + "\n",
 				"1/1/2023,5:53,8:13,11:47,13:34,15:21,17:18\n",
 				"2/1/2023,5:53,8:13,11:47,13:34,15:21,17:18\n",
 			},
-			wantErr: false,
+			check: func(t *testing.T, err error) { require.NoError(t, err) },
 		},
 		{
-			name: "Test 2",
+			name: "test_2",
 			data: []string{
 				days + "\n",
 				"1/1/2023,5:53,8:13,11:47,13:34,15:21,1718\n", // wrong time
 			},
-			wantErr: true,
+			check: func(t *testing.T, err error) { require.Error(t, err) },
 		},
 		{
-			name: "Test 3",
+			name: "test_3",
 			data: []string{
 				days + "\n",
 				"1//2023,5:53,8:13,11:47,13:34,15:21,17:18\n", // wrong month
 			},
-			wantErr: true,
+			check: func(t *testing.T, err error) { require.Error(t, err) },
 		},
 		{
-			name: "Test 4",
+			name: "test_4",
 			data: []string{
 				days + "\n",
 				"1/1/2023,5:53,8:13,11:4713:34,15:21,17:18\n", // wrong separator
 			},
-			wantErr: true,
+			check: func(t *testing.T, err error) { require.Error(t, err) },
 		},
 		{
-			name: "Test 5",
+			name: "test_5",
 			data: []string{
 				days + "\n",
 				"1/1/2023,5:53,8:13,11:47,13:34,15:21,17:18\n",
 				"2/1/2023,5:53,8:13,11:47,13:34,15:21,17:70\n", // wrong time, minutes > 59
 			},
-			wantErr: true,
+			check: func(t *testing.T, err error) { require.Error(t, err) },
 		},
 		{
-			name: "Test 6",
+			name: "test_6",
 			data: []string{
 				days + "\n",
 				"1/1/2023,5:53,8:13,11:47,13:34,15:21,17:-1\n", // wrong time, minutes < 0
 			},
-			wantErr: true,
+			check: func(t *testing.T, err error) { require.Error(t, err) },
 		},
 		{
-			name: "Test 7",
+			name: "test_7",
 			data: []string{
 				days + "\n",
 				"1/1/2023,5:53,8:13,11:47,13:34,15:21,24:18\n", // wrong time, hours > 23
 			},
-			wantErr: true,
+			check: func(t *testing.T, err error) { require.Error(t, err) },
 		},
 		{
-			name: "Test 8",
+			name: "test_8",
 			data: []string{
 				days + "\n",
 				"1/1/2023,5:53,8:13,11:47,13:34,15:21,-1:18\n", // wrong time, hours < 0
 			},
-			wantErr: true,
+			check: func(t *testing.T, err error) { require.Error(t, err) },
 		},
 		{
-			name: "Test 9",
+			name: "test_9",
 			data: []string{
 				days + "\n",
 				"1/1/2023,5:53,8:13,11:47,13:34,15:21,17;18\n", // wrong separator in time, used ; instead of :
 			},
-			wantErr: true,
+			check: func(t *testing.T, err error) { require.Error(t, err) },
 		},
 		{
-			name: "Test 10",
+			name: "test_10",
 			data: []string{
 				days + "\n",
 				"1/15/2023:53,8:13,11:47,13:34,15:21,17:18\n", // removed one comma
 			},
-			wantErr: true,
+			check: func(t *testing.T, err error) { require.Error(t, err) },
 		},
 		{
-			name: "Test 11",
+			name: "test_11",
 			data: []string{
 				days + "\n",
 				"1/1/2023,5:53,8:13,11:47,13:34,15:21,1s:18\n", // wrong time, s instead of a number in hour
 			},
-			wantErr: true,
+			check: func(t *testing.T, err error) { require.Error(t, err) },
 		},
 		{
-			name: "Test 12",
+			name: "test_12",
 			data: []string{
 				days + "\n",
 				"1/1/2023,5:53,8:13,11:47,13:34,15:21,17:1s\n", // wrong time, s instead of a number in minutes
 			},
-			wantErr: true,
+			check: func(t *testing.T, err error) { require.Error(t, err) },
 		},
 		{
-			name: "Test 13",
+			name: "test_13",
 			data: []string{
 				days + "\n",
 				"s/1/2023,5:53,8:13,11:47,13:34,15:21,17:18\n", // wrong day, s instead of a number
 			},
-			wantErr: true,
+			check: func(t *testing.T, err error) { require.Error(t, err) },
 		},
 		{
-			name: "Test 14",
+			name: "test_14",
 			data: []string{
 				days + "\n",
 				"1/s/2023,5:53,8:13,11:47,13:34,15:21,17:18\n", // wrong month, s instead of a number
 			},
-			wantErr: true,
+			check: func(t *testing.T, err error) { require.Error(t, err) },
 		},
 		{
-			name: "Test 15",
+			name: "test_15",
 			data: []string{
 				days + "\n",
 				"1/1/2023,5:53,8:13'10:47,13:34,15:21,17:18\n", // wrong separator in time, used ' instead of :
 			},
-			wantErr: true,
+			check: func(t *testing.T, err error) { require.Error(t, err) },
 		},
 		{
-			name: "Test 16",
+			name: "test_16",
 			data: []string{
 				days + "\n",
 				"1/1/2023,5:53,8:13,11:47,13:34,15:21,17:18,1:2:3\n", // too many columns
 			},
-			wantErr: true,
+			check: func(t *testing.T, err error) { require.Error(t, err) },
 		},
 		{
-			name: "Test 17",
+			name: "test_17",
 			data: []string{
 				days + "\n",
 				"1/1/2023,50:53,8:13,11:47,13:34,16:21,17:18\n", // wrong time for fajr, hours > 24
 			},
-			wantErr: true,
+			check: func(t *testing.T, err error) { require.Error(t, err) },
 		},
 		{
-			name: "Test 18",
+			name: "test_18",
 			data: []string{
 				days + "\n",
 				"1/1/2023,5:53,80:13,11:47,13:34,15:21,17:18\n", // wrong time for sunrise, hours > 24
 			},
-			wantErr: true,
+			check: func(t *testing.T, err error) { require.Error(t, err) },
 		},
 		{
-			name: "Test 19",
+			name: "test_19",
 			data: []string{
 				days + "\n",
 				"1/1/2023,5:53,8:13,35:47,13:34,15:21,17:18\n", // wrong time for dhuhr, hours > 24
 			},
-			wantErr: true,
+			check: func(t *testing.T, err error) { require.Error(t, err) },
 		},
 		{
-			name: "Test 20",
+			name: "test_20",
 			data: []string{
 				days + "\n",
 				"1/1/2023,5:53,8:13,11:47,134:34,15:21,17:18\n", // wrong time for asr, hours > 24
 			},
-			wantErr: true,
+			check: func(t *testing.T, err error) { require.Error(t, err) },
 		},
 		{
-			name: "Test 21",
+			name: "test_21",
 			data: []string{
 				days + "\n",
 				"1/1/2023,5:53,8:13,11:47,13:34,155:21,17:18\n", // wrong time for maghrib, hours > 24
 			},
-			wantErr: true,
+			check: func(t *testing.T, err error) { require.Error(t, err) },
 		},
 		{
-			name: "Test 22",
+			name: "test_22",
 			data: []string{
 				days + "\n",
 				"1/1/2023,5:53,8:13,11:47,13:34,15:21,177:18\n", // wrong time for isha, hours > 24
 			},
-			wantErr: true,
+			check: func(t *testing.T, err error) { require.Error(t, err) },
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctx := context.Background()
+			pr := memory.NewPrayerRepository()
+
 			// Create a temporary file
 			file, err := os.CreateTemp("", "test")
 			require.NoError(t, err)
@@ -209,64 +214,81 @@ func TestParserParseSchedule(t *testing.T) {
 				require.NoError(t, file.Close())
 				require.NoError(t, os.Remove(file.Name()))
 			}()
+
 			// Write data to the file
 			for _, line := range tt.data {
-				_, err := file.WriteString(line)
+				_, err = file.WriteString(line)
 				require.NoError(t, err)
 			}
+
 			// Create a parser with the path to the file
-			p := NewPrayerParser(file.Name(), WithPrayerRepository(pr))
+			parser := NewPrayerParser(file.Name(), pr, time.UTC)
+
 			// Parse the file
-			err = p.ParseSchedule(ctx)
-			require.Equal(t, tt.wantErr, err != nil, err)
+			err = parser.LoadSchedule(ctx)
+			tt.check(t, err)
 		})
 	}
 }
 
 func TestParserConvertToTime(t *testing.T) {
+	t.Parallel()
+
 	type input struct {
 		day  time.Time
 		time string
 	}
 
-	p := NewPrayerParser("RANDOM_PATH")
+	var year = time.Now().Year()
+
 	tests := []struct {
 		name string
 		args input
 		want time.Time
 	}{
 		{
-			name: "Test 1",
-			args: input{day: time.Date(time.Now().Year(), 1, 1, 0, 0, 0, 0, time.UTC), time: "05:30"},
-			want: time.Date(time.Now().Year(), 1, 1, 5, 30, 0, 0, time.UTC),
+			name: "test_1",
+			args: input{
+				day:  time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC),
+				time: "05:30",
+			},
+			want: time.Date(year, 1, 1, 5, 30, 0, 0, time.UTC),
 		},
 		{
-			name: "Test 2",
-			args: input{day: time.Date(time.Now().Year(), 5, 4, 0, 0, 0, 0, time.UTC), time: "15:35"},
-			want: time.Date(time.Now().Year(), 5, 4, 15, 35, 0, 0, time.UTC),
+			name: "test_2",
+			args: input{
+				day:  time.Date(year, 5, 4, 0, 0, 0, 0, time.UTC),
+				time: "15:35",
+			},
+			want: time.Date(year, 5, 4, 15, 35, 0, 0, time.UTC),
 		},
 		{
-			name: "Test 3",
-			args: input{day: time.Date(time.Now().Year(), 12, 31, 0, 0, 0, 0, time.UTC), time: "23:59"},
-			want: time.Date(time.Now().Year(), 12, 31, 23, 59, 0, 0, time.UTC),
+			name: "test_3",
+			args: input{
+				day:  time.Date(year, 12, 31, 0, 0, 0, 0, time.UTC),
+				time: "23:59",
+			},
+			want: time.Date(year, 12, 31, 23, 59, 0, 0, time.UTC),
 		},
 		{
-			name: "Test 4",
-			args: input{day: time.Date(time.Now().Year(), 1, 1, 0, 0, 0, 0, time.UTC), time: "00:00"},
-			want: time.Date(time.Now().Year(), 1, 1, 0, 0, 0, 0, time.UTC),
+			name: "test_4",
+			args: input{
+				day:  time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC),
+				time: "00:00",
+			},
+			want: time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC),
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := p.convertToTime(tt.args.time, tt.args.day)
-			if err != nil {
-				t.Errorf("convertToTime() error = %v, wantErr %v", err, false)
-				return
-			}
-			if !got.Equal(tt.want) {
-				t.Errorf("convertToTime() got = %v, want %v", got, tt.want)
-			}
+			t.Parallel()
+
+			parser := NewPrayerParser("", nil, time.UTC)
+
+			got, err := parser.convertToTime(tt.args.time, tt.args.day)
+			require.NoError(t, err)
+			require.Equal(t, tt.want, got)
 		})
 	}
 }

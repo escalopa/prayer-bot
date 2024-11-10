@@ -1,4 +1,4 @@
-package core
+package domain
 
 import (
 	"encoding/json"
@@ -9,14 +9,16 @@ import (
 )
 
 func TestPrayerTimesMarshal(t *testing.T) {
+	now := time.Now()
+
 	p1 := NewPrayerTime(
-		DefaultTime(1, 1, 2023),
-		time.Now().Add(time.Hour*1),
-		time.Now().Add(time.Hour*2),
-		time.Now().Add(time.Hour*3),
-		time.Now().Add(time.Hour*4),
-		time.Now().Add(time.Hour*5),
-		time.Now().Add(time.Hour*6),
+		now,
+		now.Add(time.Hour*1),
+		now.Add(time.Hour*2),
+		now.Add(time.Hour*3),
+		now.Add(time.Hour*4),
+		now.Add(time.Hour*5),
+		now.Add(time.Hour*6),
 	)
 
 	b, err := p1.MarshalBinary()

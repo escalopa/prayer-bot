@@ -1,8 +1,14 @@
-package language
+package domain
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
 
 func TestIsValidLang(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name string
 		l    string
@@ -29,11 +35,12 @@ func TestIsValidLang(t *testing.T) {
 			want: false,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := IsValidLang(tt.l); got != tt.want {
-				t.Errorf("IsValidLang() = %v, want %v", got, tt.want)
-			}
+			t.Parallel()
+
+			require.Equal(t, tt.want, IsValidLang(tt.l))
 		})
 	}
 }

@@ -41,5 +41,5 @@ func (l *LanguageRepository) GetLang(ctx context.Context, id int) (string, error
 }
 
 func (l *LanguageRepository) formatKey(id int) string {
-	return fmt.Sprintf("%s_gopray_lang:%d", l.prefix, id)
+	return fmt.Sprintf("%s:lang:%d", l.prefix, id)
 }

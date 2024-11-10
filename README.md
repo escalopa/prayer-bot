@@ -100,3 +100,12 @@ for more details check the [notifier code](./telegram/internal/adapters/notifier
 - [x] Set user script before command if nor set
 - [x] USe script commands in notifications
 - [x] Fix prayers timetable for other languages
+
+### Version 5 Milestones 🏁
+- [x] Refactor the code to be more readable and maintainable
+- [x] Enhance logging to be more informative and useful
+
+
+```bash
+redis-cli -u redis://default:116492ffa8644a81bb43c0958156fd83@eu1-lasting-cat-39360.upstash.io:39360 --raw --scan --pattern "gopray*"
+```

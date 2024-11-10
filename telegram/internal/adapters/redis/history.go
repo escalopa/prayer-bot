@@ -46,5 +46,5 @@ func (h *HistoryRepository) GetPrayerMessageID(ctx context.Context, chatID int) 
 }
 
 func (h *HistoryRepository) formatPrayerKey(chatID int) string {
-	return fmt.Sprintf("%s_gopray_prayer_message_id:%d", h.prefix, chatID)
+	return fmt.Sprintf("%s:prayer_message_id:%d", h.prefix, chatID)
 }

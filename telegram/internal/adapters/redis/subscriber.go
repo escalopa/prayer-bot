@@ -10,7 +10,7 @@ import (
 	"github.com/go-redis/redis/v9"
 )
 
-const listKey = "gopraySubscribers" // subscribers list key
+const listKey = "subscribers" // subscribers list key
 
 type SubscriberRepository struct {
 	client  *redis.Client

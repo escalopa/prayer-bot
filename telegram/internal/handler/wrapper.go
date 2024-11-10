@@ -2,7 +2,8 @@ package handler
 
 import (
 	"context"
-	"log"
+
+	log "github.com/catalystgo/logger/cli"
 
 	objs "github.com/SakoDroid/telego/objects"
 )
@@ -26,23 +27,9 @@ func (h *Handler) useAdmin(command func(u *objs.Update)) func(u *objs.Update) {
 // useContext is a wrapper for user commands to create a new context for each user
 // and cancel the previous context if exists
 func (h *Handler) useContext(command func(u *objs.Update)) func(update *objs.Update) {
-	return func(update *objs.Update) {
-		// Create new context for user
-		newCtx, cancel := context.WithCancel(h.ctx)
-
-		// Cancel previous context if exists
-		if uc, ok := h.chatCtx[update.Message.Chat.Id]; ok {
-			uc.cancel()
-		}
-
-		// Set new context
-		h.chatCtx[update.Message.Chat.Id] = userContext{
-			ctx:    newCtx,
-			cancel: cancel,
-		}
-
-		// Call user command
-		command(update)
+	return func(u *objs.Update) {
+		h.renewChatCtx(getChatID(u))
+		command(u)
 	}
 }
 
@@ -53,8 +40,8 @@ func (h *Handler) useScript(command func(u *objs.Update)) func(u *objs.Update) {
 
 		err := h.setScript(chatID)
 		if err != nil {
-			log.Printf("Handler.useScript: %v", err)
-			h.simpleSend(chatID, unexpectedErrMsg, 0)
+			log.Errorf("Handler.useScript: [%d] => %v", chatID, err)
+			h.simpleSend(chatID, unexpectedErrMsg)
 			return
 		}
 

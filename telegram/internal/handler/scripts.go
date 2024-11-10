@@ -5,8 +5,8 @@ import (
 )
 
 func (h *Handler) setScript(chatID int) error {
-	sc, ok := h.chatScript[chatID]
-	if !ok || sc == nil {
+	sc := h.getChatScript(chatID)
+	if sc == nil {
 		// Get lang for chatID
 		lang, err := h.uc.GetLang(h.ctx, chatID)
 		if err != nil {

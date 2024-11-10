@@ -1,8 +1,7 @@
 package config
 
 import (
-	"encoding/json"
-	"os"
+	log "github.com/catalystgo/logger/cli"
 	"strconv"
 	"time"
 
@@ -15,21 +14,17 @@ var (
 	errGomaaNotifyHour  = errors.New("GOMAA_NOTIFY_HOUR must be between 0 and 11")
 )
 
-type BotConfig struct {
-	Name     string   `json:"name"`
-	Prefix   string   `json:"prefix"`
-	Token    string   `json:"token"`
-	Data     string   `json:"data"`
-	Location *timeLoc `json:"location"`
-}
-
 type AppConfig struct {
 	Port string
 
-	OwnerID    int
-	BotsConfig []BotConfig
+	OwnerID int
+
+	BotToken string
+	BotData  string
+	Location *time.Location
 
 	CacheURL      string
+	CachePrefix   string
 	LanguagesPath string
 
 	UpcomingReminder time.Duration
@@ -40,44 +35,31 @@ func InitAppConfig() (*AppConfig, error) {
 	cfg := goconfig.New()
 
 	AppCfg := &AppConfig{
-		Port:          cfg.Get("PORT"),
+		Port: cfg.Get("PORT"),
+
+		BotToken: cfg.Get("BOT_TOKEN"),
+		BotData:  cfg.Get("BOT_DATA"),
+
 		CacheURL:      cfg.Get("CACHE_URL"),
+		CachePrefix:   cfg.Get("CACHE_PREFIX"),
 		LanguagesPath: cfg.Get("LANGUAGES_PATH"),
 	}
 
-	bowOwnerID, err := strconv.Atoi(cfg.Get("OWNER_ID"))
+	ownerID, err := strconv.Atoi(cfg.Get("OWNER_ID"))
 	if err != nil {
 		return nil, err
 	}
-	AppCfg.OwnerID = bowOwnerID
+	AppCfg.OwnerID = ownerID
 
-	var botsConfig []BotConfig
-	err = json.Unmarshal([]byte(cfg.Get("BOTS_CONFIG")), &botsConfig)
+	loc, err := time.LoadLocation(cfg.Get("LOCATION"))
 	if err != nil {
 		return nil, err
 	}
-	AppCfg.BotsConfig = botsConfig
-
-	// Read bot tokens from secret files.
-	for _, bot := range AppCfg.BotsConfig {
-		data, err := os.ReadFile(bot.Token)
-		if err != nil {
-			if errors.Is(err, os.ErrNotExist) {
-				// TODO: log error
-				continue
-			}
-			return nil, err
-		}
-		bot.Token = string(data)
-	}
+	AppCfg.Location = loc
 
 	upcomingReminder, err := time.ParseDuration(cfg.Get("UPCOMING_REMINDER"))
 	if err != nil {
 		return nil, err
-	}
-	// Check if the upcoming reminder is between 1 and 59 minutes.
-	if upcomingReminder.Minutes() <= 0 || upcomingReminder.Minutes() >= 60 {
-		return nil, errUpcomingReminder
 	}
 	AppCfg.UpcomingReminder = upcomingReminder
 
@@ -85,17 +67,74 @@ func InitAppConfig() (*AppConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Check if the jummah reminder is between 0 and 11 hours.
-	if jummahReminder.Hours() <= 0 || jummahReminder.Hours() >= 12 {
-		return nil, errGomaaNotifyHour
-	}
 	AppCfg.JummahReminder = jummahReminder
+
+	err = AppCfg.validate()
+	if err != nil {
+		return nil, err
+	}
 
 	logCfg(AppCfg)
 
 	return AppCfg, nil
 }
 
+func (c *AppConfig) validate() error {
+	checkEmpty := func(s string, name string) error {
+		if s == "" {
+			return errors.Errorf("%s is required", name)
+		}
+		return nil
+	}
+
+	checks := []struct {
+		name  string
+		value string
+	}{
+		{"BOT_TOKEN", c.BotToken},
+		{"BOT_DATA", c.BotData},
+		{"OWNER_ID", strconv.Itoa(c.OwnerID)},
+		{"CACHE_URL", c.CacheURL},
+		{"CACHE_PREFIX", c.CachePrefix},
+		{"LANGUAGES_PATH", c.LanguagesPath},
+	}
+
+	for _, check := range checks {
+		if err := checkEmpty(check.value, check.name); err != nil {
+			return err
+		}
+	}
+
+	if c.UpcomingReminder.Minutes() <= 0 || c.UpcomingReminder.Minutes() >= 60 {
+		return errUpcomingReminder
+	}
+
+	if c.JummahReminder.Hours() <= 0 || c.JummahReminder.Hours() >= 12 {
+		return errGomaaNotifyHour
+	}
+
+	return nil
+}
+
 func logCfg(cfg *AppConfig) {
-	//TODO: impl
+	log.Infof("App Config:")
+	log.Infof("--------------------")
+	log.Infof("PORT: %s", cfg.Port)
+	log.Infof("OWNER_ID: %d", cfg.OwnerID)
+	log.Infof("BOT_TOKEN: %s", mask(cfg.BotToken))
+	log.Infof("BOT_DATA: %s", cfg.BotData)
+	log.Infof("BOT_LOCATION: %s", cfg.Location.String())
+	log.Infof("CACHE_URL: %s", mask(cfg.CacheURL))
+	log.Infof("CACHE_PREFIX: %s", cfg.CachePrefix)
+	log.Infof("LANGUAGES_PATH: %s", cfg.LanguagesPath)
+	log.Infof("UPCOMING_REMINDER: %s", cfg.UpcomingReminder.String())
+	log.Infof("JUMMAH_REMINDER: %s", cfg.JummahReminder.String())
+	log.Infof("--------------------")
+}
+
+func mask(s string) string {
+	if len(s) > 6 {
+		return s[:3] + "***" + s[len(s)-3:]
+	}
+	return "***"
 }

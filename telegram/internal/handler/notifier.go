@@ -3,8 +3,8 @@ package handler
 import (
 	"context"
 	"fmt"
-	"log"
 
+	log "github.com/catalystgo/logger/cli"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -18,7 +18,7 @@ func (n notifier) PrayerSoon(ctx context.Context, chatIDs []int, prayer string, 
 		errG.Go(func() error {
 			err := n.praySoon(chatID, prayer, time)
 			if err != nil {
-				log.Println(err) // TODO: fix this
+				log.Errorf("Notifier.PrayerSoon: [%d] => %v", chatID, err)
 			}
 			return nil
 		})
@@ -48,7 +48,7 @@ func (n notifier) PrayerNow(ctx context.Context, chatIDs []int, prayer string) {
 		errG.Go(func() error {
 			err := n.prayNow(chatID, prayer)
 			if err != nil {
-				log.Println(err) // TODO: fix this
+				log.Errorf("Notifier.PrayerNow: [%d] => %v", chatID, err)
 			}
 			return nil
 		})
@@ -76,7 +76,7 @@ func (n notifier) PrayerJummah(ctx context.Context, chatIDs []int, time string) 
 		errG.Go(func() error {
 			err := n.prayJummah(chatID, time)
 			if err != nil {
-				log.Println(err) // TODO: fix this
+				log.Errorf("Notifier.PrayerJummah: [%d] => %v", chatID, err)
 			}
 			return nil
 		})

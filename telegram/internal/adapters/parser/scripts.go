@@ -3,7 +3,6 @@ package parser
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -62,8 +61,6 @@ func (p *ScriptParser) process(path string, info os.FileInfo, err error) error {
 	if err != nil {
 		return err
 	}
-
-	log.Printf("successfully parsed script: %s", fileName)
 
 	return nil
 }

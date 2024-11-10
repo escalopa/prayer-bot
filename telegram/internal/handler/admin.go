@@ -2,14 +2,10 @@ package handler
 
 import (
 	"context"
-	"log"
-	"strconv"
-	"time"
-
 	objs "github.com/SakoDroid/telego/objects"
+	log "github.com/catalystgo/logger/cli"
+	"strconv"
 )
-
-const adminProcessTimeout = 5 * time.Minute
 
 // Respond to a user's feedback or bug report
 func (h *Handler) Respond(u *objs.Update) {
@@ -18,54 +14,46 @@ func (h *Handler) Respond(u *objs.Update) {
 		chatIDStr = strconv.Itoa(chatID)
 	)
 
-	ch, err := h.bot.AdvancedMode().RegisterChannel(chatIDStr, "message")
-	defer h.bot.AdvancedMode().UnRegisterChannel(chatIDStr, "message")
-
+	ch, closer, err := h.registerChannel(chatIDStr)
 	if err != nil {
-		log.Printf("failed to register channel for /respond: %s", err)
+		log.Errorf("Handler.Respond: register channel [%d] => %v", chatID, err)
 		return
 	}
+	defer closer()
 
 	// Check if reply message is provided
 	if u.Message.ReplyToMessage == nil {
-		h.simpleSend(chatID, respondNoReplyMsg, 0)
+		h.simpleSend(chatID, respondNoReplyMsg)
 		return
 	}
 
 	// Read userChatID, messageID, username from the old message that will be replied to
 	userChatID, responseMessageID, _, ok := parseUserMessage(u.Message.ReplyToMessage.Text)
 	if !ok {
-		h.simpleSend(chatID, respondInvalidMsg, 0)
+		h.simpleSend(chatID, respondInvalidMsg)
 		return
 	}
 
 	// Read response message
-	messageID := h.simpleSend(chatID, respondStart, 0)
+	messageID := h.simpleSend(chatID, respondStart)
 	defer h.deleteMessage(chatID, messageID)
 
 	// Create new command context
-	ctx, cancel := context.WithTimeout(h.getChatCtx(chatID), adminProcessTimeout)
+	ctx, cancel := context.WithTimeout(h.getChatCtx(chatID), inputTimeout)
 	defer cancel()
 
 	select {
 	case <-ctx.Done():
 		return
-	case u = <-*ch:
+	case u = <-ch:
 	}
 
 	if h.isCancelOperation(chatID, u.Message.Text) {
 		return
 	}
 
-	// Send response message to user
-	_, err = h.bot.SendMessage(userChatID, u.Message.Text, "", responseMessageID, false, false)
-	if err != nil {
-		h.simpleSend(chatID, respondErr, 0)
-		log.Printf("failed to respond on user's message on : %s", err)
-		return
-	}
-
-	h.simpleSend(chatID, respondSuccess, 0)
+	h.reply(userChatID, u.Message.Text, responseMessageID)
+	h.simpleSend(chatID, respondSuccess)
 }
 
 // GetSubscribers returns the number of subscribers to the bot
@@ -74,12 +62,12 @@ func (h *Handler) GetSubscribers(u *objs.Update) {
 
 	ids, err := h.uc.GetSubscribers(h.getChatCtx(chatID))
 	if err != nil {
-		h.simpleSend(chatID, getSubscribersErr, 0)
-		log.Printf("failed to get subscribers on /subs : %s", err)
+		log.Errorf("Handler.GetSubscribers: [%d] => %v", chatID, err)
+		h.simpleSend(chatID, getSubscribersErr)
 		return
 	}
 
-	h.simpleSend(chatID, strconv.Itoa(len(ids)), 0)
+	h.simpleSend(chatID, strconv.Itoa(len(ids)))
 }
 
 // SendAll broadcasts a message to all subscribers
@@ -89,24 +77,24 @@ func (h *Handler) SendAll(u *objs.Update) {
 		chatIDStr = strconv.Itoa(chatID)
 	)
 
-	ch, err := h.bot.AdvancedMode().RegisterChannel(chatIDStr, "message")
-	defer h.bot.AdvancedMode().UnRegisterChannel(chatIDStr, "message")
+	ch, closer, err := h.registerChannel(chatIDStr)
 	if err != nil {
-		log.Printf("failed to register channel for /sendall: %s", err)
+		log.Errorf("Handler.SendAll: register channel [%d] => %v", chatID, err)
 		return
 	}
+	defer closer()
 
 	// Wait for message or timeout after 2 minutes
-	messageID := h.simpleSend(chatID, sendAllStart, 0)
+	messageID := h.simpleSend(chatID, sendAllStart)
 	defer h.deleteMessage(chatID, messageID)
 
-	ctx1, cancel1 := context.WithTimeout(h.getChatCtx(chatID), adminProcessTimeout)
+	ctx1, cancel1 := context.WithTimeout(h.getChatCtx(chatID), inputTimeout)
 	defer cancel1()
 
 	select {
 	case <-ctx1.Done():
 		return
-	case u = <-*ch:
+	case u = <-ch:
 	}
 
 	var (
@@ -119,17 +107,17 @@ func (h *Handler) SendAll(u *objs.Update) {
 	}
 
 	// Double check that the owner still wants to send the message
-	messageID = h.simpleSend(chatID, sendAllConfirm, 0)
+	messageID = h.simpleSend(chatID, sendAllConfirm)
 	defer h.deleteMessage(chatID, messageID)
 
 	// Wait for confirmation message or timeout after 5 minutes
-	ctx2, cancel2 := context.WithTimeout(h.getChatCtx(chatID), adminProcessTimeout)
+	ctx2, cancel2 := context.WithTimeout(h.getChatCtx(chatID), inputTimeout)
 	defer cancel2()
 
 	select {
 	case <-ctx2.Done():
 		return
-	case u = <-*ch:
+	case u = <-ch:
 	}
 
 	// Delete the bot message if the user sends the message or if the context times out
@@ -141,16 +129,19 @@ func (h *Handler) SendAll(u *objs.Update) {
 
 	chatIDs, err := h.uc.GetSubscribers(h.getChatCtx(chatID))
 	if err != nil {
-		h.simpleSend(chatID, sendAllErr, 0)
-		log.Printf("failed to send message subscribers on /sendall : %s", err)
+		log.Errorf("Handler.SendAll: [%d] => %v", chatID, err)
+		h.simpleSend(chatID, sendAllErr)
 		return
 	}
 
 	// Send message to all subscribers asynchronously
 	go func() {
 		for _, userChatID := range chatIDs {
-			h.simpleSend(userChatID, broadcastMessageText, 0)
+			if userChatID == chatID {
+				continue
+			}
+			h.simpleSend(userChatID, broadcastMessageText)
 		}
-		h.simpleSend(chatID, sendAllSuccess, broadcastMessageID)
+		h.reply(chatID, sendAllSuccess, broadcastMessageID)
 	}()
 }

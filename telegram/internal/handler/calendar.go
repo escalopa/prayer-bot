@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"log"
+	log "github.com/catalystgo/logger/cli"
 	"strconv"
 	"time"
 
@@ -32,7 +32,7 @@ func (h *Handler) getCalendarKeyboardCallback(chatID int, callBack func(time.Tim
 			monthDigit, _ = strconv.Atoi(u.CallbackQuery.Data)
 			month         = time.Month(monthDigit)
 
-			daysInMonth = daysIn(month, time.Now().Year())
+			daysInMonth = daysIn(month, time.Now().In(h.uc.Loc()).Year())
 		)
 
 		var (
@@ -42,14 +42,14 @@ func (h *Handler) getCalendarKeyboardCallback(chatID int, callBack func(time.Tim
 
 		for j = range daysInMonth {
 			row = (j / 5) + 1 // 5 buttons(days) per row.
-			kb.AddCallbackButtonHandler(strconv.Itoa(j), strconv.Itoa(j), row, func(u1 *objs.Update) {
+			kb.AddCallbackButtonHandler(strconv.Itoa(j+1), strconv.Itoa(j+1), row, func(u1 *objs.Update) {
 				day, _ := strconv.Atoi(u1.CallbackQuery.Data)
 				callBack(domain.Time(day, month, h.uc.Loc()))
 			})
 		}
 
 		// Add empty callback buttons
-		for (j-1)%5 != 0 {
+		for (j+1)%5 != 0 {
 			kb.AddCallbackButtonHandler(" ", " ", row, func(_ *objs.Update) { /* empty button to fill row */ })
 			j++
 		}
@@ -65,12 +65,14 @@ func (h *Handler) getCalendarKeyboardCallback(chatID int, callBack func(time.Tim
 			kb,
 		)
 		if err != nil {
-			log.Printf("failed to edit message in calendar /date : %s", err)
+			log.Errorf("Handler.getCalendarKeyboardCallback: [%d] => %v", chatID, err)
 			callBack(time.Time{}) // Cancel the calendar.
 		}
 	}
 }
 
+// daysIn returns the number of days in a month.
+// Month is incremented by 1 because to get the last day of the previous month.
 func daysIn(m time.Month, year int) int {
 	return time.Date(year, m+1, 0, 0, 0, 0, 0, time.UTC).Day()
 }

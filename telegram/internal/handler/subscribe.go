@@ -2,36 +2,37 @@ package handler
 
 import (
 	objs "github.com/SakoDroid/telego/objects"
-	log "github.com/sirupsen/logrus"
+	log "github.com/catalystgo/logger/cli"
 )
 
 func (h *Handler) Subscribe(u *objs.Update) {
-	chatID := getChatID(u)
+	var (
+		chatID = getChatID(u)
+		script = h.getChatScript(chatID)
+	)
 
 	err := h.uc.Subscribe(h.getChatCtx(chatID), chatID)
 	if err != nil {
-		h.simpleSend(chatID, h.chatScript[chatID].SubscriptionError, 0)
+		log.Errorf("Handler.Subscribe: [%d] => %v", chatID, err)
+		h.simpleSend(chatID, script.SubscriptionError)
 		return
 	}
-	_, err = h.bot.SendMessage(chatID, h.chatScript[chatID].SubscriptionSuccess, "HTML", 0, false, false)
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Warn("failed to send subscribe message")
-		return
-	}
+
+	h.simpleSend(chatID, script.SubscriptionSuccess)
 }
 
 func (h *Handler) Unsubscribe(u *objs.Update) {
-	chatID := getChatID(u)
+	var (
+		chatID = getChatID(u)
+		script = h.getChatScript(chatID)
+	)
 
 	err := h.uc.Unsubscribe(h.getChatCtx(chatID), chatID)
 	if err != nil {
-		h.simpleSend(chatID, h.chatScript[chatID].UnsubscriptionError, 0)
+		log.Errorf("Handler.Unsubscribe: [%d] => %v", chatID, err)
+		h.simpleSend(chatID, script.UnsubscriptionError)
 		return
 	}
 
-	_, err = h.bot.SendMessage(chatID, h.chatScript[chatID].UnsubscriptionSuccess, "HTML", 0, false, false)
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Warn("failed to send unsubscribe message")
-		return
-	}
+	h.simpleSend(chatID, script.UnsubscriptionSuccess)
 }

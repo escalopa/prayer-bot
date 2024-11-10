@@ -3,8 +3,9 @@ package handler
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
+
+	log "github.com/catalystgo/logger/cli"
 
 	"github.com/escalopa/gopray/telegram/internal/domain"
 
@@ -17,8 +18,8 @@ func (h *Handler) GetPrayers(u *objs.Update) {
 
 	prayers, err := h.uc.GetPrayers()
 	if err != nil {
-		log.Printf("failed to get prayers /today: %s", err)
-		h.simpleSend(chatID, h.chatScript[chatID].PrayerFail, 0)
+		log.Errorf("Handler.GetPrayers: [%d] => %v", chatID, err)
+		h.simpleSend(chatID, h.getChatScript(chatID).PrayerFail)
 		return
 	}
 
@@ -26,14 +27,19 @@ func (h *Handler) GetPrayers(u *objs.Update) {
 	table := h.prayrify(chatID, prayers)
 	_, err = h.bot.SendMessage(chatID, table, "MarkDownV2", 0, false, false)
 	if err != nil {
-		log.Printf("failed to send the prayers prayerTable: %s", err)
+		log.Errorf("Handler.GetPrayers: [%d] => %v", chatID, err)
 	}
 }
 
 func (h *Handler) GetPrayersByDate(u *objs.Update) {
-	chatID := getChatID(u)
+	var (
+		chatID = getChatID(u)
 
-	ctx, cancel := context.WithTimeout(h.getChatCtx(chatID), 3*time.Minute)
+		ctx    = h.getChatCtx(chatID)
+		script = h.getChatScript(chatID)
+	)
+
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Minute)
 
 	var messageID int
 
@@ -47,13 +53,14 @@ func (h *Handler) GetPrayersByDate(u *objs.Update) {
 	kb := h.newCalendar(chatID, func(day time.Time) {
 		defer cancel()
 		if day.IsZero() {
-			h.simpleSend(chatID, h.chatScript[chatID].PrayerFail, 0)
+			h.simpleSend(chatID, script.PrayerFail)
 			return
 		}
+
 		prayers, err := h.uc.GetPrayersDate(day)
 		if err != nil {
-			log.Printf("failed to get prayers on /date: %s", err)
-			h.simpleSend(chatID, h.chatScript[chatID].PrayerFail, 0)
+			log.Errorf("Handler.GetPrayersByDate: [%d] => %v", chatID, err)
+			h.simpleSend(chatID, script.PrayerFail)
 			return
 		}
 
@@ -61,14 +68,14 @@ func (h *Handler) GetPrayersByDate(u *objs.Update) {
 		table := h.prayrify(chatID, prayers)
 		_, err = h.bot.SendMessage(chatID, table, "MarkDownV2", 0, false, false)
 		if err != nil {
-			log.Printf("failed to send the prayers prayerTable /date: %s", err)
+			log.Errorf("Handler.GetPrayersByDate: [%d] => %v", chatID, err)
 		}
 	})
 
 	// Send a message to the user to ask for the date
 	r, err := h.bot.AdvancedMode().ASendMessage(
 		chatID,
-		h.chatScript[chatID].DatePickerStart,
+		script.DatePickerStart,
 		"",
 		0,
 		false,
@@ -79,7 +86,7 @@ func (h *Handler) GetPrayersByDate(u *objs.Update) {
 		kb,
 	)
 	if err != nil {
-		log.Printf("failed to send message /date: %s", err)
+		log.Errorf("Handler.GetPrayersByDate: [%d] => %v", chatID, err)
 		return
 	}
 	messageID = r.Result.MessageId
@@ -131,7 +138,7 @@ func (h *Handler) prayrify(chatID int, p *domain.PrayerTime) string {
 	tw.SetCenterSeparator("|")
 	tw.Render()
 
-	formattedTable := fmt.Sprintf("```\n%s %d %s 🕌\n\n%s```\n/help",
+	formattedTable := fmt.Sprintf(prayerText,
 		script.PrayrifyTableDay,
 		p.Day.Day(),
 		script.GetMonthNames()[p.Day.Month()-1],

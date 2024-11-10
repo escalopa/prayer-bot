@@ -2,10 +2,11 @@ package scheduler
 
 import (
 	"context"
-	"log"
 	"strconv"
 	"sync"
 	"time"
+
+	log "github.com/catalystgo/logger/cli"
 
 	app "github.com/escalopa/gopray/telegram/internal/application"
 )
@@ -58,17 +59,17 @@ func (s *Scheduler) notifyPrayers(
 	for {
 		prayerName, prayerAfter, err := s.getClosestPrayer(ctx)
 		if err != nil {
-			log.Printf("notifyPrayer: failed to get closest prayer: %s", err)
+			log.Errorf("Scheduler.notifyPrayer.getClosestPrayer: %v", err)
 			sleep(errSleepDuration)
 			continue
 		}
 
 		upcomingAt, startsAt := s.timeLeft(prayerAfter)
 		// logs for debugging
-		log.Printf("Prayer: %s | upcoming: %s(%d) | starts: %s(%d)\n", prayerName,
-			s.now().Add(upcomingAt).Format(defaultTimeFormat), int(upcomingAt.Minutes()), // upcoming status
-			s.now().Add(startsAt).Add(upcomingAt).Format(defaultTimeFormat), int((startsAt + upcomingAt).Minutes()), // start status
-		)
+		//log.Infof("Prayer: %s | upcoming: %s(%d) | starts: %s(%d)", prayerName,
+		//	s.now().Add(upcomingAt).Format(defaultTimeFormat), int(upcomingAt.Minutes()), // upcoming status
+		//	s.now().Add(startsAt).Add(upcomingAt).Format(defaultTimeFormat), int((startsAt + upcomingAt).Minutes()), // start status
+		//)
 
 		////////////////////////////////////////////////////////////////
 		/// Notify subscribers about the upcoming prayer.
@@ -77,7 +78,7 @@ func (s *Scheduler) notifyPrayers(
 
 		chatIDs, err := s.sr.GetSubscribers(ctx)
 		if err != nil {
-			log.Printf("notifyPrayer: failed to get subscribers: %s", err)
+			log.Errorf("Scheduler.notifyPrayer.GetSubscribers: %v", err)
 			sleep(errSleepDuration)
 			continue
 		}
@@ -90,7 +91,7 @@ func (s *Scheduler) notifyPrayers(
 
 		chatIDs, err = s.sr.GetSubscribers(ctx)
 		if err != nil {
-			log.Printf("notifyPrayer: failed to get subscribers, %s", err)
+			log.Errorf("Scheduler.notifyPrayer.GetSubscribers: %v", err)
 			sleep(errSleepDuration)
 			continue
 		}
@@ -101,7 +102,6 @@ func (s *Scheduler) notifyPrayers(
 func (s *Scheduler) notifyJummah(ctx context.Context, notifyGomaa func(context.Context, []int, string)) {
 	for {
 		jummah := s.getClosestJummah()
-		log.Printf("Gomaa: %s", jummah.Format(defaultTimeFormat))
 
 		// Wait until the jummah is about to start
 		sleep(jummah.Sub(s.now()))
@@ -109,7 +109,7 @@ func (s *Scheduler) notifyJummah(ctx context.Context, notifyGomaa func(context.C
 		// Get the subscribers
 		ids, err := s.sr.GetSubscribers(ctx)
 		if err != nil {
-			log.Printf("notifyGomma: failed to get subscribers: %s", err)
+			log.Errorf("Scheduler.notifyJummah: %v", err)
 			sleep(errSleepDuration)
 			continue
 		}
@@ -117,10 +117,11 @@ func (s *Scheduler) notifyJummah(ctx context.Context, notifyGomaa func(context.C
 		// Get the prayer time for the jummah
 		prayers, err := s.pr.GetPrayer(ctx, jummah)
 		if err != nil {
-			log.Printf("notifyGomma: failed to get prayers for jummah: %s", err)
+			log.Errorf("Scheduler.notifyJummah: %v", err)
 			sleep(errSleepDuration)
 			continue
 		}
+
 		// Notify the subscribers
 		notifyGomaa(ctx, ids, prayers.Dhuhr.Format("15:04"))
 	}
@@ -137,6 +138,7 @@ func (s *Scheduler) getClosestPrayer(ctx context.Context) (prayerName string, pr
 	if err != nil {
 		return "", time.Time{}, err
 	}
+
 	// Get the closest prayer.
 	// To get time left until the prayer starts, we subtract the current time from the prayer time
 	// and convert the result to minutes.

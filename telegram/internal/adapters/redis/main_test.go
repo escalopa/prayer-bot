@@ -2,8 +2,9 @@ package redis
 
 import (
 	"context"
-	"log"
 	"testing"
+
+	log "github.com/catalystgo/logger/cli"
 
 	"github.com/escalopa/gopray/telegram/test/testcon"
 )

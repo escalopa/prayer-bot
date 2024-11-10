@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
-	"log"
+	"fmt"
+
+	log "github.com/catalystgo/logger/cli"
 
 	bt "github.com/SakoDroid/telego"
 	telegoCfg "github.com/SakoDroid/telego/configs"
@@ -23,7 +25,7 @@ func main() {
 	defer cancel()
 
 	appCfg, err := config.InitAppConfig()
-	checkError(err, "failed to init app config")
+	checkError(err, "init app config")
 
 	// Set up the database.
 	r, err := redis.New(appCfg.CacheURL)
@@ -40,32 +42,30 @@ func main() {
 
 	srv := server.New()
 
-	for _, botCfg := range appCfg.BotsConfig {
-		bot, err := bt.NewBot(telegoCfg.Default(botCfg.Token))
-		checkError(err, "create bot")
+	bot, err := bt.NewBot(telegoCfg.Default(appCfg.BotToken))
+	checkError(err, "create bot")
 
-		loc := botCfg.Location.Get()
+	loc := appCfg.Location
 
-		pr := memory.NewPrayerRepository() // Use memory for prayer repository to not hit db on every call.
-		sr := redis.NewSubscriberRepository(r, botCfg.Prefix)
-		lr := redis.NewLanguageRepository(r, botCfg.Prefix)
-		hr := redis.NewHistoryRepository(r, botCfg.Prefix)
+	pr := memory.NewPrayerRepository() // Use memory for prayer repository to not hit db on every call.
+	sr := redis.NewSubscriberRepository(r, appCfg.CachePrefix)
+	lr := redis.NewLanguageRepository(r, appCfg.CachePrefix)
+	hr := redis.NewHistoryRepository(r, appCfg.CachePrefix)
 
-		pp := parser.NewPrayerParser(botCfg.Data, pr, loc)
-		checkError(pp.LoadSchedule(ctx), "parse schedule")
+	pp := parser.NewPrayerParser(appCfg.BotData, pr, loc)
+	checkError(pp.LoadSchedule(ctx), "parse schedule")
 
-		sch := scheduler.New(appCfg.UpcomingReminder, appCfg.JummahReminder, loc, pr, sr)
+	sch := scheduler.New(appCfg.UpcomingReminder, appCfg.JummahReminder, loc, pr, sr)
 
-		uc := app.NewUseCase(ctx, loc, sch, pr, scr, hr, lr, sr)
-		h := handler.New(bot, appCfg.OwnerID, uc)
-		srv.AddHandler(h)
-	}
+	uc := app.NewUseCase(ctx, loc, sch, pr, scr, hr, lr, sr)
+	h := handler.New(bot, appCfg.OwnerID, uc)
 
-	srv.Run(ctx, appCfg.Port)
+	srv.Run(ctx, h, appCfg.Port)
 }
 
-func checkError(err error, message ...string) {
+func checkError(err error, message string) {
 	if err != nil {
-		log.Fatal(err, message)
+		message = fmt.Sprintf("%s => %v", message, err)
+		log.Fatal(message)
 	}
 }

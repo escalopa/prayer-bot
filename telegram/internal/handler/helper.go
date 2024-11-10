@@ -2,18 +2,28 @@ package handler
 
 import (
 	"context"
+	"time"
 
 	objs "github.com/SakoDroid/telego/objects"
+	log "github.com/catalystgo/logger/cli"
 	"github.com/escalopa/gopray/telegram/internal/domain"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 )
 
-// simpleSend sends a simple message to the chat with the given chatID & text and replyTo.
-func (h *Handler) simpleSend(chatID int, text string, replyTo int) (messageID int) {
+const (
+	inputTimeout = 10 * time.Minute
+)
+
+// simpleSend sends a simple text message to the chatID
+func (h *Handler) simpleSend(chatID int, text string) (messageID int) {
+	return h.reply(chatID, text, 0)
+}
+
+// reply sends a text message to the chatID with the given replyTo messageID.
+func (h *Handler) reply(chatID int, text string, replyTo int) (messageID int) {
 	r, err := h.bot.SendMessage(chatID, text, "", replyTo, false, false)
 	if err != nil {
-		log.Printf("failed to send message on simpleSend: %s", err)
+		log.Errorf("Handler.SendMessage: [%d] [%d] [%s] => %v", chatID, replyTo, text, err)
 		return 0
 	}
 	return r.Result.MessageId
@@ -29,7 +39,7 @@ func (h *Handler) deleteMessage(chatID, messageID int) {
 	editor := h.bot.GetMsgEditor(chatID)
 	_, err := editor.DeleteMessage(messageID)
 	if err != nil {
-		log.Printf("failed to delete message: %s", err)
+		log.Errorf("Handler.deleteMessage: [%d] [%d] => %v", chatID, messageID, err)
 		return
 	}
 }
@@ -38,7 +48,7 @@ func (h *Handler) deleteMessage(chatID, messageID int) {
 func (h *Handler) replace(chatID int, messageID int) {
 	lastMessageId, err := h.uc.GetPrayerMessageID(h.ctx, chatID)
 	if err != nil && !errors.Is(err, domain.ErrNotFound) {
-		log.WithFields(log.Fields{"error": err}).Warn("failed to remove last messageID chatID /notify")
+		log.Errorf("Handler.replace: [%d] => %v", chatID, err)
 	}
 
 	// Delete the last messageID in chatID if exists.
@@ -47,66 +57,73 @@ func (h *Handler) replace(chatID int, messageID int) {
 	// Store the new messageID chatID.
 	err = h.uc.StorePrayerMessageID(h.ctx, chatID, messageID)
 	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Warn("failed to replace messageID chatID /notify")
+		log.Errorf("Handler.replace: [%d] => %v", chatID, err)
 	}
+}
+
+func (h *Handler) registerChannel(chatID string) (chan *objs.Update, func(), error) {
+	ch, err := h.bot.AdvancedMode().RegisterChannel(chatID, "message")
+	closer := func() {
+		if ch == nil {
+			return
+		}
+		h.bot.AdvancedMode().UnRegisterChannel(chatID, "message")
+	}
+	return *ch, closer, err
 }
 
 // isCancelOperation checks if the message is /cancel and sends a response.
 // Returns true if the message is /cancel.
 func (h *Handler) isCancelOperation(chatID int, message string) bool {
-	if message == "/cancel" {
-		h.simpleSend(chatID, operationCanceled, 0)
+	if message == cmdCancel {
+		h.simpleSend(chatID, operationCanceled)
 		return true
 	}
 	return false
 }
 
 func (h *Handler) getChatCtx(chatID int) context.Context {
-	h.chatCtxMu.RLock()
-	defer h.chatCtxMu.RUnlock()
+	h.internal.chatCtxMu.RLock()
+	defer h.internal.chatCtxMu.RUnlock()
 
-	userCtx, _ := h.chatCtx[chatID]
+	userCtx, _ := h.internal.chatCtx[chatID]
 	return userCtx.ctx
 }
 
 func (h *Handler) renewChatCtx(chatID int) {
-	h.chatCtxMu.Lock()
-	defer h.chatCtxMu.Unlock()
+	h.internal.chatCtxMu.Lock()
+	defer h.internal.chatCtxMu.Unlock()
 
 	// Create new context for user
 	ctx, cancel := context.WithCancel(h.ctx)
 
 	// Cancel previous context if exists
-	if uc, ok := h.chatCtx[chatID]; ok {
+	if uc, ok := h.internal.chatCtx[chatID]; ok {
 		uc.cancel()
 	}
 
 	// Set new context
-	h.chatCtx[chatID] = userContext{
+	h.internal.chatCtx[chatID] = userContext{
 		ctx:    ctx,
 		cancel: cancel,
 	}
 }
 
 func (h *Handler) getChatScript(chatID int) *domain.Script {
-	h.chatScriptMu.RLock()
-	defer h.chatScriptMu.RUnlock()
+	h.internal.chatScriptMu.RLock()
+	defer h.internal.chatScriptMu.RUnlock()
 
-	script, _ := h.chatScript[chatID]
+	script, _ := h.internal.chatScript[chatID]
 	return script
 }
 
 func (h *Handler) setChatScript(chatID int, script *domain.Script) {
-	h.chatScriptMu.Lock()
-	defer h.chatScriptMu.Unlock()
+	h.internal.chatScriptMu.Lock()
+	defer h.internal.chatScriptMu.Unlock()
 
-	h.chatScript[chatID] = script
+	h.internal.chatScript[chatID] = script
 }
 
 func getChatID(u *objs.Update) int {
 	return u.Message.Chat.Id
-}
-
-func isConfirmOperation(text string) bool {
-	return text == "/confirm"
 }

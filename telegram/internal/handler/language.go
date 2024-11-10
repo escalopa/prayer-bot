@@ -3,12 +3,9 @@ package handler
 import (
 	"context"
 	"fmt"
-	"log"
-	"time"
-
-	"github.com/escalopa/gopray/telegram/internal/domain"
-
 	objs "github.com/SakoDroid/telego/objects"
+	log "github.com/catalystgo/logger/cli"
+	"github.com/escalopa/gopray/telegram/internal/domain"
 )
 
 func (h *Handler) SetLang(u *objs.Update) {
@@ -18,8 +15,9 @@ func (h *Handler) SetLang(u *objs.Update) {
 	script := h.getChatScript(chatID)
 	kb := h.bot.CreateInlineKeyboard()
 
-	ctx, cancel := context.WithTimeout(h.getChatCtx(chatID), 1*time.Minute)
-	// Deletes the message after the button is pressed or after 1 hour.
+	ctx, cancel := context.WithTimeout(h.getChatCtx(chatID), inputTimeout)
+
+	// Deletes the message after the button is pressed or the timeout is reached.
 	go func() {
 		defer cancel()
 		<-ctx.Done()
@@ -45,7 +43,9 @@ func (h *Handler) SetLang(u *objs.Update) {
 		kb,
 	)
 	if err != nil {
-		log.Printf("failed to send message on /lang: %s", err)
+		log.Errorf("Handler.SetLang: [%d] => %v", chatID, err)
+		h.simpleSend(chatID, script.LanguageSelectionFail)
+		return
 	}
 	messageID = r.Result.MessageId
 }
@@ -68,21 +68,21 @@ func (h *Handler) setLangKeyboardCallback(ctx context.Context, cancel context.Ca
 				fmt.Sprintf(script.LanguageSelectionFail, selectedLanguage),
 				true, "", 0)
 			if err != nil {
-				log.Printf("failed to send callback query on /lang: %s", err)
+				log.Errorf("Handler.setLangKeyboardCallback: [%d] => %v", chatID, err)
 			}
 		}()
 
 		// Sets the lang
 		err = h.uc.SetLang(ctx, chatID, selectedLanguage)
 		if err != nil {
-			log.Printf("failed to set lang to %s: %v", selectedLanguage, err)
+			log.Errorf("Handler.setLangKeyboardCallback: [%d] => %v", chatID, err)
 			return
 		}
 
 		// Get script for chatID
 		script, err = h.uc.GetScript(ctx, selectedLanguage)
 		if err != nil {
-			log.Printf("failed to get script for %s: %v", selectedLanguage, err)
+			log.Errorf("Handler.setLangKeyboardCallback: [%d] => %v", chatID, err)
 			return
 		}
 
@@ -94,7 +94,7 @@ func (h *Handler) setLangKeyboardCallback(ctx context.Context, cancel context.Ca
 			"HTML",
 			0, false, false)
 		if err != nil {
-			log.Printf("failed to send message on /lang: %s", err)
+			log.Errorf("Handler.setLangKeyboardCallback: [%d] => %v", chatID, err)
 		}
 	}
 }

@@ -10,8 +10,6 @@ import (
 type UseCase struct {
 	ctx context.Context
 
-	loc *time.Location
-
 	sc  Scheduler
 	pr  PrayerRepository
 	scr ScriptRepository
@@ -22,7 +20,6 @@ type UseCase struct {
 
 func NewUseCase(
 	ctx context.Context,
-	loc *time.Location,
 	sc Scheduler,
 	prayerRepo PrayerRepository,
 	scriptRepo ScriptRepository,
@@ -32,8 +29,6 @@ func NewUseCase(
 ) *UseCase {
 	uc := &UseCase{
 		ctx: ctx,
-
-		loc: loc,
 
 		sc:  sc,
 		pr:  prayerRepo,
@@ -90,12 +85,8 @@ func (uc *UseCase) GetScript(ctx context.Context, language string) (*domain.Scri
 	return uc.scr.GetScript(ctx, language)
 }
 
-func (uc *UseCase) Loc() *time.Location {
-	return uc.loc
-}
-
 func (uc *UseCase) Close() {}
 
 func (uc *UseCase) now() time.Time {
-	return time.Now().In(uc.loc)
+	return time.Now().In(domain.GetLocation())
 }

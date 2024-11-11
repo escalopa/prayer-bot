@@ -135,7 +135,7 @@ func (p *PrayerParser) parseDate(line string) (time.Time, error) {
 	if err != nil {
 		return time.Time{}, fmt.Errorf("PrayerParser.parseDate[%s]: %v", line, err)
 	}
-	return domain.Time(t.Day(), t.Month(), p.loc), nil
+	return domain.Time(t.Day(), t.Month(), t.Year()), nil
 }
 
 // parsePrayer parses all day's prayers
@@ -163,7 +163,8 @@ func (p *PrayerParser) convertToTime(str string, day time.Time) (time.Time, erro
 	if err != nil {
 		return time.Time{}, errors.Errorf("PrayerParser.convertToTime[%s]: %v", str, err)
 	}
-	return domain.Date(day, clock, p.loc), nil
+	fmt.Printf(" %s | %s | %d:%d \n", day.String(), str, clock.Hour(), clock.Minute())
+	return domain.Date(day, clock), nil
 }
 
 // saveSchedule saves the schedule to the database.

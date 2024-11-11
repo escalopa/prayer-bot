@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/escalopa/gopray/telegram/internal/domain"
 
 	log "github.com/catalystgo/logger/cli"
 
@@ -46,6 +47,7 @@ func main() {
 	checkError(err, "create bot")
 
 	loc := appCfg.Location
+	domain.SetLocation(loc)
 
 	pr := memory.NewPrayerRepository() // Use memory for prayer repository to not hit db on every call.
 	sr := redis.NewSubscriberRepository(r, appCfg.CachePrefix)
@@ -57,7 +59,7 @@ func main() {
 
 	sch := scheduler.New(appCfg.UpcomingReminder, appCfg.JummahReminder, loc, pr, sr)
 
-	uc := app.NewUseCase(ctx, loc, sch, pr, scr, hr, lr, sr)
+	uc := app.NewUseCase(ctx, sch, pr, scr, hr, lr, sr)
 	h := handler.New(bot, appCfg.OwnerID, uc)
 
 	srv.Run(ctx, h, appCfg.Port)

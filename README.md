@@ -104,8 +104,4 @@ for more details check the [notifier code](./telegram/internal/adapters/notifier
 ### Version 5 Milestones 🏁
 - [x] Refactor the code to be more readable and maintainable
 - [x] Enhance logging to be more informative and useful
-
-
-```bash
-redis-cli -u redis://default:116492ffa8644a81bb43c0958156fd83@eu1-lasting-cat-39360.upstash.io:39360 --raw --scan --pattern "gopray*"
-```
+- [x] Enable using many bot in the same code

@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	loc  *time.Location
+	loc  = time.UTC // default loc
 	once sync.Once
 )
 

@@ -3,14 +3,18 @@ package handler
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
-	log "github.com/catalystgo/logger/cli"
-
-	"github.com/escalopa/gopray/telegram/internal/domain"
-
 	objs "github.com/SakoDroid/telego/objects"
+	log "github.com/catalystgo/logger/cli"
+	"github.com/escalopa/gopray/telegram/internal/domain"
 	"github.com/olekukonko/tablewriter"
+)
+
+const (
+	// PrayerTimeFormat is the format of the prayer times
+	prayerTimeFormat = "15:04"
 )
 
 func (h *Handler) GetPrayers(u *objs.Update) {
@@ -92,18 +96,6 @@ func (h *Handler) GetPrayersByDate(u *objs.Update) {
 	messageID = r.Result.MessageId
 }
 
-const (
-	// PrayerTimeFormat is the format of the prayer times
-	prayerTimeFormat = "15:04"
-)
-
-type prayerTable string
-
-func (t *prayerTable) Write(p []byte) (n int, err error) {
-	*t += prayerTable(p)
-	return len(p), nil
-}
-
 // prayrify returns a string representation of the prayer times in a Markdown prayerTable format.
 // Example output:
 // Day 9 November 🕌
@@ -118,8 +110,8 @@ func (h *Handler) prayrify(chatID int, p *domain.PrayerTime) string {
 	script := h.getChatScript(chatID)
 
 	// Create a Markdown prayerTable with the prayer times
-	t := new(prayerTable)
-	tw := tablewriter.NewWriter(t)
+	writer := &strings.Builder{}
+	tw := tablewriter.NewWriter(writer)
 
 	data := [][]string{
 		{script.Fajr, p.Fajr.Format(prayerTimeFormat)},
@@ -139,10 +131,9 @@ func (h *Handler) prayrify(chatID int, p *domain.PrayerTime) string {
 	tw.Render()
 
 	formattedTable := fmt.Sprintf(prayerText,
-		script.PrayrifyTableDay,
 		p.Day.Day(),
 		script.GetMonthNames()[p.Day.Month()-1],
-		string(*t),
+		writer.String(),
 	)
 
 	return formattedTable

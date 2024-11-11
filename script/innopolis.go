@@ -32,7 +32,6 @@ func (n *NodeIterator) Next() *html.Node {
 	n.current = n.current.NextSibling
 
 	return node
-
 }
 
 const (

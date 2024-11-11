@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	objs "github.com/SakoDroid/telego/objects"
@@ -61,13 +62,14 @@ func (h *Handler) replace(chatID int, messageID int) {
 	}
 }
 
-func (h *Handler) registerChannel(chatID string) (chan *objs.Update, func(), error) {
-	ch, err := h.bot.AdvancedMode().RegisterChannel(chatID, "message")
+func (h *Handler) registerChannel(chatID int) (chan *objs.Update, func(), error) {
+	chatIDStr := strconv.Itoa(chatID)
+	ch, err := h.bot.AdvancedMode().RegisterChannel(chatIDStr, "message")
 	closer := func() {
 		if ch == nil {
 			return
 		}
-		h.bot.AdvancedMode().UnRegisterChannel(chatID, "message")
+		h.bot.AdvancedMode().UnRegisterChannel(chatIDStr, "message")
 	}
 	return *ch, closer, err
 }

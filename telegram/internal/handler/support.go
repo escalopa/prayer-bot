@@ -1,27 +1,27 @@
 package handler
 
 import (
-	"context"
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
-
-	log "github.com/catalystgo/logger/cli"
-
-	"github.com/escalopa/gopray/telegram/internal/domain"
 
 	objs "github.com/SakoDroid/telego/objects"
+	log "github.com/catalystgo/logger/cli"
+	"github.com/escalopa/gopray/telegram/internal/domain"
 )
 
+// Start is the first command that the user will see when they start the bot.
+// It will set the user's language and show the help message.
 func (h *Handler) Start(u *objs.Update) {
-	chatID := getChatID(u)
+	var (
+		chatID = getChatID(u)
+		ctx    = h.getChatCtx(chatID)
+	)
+
 	if _, err := h.uc.GetLang(h.ctx, chatID); err == nil {
 		h.Help(u)
 		return
 	}
-
-	ctx := h.getChatCtx(chatID)
 
 	// Check that the user language is valid & supported.
 	userLang := u.Message.From.LanguageCode
@@ -54,14 +54,13 @@ func (h *Handler) Help(u *objs.Update) {
 
 func (h *Handler) Feedback(u *objs.Update) {
 	var (
-		chatID    = getChatID(u)
-		chatIDStr = strconv.Itoa(chatID)
+		chatID = getChatID(u)
 
 		ctx    = h.getChatCtx(chatID)
 		script = h.getChatScript(chatID)
 	)
 
-	ch, closer, err := h.registerChannel(chatIDStr)
+	ch, closer, err := h.registerChannel(chatID)
 	if err != nil {
 		log.Errorf("Handler.Feedback: register channel [%d] => %v", chatID, err)
 		h.simpleSend(chatID, script.FeedbackFail)
@@ -72,46 +71,37 @@ func (h *Handler) Feedback(u *objs.Update) {
 	messageID := h.simpleSend(chatID, script.FeedbackStart)
 	defer h.deleteMessage(chatID, messageID)
 
-	// Create new command context
-	ctx, cancel := context.WithTimeout(ctx, inputTimeout)
-	defer cancel()
-
-	// Wait for user response or timeout
-	select {
-	case <-ctx.Done():
+	u = h.readInput(ctx, ch)
+	if u == nil {
 		return
-	case u = <-ch:
 	}
 
 	// Create the feedback message and send it to the bot owner
-	message := fmt.Sprintf(feedbackSendMsg, chatID,
-		u.Message.Chat.Username,
-		u.Message.Chat.FirstName,
-		u.Message.Chat.LastName,
+	messageToBotOwner := fmt.Sprintf(feedbackSendMsg,
+		chatID,
 		u.Message.MessageId,
-		u.Message.Text,
+		u.Message.Chat.Username,
 	)
 
-	_, err = h.bot.SendMessage(h.botOwner, message, "HTML", 0, false, false)
-	if err != nil {
-		log.Errorf("Handler.Feedback: [%d] => %v", chatID, err)
-		h.simpleSend(u.Message.Chat.Id, script.FeedbackFail)
-		return
-	}
+	h.sendToOwner(
+		chatID,
+		u.Message.MessageId,
+		messageToBotOwner,
+		fmt.Sprintf(script.FeedbackSuccess, u.Message.Chat.FirstName),
+		script.FeedbackFail,
+	)
 
-	message = fmt.Sprintf(script.FeedbackSuccess, u.Message.Chat.FirstName)
-	h.simpleSend(chatID, message)
 }
 
 func (h *Handler) Bug(u *objs.Update) {
 	var (
-		chatID    = getChatID(u)
-		chatIDStr = strconv.Itoa(chatID)
+		chatID = getChatID(u)
 
+		ctx    = h.getChatCtx(chatID)
 		script = h.getChatScript(chatID)
 	)
 
-	ch, closer, err := h.registerChannel(chatIDStr)
+	ch, closer, err := h.registerChannel(chatID)
 	if err != nil {
 		log.Errorf("Handler.Bug: register channel [%d] => %v", chatID, err)
 		h.simpleSend(chatID, script.BugReportFail)
@@ -123,41 +113,60 @@ func (h *Handler) Bug(u *objs.Update) {
 	messageID := h.simpleSend(chatID, script.BugReportStart)
 	defer h.deleteMessage(chatID, messageID)
 
-	// Create new command context
-	ctx, cancel := context.WithTimeout(h.getChatCtx(chatID), 1*time.Minute)
-	defer cancel()
-
-	// Wait for user response or timeout
-	select {
-	case <-ctx.Done():
+	u = h.readInput(ctx, ch)
+	if u == nil {
 		return
-	case u = <-ch:
 	}
-	text := u.Message.Text
 
-	// Send message to bot owner
-	message := fmt.Sprintf(bugSendMsg,
+	messageToBotOwner := fmt.Sprintf(bugSendMsg,
 		chatID,
-		u.Message.Chat.Username,
-		u.Message.Chat.FirstName,
-		u.Message.Chat.LastName,
 		u.Message.MessageId,
-		text,
+		u.Message.Chat.Username,
 	)
-	_, err = h.bot.SendMessage(h.botOwner, message, "HTML", 0, false, false)
+
+	h.sendToOwner(
+		chatID,
+		u.Message.MessageId,
+		messageToBotOwner,
+		fmt.Sprintf(script.BugReportSuccess, u.Message.Chat.FirstName),
+		script.BugReportFail,
+	)
+}
+
+// sendToOwner sends a message from bot's user to bot's owner
+//
+//	chatID - user's ChatID
+//	messageID - user's message that need to be sent to the owner
+//	messageDataToOwner - data about user's message that is used by /respond cmd
+//	messageOnSuccess - text to send to user on success
+//	messageOnFail - text to send to user on fail
+func (h *Handler) sendToOwner(
+	chatID int,
+	messageID int,
+	messageDataToOwner string,
+	messageOnSuccess string,
+	messageOnFail string,
+) {
+	forward := h.bot.ForwardMessage(messageID, false, false)
+	res, err := forward.ForwardFromUserToUser(h.botOwner, chatID)
 	if err != nil {
-		log.Errorf("Handler.Bug: [%d] => %v", chatID, err)
-		h.simpleSend(chatID, script.BugReportFail)
+		log.Errorf("Handler.sendToOwner: [%d] => %v", chatID, err)
+		h.simpleSend(chatID, messageOnFail)
 		return
 	}
 
-	// Send response message to user
-	message = fmt.Sprintf(script.BugReportSuccess, u.Message.Chat.FirstName)
-	h.simpleSend(chatID, message)
+	_, err = h.bot.SendMessage(h.botOwner, messageDataToOwner, "HTML", res.Result.MessageId, false, false)
+	if err != nil {
+		log.Errorf("Handler.sendToOwner: [%d] => %v", chatID, err)
+		h.simpleSend(chatID, messageOnFail)
+		return
+	}
+
+	h.simpleSend(chatID, messageOnSuccess)
 }
 
 // parseUserMessage parses user's feedback or bug report
-func parseUserMessage(message string) (chatID int, messageID int, name string, ok bool) {
+func parseUserMessage(message string) (chatID int, messageID int, ok bool) {
 	secondArg := func(s string) (string, bool) {
 		ss := strings.Split(s, ":")
 		if len(ss) != 2 {
@@ -173,7 +182,7 @@ func parseUserMessage(message string) (chatID int, messageID int, name string, o
 
 	for _, line := range strings.Split(message, "\n") {
 		// Parse user ID
-		if strings.HasPrefix(strings.TrimSpace(line), "User ID:") {
+		if strings.HasPrefix(strings.TrimSpace(line), "ChatID:") {
 			sa, ok = secondArg(line)
 			if !ok {
 				return
@@ -184,17 +193,8 @@ func parseUserMessage(message string) (chatID int, messageID int, name string, o
 			}
 		}
 
-		// Parse user full name
-		if strings.HasPrefix(strings.TrimSpace(line), "Full Name:") {
-			sa, ok = secondArg(line)
-			if !ok {
-				return
-			}
-			name = sa
-		}
-
 		// Parse user message ID
-		if strings.HasPrefix(strings.TrimSpace(line), "Message ID:") {
+		if strings.HasPrefix(strings.TrimSpace(line), "MessageID:") {
 			sa, ok = secondArg(line)
 			if !ok {
 				return
@@ -208,7 +208,7 @@ func parseUserMessage(message string) (chatID int, messageID int, name string, o
 		}
 	}
 
-	if chatID == 0 || messageID == 0 || name == "" {
+	if chatID == 0 || messageID == 0 {
 		ok = false
 		return
 	}

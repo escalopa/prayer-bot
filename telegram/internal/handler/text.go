@@ -35,12 +35,10 @@ const (
 	feedbackSendMsg = `
 💬 Feedback Message 💬
 
-<b>User ID:</b> %d
+<b>ChatID:</b> %d
+<b>MessageID:</b> %d
 <b>Username:</b> @%s
-<b>Full Name:</b> %s %s
-<b>Message ID:</b> %d
-<b>Feedback:</b> %s
-	`
+`
 )
 
 // text messages for /bug command
@@ -48,12 +46,10 @@ const (
 	bugSendMsg = `
 🐞 Bug Report 🐞
 
-<b>User ID:</b> %d
-<b>Username:</b> @%s
-<b>Full Name:</b> %s %s
-<b>Message ID:</b> %d
-<b>Bug Report:</b> %s
-	`
+<b>ChatID:</b> %d
+<b>MessageID:</b> %d
+<b>Username:</b>@%s
+`
 )
 
 // text messages for /respond command
@@ -82,5 +78,5 @@ const (
 
 // text messages for /today & /date command
 const (
-	prayerText = "```\n%s %d %s 🕌\n\n%s```\n/help"
+	prayerText = "%d \\- %s\n```\n%s```\n/help"
 )

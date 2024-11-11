@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"strconv"
 
 	objs "github.com/SakoDroid/telego/objects"
@@ -11,11 +10,11 @@ import (
 // Respond to a user's feedback or bug report
 func (h *Handler) Respond(u *objs.Update) {
 	var (
-		chatID    = getChatID(u)
-		chatIDStr = strconv.Itoa(chatID)
+		chatID = getChatID(u)
+		ctx    = h.getChatCtx(chatID)
 	)
 
-	ch, closer, err := h.registerChannel(chatIDStr)
+	ch, closer, err := h.registerChannel(chatID)
 	if err != nil {
 		log.Errorf("Handler.Respond: register channel [%d] => %v", chatID, err)
 		return
@@ -28,8 +27,8 @@ func (h *Handler) Respond(u *objs.Update) {
 		return
 	}
 
-	// Read userChatID, messageID, username from the old message that will be replied to
-	userChatID, responseMessageID, _, ok := parseUserMessage(u.Message.ReplyToMessage.Text)
+	// Read userChatID, messageID, from the old message that will be replied to
+	userChatID, userMessageID, ok := parseUserMessage(u.Message.ReplyToMessage.Text)
 	if !ok {
 		h.simpleSend(chatID, respondInvalidMsg)
 		return
@@ -39,21 +38,16 @@ func (h *Handler) Respond(u *objs.Update) {
 	messageID := h.simpleSend(chatID, respondStart)
 	defer h.deleteMessage(chatID, messageID)
 
-	// Create new command context
-	ctx, cancel := context.WithTimeout(h.getChatCtx(chatID), inputTimeout)
-	defer cancel()
-
-	select {
-	case <-ctx.Done():
+	u = h.readInput(ctx, ch)
+	if u == nil {
 		return
-	case u = <-ch:
 	}
 
 	if h.isCancelOperation(chatID, u.Message.Text) {
 		return
 	}
 
-	h.reply(userChatID, u.Message.Text, responseMessageID)
+	h.reply(userChatID, u.Message.Text, userMessageID)
 	h.simpleSend(chatID, respondSuccess)
 }
 
@@ -74,11 +68,11 @@ func (h *Handler) GetSubscribers(u *objs.Update) {
 // SendAll broadcasts a message to all subscribers
 func (h *Handler) SendAll(u *objs.Update) {
 	var (
-		chatID    = getChatID(u)
-		chatIDStr = strconv.Itoa(chatID)
+		chatID = getChatID(u)
+		ctx    = h.getChatCtx(chatID)
 	)
 
-	ch, closer, err := h.registerChannel(chatIDStr)
+	ch, closer, err := h.registerChannel(chatID)
 	if err != nil {
 		log.Errorf("Handler.SendAll: register channel [%d] => %v", chatID, err)
 		return
@@ -89,13 +83,9 @@ func (h *Handler) SendAll(u *objs.Update) {
 	messageID := h.simpleSend(chatID, sendAllStart)
 	defer h.deleteMessage(chatID, messageID)
 
-	ctx1, cancel1 := context.WithTimeout(h.getChatCtx(chatID), inputTimeout)
-	defer cancel1()
-
-	select {
-	case <-ctx1.Done():
+	u = h.readInput(ctx, ch)
+	if u == nil {
 		return
-	case u = <-ch:
 	}
 
 	var (
@@ -111,19 +101,12 @@ func (h *Handler) SendAll(u *objs.Update) {
 	messageID = h.simpleSend(chatID, sendAllConfirm)
 	defer h.deleteMessage(chatID, messageID)
 
-	// Wait for confirmation message or timeout after 5 minutes
-	ctx2, cancel2 := context.WithTimeout(h.getChatCtx(chatID), inputTimeout)
-	defer cancel2()
-
-	select {
-	case <-ctx2.Done():
+	u = h.readInput(ctx, ch)
+	if u == nil {
 		return
-	case u = <-ch:
 	}
 
-	// Delete the bot message if the user sends the message or if the context times out
 	defer h.deleteMessage(chatID, u.Message.MessageId)
-
 	if h.isCancelOperation(chatID, u.Message.Text) {
 		return
 	}
@@ -138,11 +121,11 @@ func (h *Handler) SendAll(u *objs.Update) {
 	// Send message to all subscribers asynchronously
 	go func() {
 		for _, userChatID := range chatIDs {
-			if userChatID == chatID {
+			if userChatID == chatID { // Skip the owner
 				continue
 			}
 			h.simpleSend(userChatID, broadcastMessageText)
 		}
-		h.reply(chatID, sendAllSuccess, broadcastMessageID)
+		h.reply(chatID, sendAllSuccess, broadcastMessageID) // Notify the owner
 	}()
 }

@@ -4,6 +4,8 @@ import (
 	"context"
 	"sync"
 
+	objs "github.com/SakoDroid/telego/objects"
+
 	"github.com/SakoDroid/telego"
 	app "github.com/escalopa/gopray/telegram/internal/application"
 	"github.com/escalopa/gopray/telegram/internal/domain"
@@ -97,6 +99,19 @@ func (h *Handler) processUnknown() {
 
 		h.deleteMessage(chatID, u.Message.MessageId)
 		h.simpleSend(chatID, cmdHelp)
+	}
+}
+
+// readInput reads the next input from the input channel or returns nil if the context is done.
+func (h *Handler) readInput(ctx context.Context, inputChan <-chan *objs.Update) *objs.Update {
+	ctx, cancel := context.WithTimeout(ctx, inputTimeout)
+	defer cancel()
+
+	select {
+	case <-ctx.Done():
+		return nil
+	case u := <-inputChan:
+		return u
 	}
 }
 

@@ -1,10 +1,10 @@
 package config
 
 import (
-	log "github.com/catalystgo/logger/cli"
 	"strconv"
 	"time"
 
+	log "github.com/catalystgo/logger/cli"
 	"github.com/escalopa/goconfig"
 	"github.com/pkg/errors"
 )

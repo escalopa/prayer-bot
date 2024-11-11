@@ -1,12 +1,12 @@
 package handler
 
 import (
-	log "github.com/catalystgo/logger/cli"
 	"strconv"
 	"time"
 
 	"github.com/SakoDroid/telego"
 	objs "github.com/SakoDroid/telego/objects"
+	log "github.com/catalystgo/logger/cli"
 	"github.com/escalopa/gopray/telegram/internal/domain"
 )
 

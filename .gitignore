@@ -2,3 +2,4 @@
 *.env
 data
 coverage.txt
+config.json

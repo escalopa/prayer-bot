@@ -3,18 +3,17 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/escalopa/gopray/telegram/internal/domain"
-
-	log "github.com/catalystgo/logger/cli"
 
 	bt "github.com/SakoDroid/telego"
 	telegoCfg "github.com/SakoDroid/telego/configs"
+	log "github.com/catalystgo/logger/cli"
 	"github.com/escalopa/gopray/telegram/internal/adapters/memory"
 	"github.com/escalopa/gopray/telegram/internal/adapters/parser"
 	"github.com/escalopa/gopray/telegram/internal/adapters/redis"
 	"github.com/escalopa/gopray/telegram/internal/adapters/scheduler"
 	app "github.com/escalopa/gopray/telegram/internal/application"
 	"github.com/escalopa/gopray/telegram/internal/config"
+	"github.com/escalopa/gopray/telegram/internal/domain"
 	"github.com/escalopa/gopray/telegram/internal/handler"
 	"github.com/escalopa/gopray/telegram/internal/server"
 	redis2 "github.com/go-redis/redis/v9"

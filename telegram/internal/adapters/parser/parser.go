@@ -163,7 +163,6 @@ func (p *PrayerParser) convertToTime(str string, day time.Time) (time.Time, erro
 	if err != nil {
 		return time.Time{}, errors.Errorf("PrayerParser.convertToTime[%s]: %v", str, err)
 	}
-	fmt.Printf(" %s | %s | %d:%d \n", day.String(), str, clock.Hour(), clock.Minute())
 	return domain.Date(day, clock), nil
 }
 

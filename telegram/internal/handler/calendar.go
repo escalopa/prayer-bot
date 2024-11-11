@@ -1,12 +1,12 @@
 package handler
 
 import (
-	log "github.com/catalystgo/logger/cli"
 	"strconv"
 	"time"
 
 	"github.com/SakoDroid/telego"
 	objs "github.com/SakoDroid/telego/objects"
+	log "github.com/catalystgo/logger/cli"
 	"github.com/escalopa/gopray/telegram/internal/domain"
 )
 
@@ -31,8 +31,9 @@ func (h *Handler) getCalendarKeyboardCallback(chatID int, callBack func(time.Tim
 
 			monthDigit, _ = strconv.Atoi(u.CallbackQuery.Data)
 			month         = time.Month(monthDigit)
+			year          = time.Now().In(domain.GetLocation()).Year()
 
-			daysInMonth = daysIn(month, time.Now().In(h.uc.Loc()).Year())
+			daysInMonth = daysIn(month, year)
 		)
 
 		var (
@@ -44,7 +45,7 @@ func (h *Handler) getCalendarKeyboardCallback(chatID int, callBack func(time.Tim
 			row = (j / 5) + 1 // 5 buttons(days) per row.
 			kb.AddCallbackButtonHandler(strconv.Itoa(j+1), strconv.Itoa(j+1), row, func(u1 *objs.Update) {
 				day, _ := strconv.Atoi(u1.CallbackQuery.Data)
-				callBack(domain.Time(day, month, h.uc.Loc()))
+				callBack(domain.Time(day, month, year))
 			})
 		}
 

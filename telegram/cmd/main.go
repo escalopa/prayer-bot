@@ -4,16 +4,16 @@ import (
 	"context"
 	"fmt"
 
-	log "github.com/catalystgo/logger/cli"
-
 	bt "github.com/SakoDroid/telego"
 	telegoCfg "github.com/SakoDroid/telego/configs"
+	log "github.com/catalystgo/logger/cli"
 	"github.com/escalopa/gopray/telegram/internal/adapters/memory"
 	"github.com/escalopa/gopray/telegram/internal/adapters/parser"
 	"github.com/escalopa/gopray/telegram/internal/adapters/redis"
 	"github.com/escalopa/gopray/telegram/internal/adapters/scheduler"
 	app "github.com/escalopa/gopray/telegram/internal/application"
 	"github.com/escalopa/gopray/telegram/internal/config"
+	"github.com/escalopa/gopray/telegram/internal/domain"
 	"github.com/escalopa/gopray/telegram/internal/handler"
 	"github.com/escalopa/gopray/telegram/internal/server"
 	redis2 "github.com/go-redis/redis/v9"
@@ -46,6 +46,7 @@ func main() {
 	checkError(err, "create bot")
 
 	loc := appCfg.Location
+	domain.SetLocation(loc)
 
 	pr := memory.NewPrayerRepository() // Use memory for prayer repository to not hit db on every call.
 	sr := redis.NewSubscriberRepository(r, appCfg.CachePrefix)
@@ -57,7 +58,7 @@ func main() {
 
 	sch := scheduler.New(appCfg.UpcomingReminder, appCfg.JummahReminder, loc, pr, sr)
 
-	uc := app.NewUseCase(ctx, loc, sch, pr, scr, hr, lr, sr)
+	uc := app.NewUseCase(ctx, sch, pr, scr, hr, lr, sr)
 	h := handler.New(bot, appCfg.OwnerID, uc)
 
 	srv.Run(ctx, h, appCfg.Port)

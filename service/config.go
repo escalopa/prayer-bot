@@ -12,6 +12,7 @@ type BotConfig struct {
 	BotID    uint8  `json:"bot_id"`
 	Location string `json:"location"`
 	Token    string `json:"token"`
+	Secret   string `json:"secret"`
 }
 
 var cfg = struct {

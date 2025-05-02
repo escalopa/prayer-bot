@@ -91,14 +91,9 @@ func Handler(ctx context.Context, event *Event) error {
 			return fmt.Errorf("extract info from filename: %s => %w", key, err)
 		}
 
-		config, ok := botConfig[botID]
+		_, ok := botConfig[botID]
 		if !ok {
 			return fmt.Errorf("bot config not found for bot_id: %d", botID)
-		}
-
-		loc, err := time.LoadLocation(config.Location)
-		if err != nil {
-			return fmt.Errorf("load location: %s => %w", config.Location, err)
 		}
 
 		data, err := storage.Get(ctx, bucket, key)
@@ -106,7 +101,7 @@ func Handler(ctx context.Context, event *Event) error {
 			return fmt.Errorf("get file from S3: %s => %w", key, err)
 		}
 
-		rows, err := internal.ParsePrayers(bytes.NewReader(data), loc)
+		rows, err := internal.ParsePrayers(bytes.NewReader(data))
 		if err != nil {
 			return fmt.Errorf("load schedule: %s => %w", key, err)
 		}
@@ -116,7 +111,7 @@ func Handler(ctx context.Context, event *Event) error {
 			return fmt.Errorf("store prayers: %s => %w", key, err)
 		}
 
-		fmt.Printf("processed file for bot_id: %d, location: %s\n", botID, loc)
+		fmt.Printf("processed file for bot_id: %d\n", botID)
 	}
 
 	return nil

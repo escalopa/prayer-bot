@@ -13,6 +13,8 @@ import (
 var (
 	dayFormat   = "2/1/2006"
 	clockFormat = "15:04"
+
+	loc = time.UTC
 )
 
 const (
@@ -20,7 +22,7 @@ const (
 	columnsCount = 7 // (date, fajr, shuruq, dhuhr, asr, maghrib, isha)
 )
 
-func ParsePrayers(file io.Reader, loc *time.Location) (schedule []*domain.PrayerTimes, err error) {
+func ParsePrayers(file io.Reader) (schedule []*domain.PrayerTimes, err error) {
 	reader := csv.NewReader(file)
 	reader.FieldsPerRecord = columnsCount
 	reader.TrimLeadingSpace = true
@@ -41,7 +43,7 @@ func ParsePrayers(file io.Reader, loc *time.Location) (schedule []*domain.Prayer
 			return nil, err
 		}
 
-		prayer, err := parseRecord(record, loc)
+		prayer, err := parseRecord(record)
 		if err != nil {
 			return nil, err
 		}
@@ -53,19 +55,19 @@ func ParsePrayers(file io.Reader, loc *time.Location) (schedule []*domain.Prayer
 }
 
 // parseRecord parses a record from the file
-func parseRecord(record []string, loc *time.Location) (*domain.PrayerTimes, error) {
+func parseRecord(record []string) (*domain.PrayerTimes, error) {
 	if len(record) != columnsCount {
 		return nil, fmt.Errorf("parseRecord: invalid number of fields, expected 7, got %d", len(record))
 	}
 
 	// parse day date
-	day, err := parseDate(record[0], loc)
+	day, err := parseDate(record[0])
 	if err != nil {
 		return nil, err
 	}
 
 	// parse prayers times and convert into time.Time
-	prayers, err := parsePrayer(record[1:], day, loc) // skip first record since it was date
+	prayers, err := parsePrayer(record[1:], day) // skip first record since it was date
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +89,7 @@ func parseRecord(record []string, loc *time.Location) (*domain.PrayerTimes, erro
 }
 
 // parseDate get day date from string
-func parseDate(line string, loc *time.Location) (time.Time, error) {
+func parseDate(line string) (time.Time, error) {
 	t, err := time.Parse(dayFormat, line)
 	if err != nil {
 		return time.Time{}, fmt.Errorf("parseDate[%s]: %v", line, err)
@@ -96,7 +98,7 @@ func parseDate(line string, loc *time.Location) (time.Time, error) {
 }
 
 // parsePrayer parses all day's prayers
-func parsePrayer(prayersStr []string, day time.Time, loc *time.Location) ([]time.Time, error) {
+func parsePrayer(prayersStr []string, day time.Time) ([]time.Time, error) {
 	if len(prayersStr) != prayersCount {
 		return nil, fmt.Errorf("parsePrayer: unexpected number of prayers, expected 6, got %d", len(prayersStr))
 	}

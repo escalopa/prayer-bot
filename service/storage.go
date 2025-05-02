@@ -6,21 +6,33 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
 )
 
 type Storage struct {
-	client *s3.Client
+	client *s3.S3
 }
 
-func NewStorage() *Storage {
-	client := s3.New(s3.Options{
-		Credentials:  &credentials{},
-		Region:       cfg.Region,
-		BaseEndpoint: aws.String(s3Endpoint),
-	})
-	return &Storage{client: client}
+func NewStorage() (*Storage, error) {
+	config := &aws.Config{
+		Endpoint:         aws.String(s3Endpoint),
+		Region:           aws.String(cfg.region),
+		Credentials:      credentials.NewStaticCredentials(cfg.accessKey, cfg.secretKey, ""),
+		S3ForcePathStyle: aws.Bool(true), // required for non-AWS S3 implementations
+	}
+
+	// create a new session with the custom configuration
+	sess, err := session.NewSession(config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create session: %w", err)
+	}
+
+	client := s3.New(sess, config)
+
+	return &Storage{client: client}, nil
 }
 
 func (s *Storage) Get(ctx context.Context, bucket string, key string) ([]byte, error) {
@@ -29,7 +41,7 @@ func (s *Storage) Get(ctx context.Context, bucket string, key string) ([]byte, e
 		Key:    aws.String(key),
 	}
 
-	result, err := s.client.GetObject(ctx, input)
+	result, err := s.client.GetObjectWithContext(ctx, input)
 	if err != nil {
 		return nil, fmt.Errorf("get object: %w", err)
 	}
@@ -47,8 +59,8 @@ const (
 	botConfigKey = "bot_config.json"
 )
 
-func (s *Storage) LoadBotConfig(ctx context.Context, bucket string) (map[uint8]*BotConfig, error) {
-	data, err := s.Get(ctx, bucket, botConfigKey)
+func (s *Storage) LoadBotConfig(ctx context.Context) (map[uint8]*BotConfig, error) {
+	data, err := s.Get(ctx, cfg.bucket, botConfigKey)
 	if err != nil {
 		return nil, fmt.Errorf("load bot config: %w", err)
 	}

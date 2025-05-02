@@ -4,10 +4,10 @@ import (
 	"context"
 
 	"github.com/escalopa/prayer-bot/domain"
-
-	ydb "github.com/ydb-platform/ydb-go-sdk/v3"
+	"github.com/ydb-platform/ydb-go-sdk/v3"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table/types"
+	yc "github.com/ydb-platform/ydb-go-yc"
 )
 
 type DB struct {
@@ -15,7 +15,11 @@ type DB struct {
 }
 
 func NewDB(ctx context.Context) (*DB, error) {
-	sdk, err := ydb.Open(ctx, cfg.YDBEndpoint)
+	sdk, err := ydb.Open(ctx, cfg.ydb,
+		yc.WithMetadataCredentials(),
+		yc.WithInternalCA(),
+	)
+
 	if err != nil {
 		return nil, err
 	}
@@ -39,15 +43,7 @@ func (db *DB) StorePrayers(ctx context.Context, botID uint8, rows []*domain.Pray
 		>>;
 
 		UPSERT INTO prayers
-		SELECT * FROM AS_TABLE($items)
-		ON CONFLICT(bot_id, prayer_date) DO UPDATE
-		SET
-			fajr = EXCLUDED.fajr,
-			shuruq = EXCLUDED.shuruq,
-			dhuhr = EXCLUDED.dhuhr,
-			asr = EXCLUDED.asr,
-			maghrib = EXCLUDED.maghrib,
-			isha = EXCLUDED.isha;
+		SELECT * FROM AS_TABLE($items);
 	`
 
 	values := make([]types.Value, 0, len(rows))

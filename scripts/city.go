@@ -11,6 +11,19 @@ import (
 	"golang.org/x/net/html"
 )
 
+const (
+	endpointURL = "https://5namaz.com/russia/respublika_tatarstan/%s/%d-%s/"
+	city        = "innopolis"
+)
+
+const (
+	header = "День,ФАЖР,ВОСХОД,ЗУХР,АСР,МАГРИБ,ИША"
+)
+
+var (
+	years = []int{2024, 2025}
+)
+
 type NodeIterator struct {
 	current *html.Node
 }
@@ -34,21 +47,14 @@ func (n *NodeIterator) Next() *html.Node {
 	return node
 }
 
-const (
-	endpointURL = "https://5namaz.com/russia/respublika_tatarstan/innopolis/%d-%s/"
-)
-
 func main() {
-	var (
-		years = []int{2024, 2025}
-		data  = make([][]string, 0, 365*len(years))
-	)
+	data := make([][]string, 0, 365*len(years))
 
 	for _, year := range years {
 		for month := range time.Month(12) {
 			month++ // month is 1-based
 
-			finalURL := fmt.Sprintf(endpointURL, year, strings.ToLower(month.String()))
+			finalURL := fmt.Sprintf(endpointURL, city, year, strings.ToLower(month.String()))
 
 			node, err := parseHTML(finalURL)
 			checkErr(err)
@@ -126,10 +132,7 @@ func parseRaw(node *html.Node) []string {
 }
 
 func storeCSV(data [][]string) error {
-	const (
-		header   = "День,ФАЖР,ВОСХОД,ЗУХР,АСР,МАГРИБ,ИША"
-		filename = "innopolis.csv"
-	)
+	filename := fmt.Sprintf("%s.csv", city)
 
 	file, err := os.Create(filename)
 	checkErr(err)

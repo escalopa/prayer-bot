@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/escalopa/prayer-bot/domain"
 )
 
 type Storage struct {
@@ -24,10 +25,9 @@ func NewStorage() (*Storage, error) {
 		S3ForcePathStyle: aws.Bool(true), // required for non-AWS S3 implementations
 	}
 
-	// create a new session with the custom configuration
 	sess, err := session.NewSession(config)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create session: %w", err)
+		return nil, fmt.Errorf("create session: %v", err)
 	}
 
 	client := s3.New(sess, config)
@@ -43,13 +43,13 @@ func (s *Storage) Get(ctx context.Context, bucket string, key string) ([]byte, e
 
 	result, err := s.client.GetObjectWithContext(ctx, input)
 	if err != nil {
-		return nil, fmt.Errorf("get object: %w", err)
+		return nil, fmt.Errorf("get object: %v", err)
 	}
 	defer func(Body io.ReadCloser) { _ = Body.Close() }(result.Body)
 
 	data, err := io.ReadAll(result.Body)
 	if err != nil {
-		return nil, fmt.Errorf("read object body: %w", err)
+		return nil, fmt.Errorf("read object body: %v", err)
 	}
 
 	return data, nil
@@ -59,17 +59,17 @@ const (
 	botConfigKey = "bot_config.json"
 )
 
-func (s *Storage) LoadBotConfig(ctx context.Context) (map[uint8]*BotConfig, error) {
+func (s *Storage) LoadBotConfig(ctx context.Context) (map[uint8]*domain.BotConfig, error) {
 	data, err := s.Get(ctx, cfg.bucket, botConfigKey)
 	if err != nil {
-		return nil, fmt.Errorf("load bot config: %w", err)
+		return nil, fmt.Errorf("load bot config: %v", err)
 	}
 
-	var config map[uint8]*BotConfig
+	var config map[uint8]*domain.BotConfig
 
 	err = json.Unmarshal(data, &config)
 	if err != nil {
-		return nil, fmt.Errorf("unmarshal bot config: %w", err)
+		return nil, fmt.Errorf("unmarshal bot config: %v", err)
 	}
 
 	return config, nil

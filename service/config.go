@@ -5,15 +5,9 @@ import (
 )
 
 const (
-	s3Endpoint = "https://storage.yandexcloud.net"
+	s3Endpoint  = "https://storage.yandexcloud.net"
+	sqsEndpoint = "https://message-queue.yandexcloud.net"
 )
-
-type BotConfig struct {
-	BotID    uint8  `json:"bot_id"`
-	Location string `json:"location"`
-	Token    string `json:"token"`
-	Secret   string `json:"secret"`
-}
 
 var cfg = struct {
 	region    string
@@ -27,7 +21,7 @@ var cfg = struct {
 
 func init() {
 	cfg.ydb = os.Getenv("YDB_ENDPOINT")
-	cfg.queue = os.Getenv("QUEUE_NAME")
+	cfg.queue = os.Getenv("QUEUE_URL")
 	cfg.bucket = os.Getenv("S3_BUCKET")
 
 	cfg.region = os.Getenv("REGION")

@@ -15,7 +15,7 @@ type DB struct {
 }
 
 func NewDB(ctx context.Context) (*DB, error) {
-	sdk, err := ydb.Open(ctx, cfg.ydb,
+	sdk, err := ydb.Open(ctx, cfg.ydb.endpoint,
 		yc.WithMetadataCredentials(),
 		yc.WithInternalCA(),
 	)

@@ -16,8 +16,8 @@ type Queue struct {
 
 func NewQueue() (*Queue, error) {
 	config := &aws.Config{
-		Endpoint:    aws.String(sqsEndpoint),
-		Region:      aws.String(cfg.region),
+		Endpoint:    aws.String(cfg.sqs.endpoint),
+		Region:      aws.String(cfg.sqs.region),
 		Credentials: credentials.NewStaticCredentials(cfg.accessKey, cfg.secretKey, ""),
 	}
 
@@ -38,7 +38,7 @@ func (q *Queue) Push(ctx context.Context, payload *domain.Payload) error {
 	}
 
 	input := &sqs.SendMessageInput{
-		QueueUrl:    aws.String(cfg.queue),
+		QueueUrl:    aws.String(cfg.sqs.url),
 		MessageBody: aws.String(string(b)),
 	}
 

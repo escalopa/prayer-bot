@@ -19,7 +19,7 @@ type Storage struct {
 
 func NewStorage() (*Storage, error) {
 	config := &aws.Config{
-		Endpoint:         aws.String(s3Endpoint),
+		Endpoint:         aws.String(cfg.s3.endpoint),
 		Region:           aws.String(cfg.region),
 		Credentials:      credentials.NewStaticCredentials(cfg.accessKey, cfg.secretKey, ""),
 		S3ForcePathStyle: aws.Bool(true), // required for non-AWS S3 implementations
@@ -60,7 +60,7 @@ const (
 )
 
 func (s *Storage) LoadBotConfig(ctx context.Context) (map[uint8]*domain.BotConfig, error) {
-	data, err := s.Get(ctx, cfg.bucket, botConfigKey)
+	data, err := s.Get(ctx, cfg.s3.bucket, botConfigKey)
 	if err != nil {
 		return nil, fmt.Errorf("load bot config: %v", err)
 	}

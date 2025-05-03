@@ -2,6 +2,36 @@ package domain
 
 import "time"
 
+type PrayerID uint8
+
+const (
+	PrayerIDFajr    PrayerID = 1
+	PrayerIDShuruq  PrayerID = 2
+	PrayerIDDhuhr   PrayerID = 3
+	PrayerIDAsr     PrayerID = 4
+	PrayerIDMaghrib PrayerID = 5
+	PrayerIDIsha    PrayerID = 6
+)
+
+func (p PrayerID) String() string {
+	switch p {
+	case PrayerIDFajr:
+		return "fajr"
+	case PrayerIDShuruq:
+		return "shuruq"
+	case PrayerIDDhuhr:
+		return "dhuhr"
+	case PrayerIDAsr:
+		return "asr"
+	case PrayerIDMaghrib:
+		return "maghrib"
+	case PrayerIDIsha:
+		return "isha"
+	default:
+		return "unknown"
+	}
+}
+
 type PrayerTimes struct {
 	Date    time.Time `json:"date"`
 	Fajr    time.Time `json:"fajr"`

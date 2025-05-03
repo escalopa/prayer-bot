@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -31,7 +32,7 @@ func NewQueue() (*Queue, error) {
 	return &Queue{client: client}, nil
 }
 
-func (q *Queue) Push(ctx context.Context, payload *domain.Payload) error {
+func (q *Queue) Push(ctx context.Context, payload *domain.HandlePayload) error {
 	b, err := payload.Marshal()
 	if err != nil {
 		return fmt.Errorf("marshal payload: %w", err)

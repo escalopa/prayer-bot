@@ -2,52 +2,66 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
 
+	"github.com/escalopa/prayer-bot/domain"
 	"github.com/escalopa/prayer-bot/handler/internal"
 	"github.com/escalopa/prayer-bot/service"
-	"github.com/go-telegram/bot"
 )
 
-type Response struct {
-	StatusCode int    `json:"status_code"`
-	Body       string `json:"body"`
+type (
+	Request struct {
+		Headers map[string]string `json:"headers"`
+		Body    string            `json:"body"`
+	}
+	Response struct {
+		StatusCode int    `json:"status_code"`
+		Body       string `json:"body"`
+	}
+)
+
+func newResponse(statusCode int, body string, data ...any) (*Response, error) {
+	return &Response{
+		StatusCode: statusCode,
+		Body:       fmt.Sprintf(body, data...),
+	}, nil
 }
 
-func Handler(ctx context.Context, request []byte) (*Response, error) {
-	update, headers, err := internal.ParseRequest(request)
-	if err != nil {
-		return nil, fmt.Errorf("parse request: %v", err)
+func Handler(ctx context.Context, requestBytes []byte) (*Response, error) {
+	request := &Request{}
+
+	if err := json.Unmarshal(requestBytes, &request); err != nil {
+		return newResponse(http.StatusBadRequest, "unmarshal request body: %v", err)
 	}
 
 	storage, err := service.NewStorage()
 	if err != nil {
-		return nil, fmt.Errorf("create S3 client: %v", err)
-	}
-
-	queue, err := service.NewQueue()
-	if err != nil {
-		return nil, fmt.Errorf("create queue: %v", err)
+		return newResponse(http.StatusInternalServerError, "create storage: %v", err)
 	}
 
 	botConfig, err := storage.LoadBotConfig(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("load bot config: %v", err)
+		return newResponse(http.StatusInternalServerError, "load bot config: %v", err)
 	}
 
-	botID, token, err := internal.Authenticate(botConfig, headers)
+	botID, err := internal.Authenticate(botConfig, request.Headers)
 	if err != nil {
-		return nil, fmt.Errorf("authenticate: %v\n", err)
+		return newResponse(http.StatusUnauthorized, "authenticate: %v", err)
 	}
 
-	handler := internal.NewHandler(botID, queue)
-
-	b, err := bot.New(token, handler.Opts()...)
+	queue, err := service.NewQueue()
 	if err != nil {
-		return nil, fmt.Errorf("create bot: %v", err)
+		return newResponse(http.StatusInternalServerError, "create queue: %v", err)
 	}
 
-	b.ProcessUpdate(ctx, update)
+	payload := &domain.Payload{BotID: botID, Data: request.Body}
 
-	return &Response{StatusCode: 200, Body: "OK"}, nil
+	err = queue.Push(ctx, payload)
+	if err != nil {
+		return newResponse(http.StatusInternalServerError, fmt.Sprintf("push payload: %v", err))
+	}
+
+	return newResponse(http.StatusOK, "success")
 }

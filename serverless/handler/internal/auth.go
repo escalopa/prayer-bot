@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/escalopa/prayer-bot/service"
+	"github.com/escalopa/prayer-bot/domain"
 )
 
 const (
@@ -14,7 +14,7 @@ const (
 	secretTokenPartsCount = 2
 )
 
-func Authenticate(config map[uint8]*service.BotConfig, headers map[string]string) (uint8, string, error) {
+func Authenticate(config map[uint8]*domain.BotConfig, headers map[string]string) (uint8, string, error) {
 	secretToken := headers[telegramSecretTokenHeader]
 	if secretToken == "" {
 		return 0, "", fmt.Errorf("empty secret token header")
@@ -27,7 +27,7 @@ func Authenticate(config map[uint8]*service.BotConfig, headers map[string]string
 
 	botID, err := strconv.ParseUint(parts[0], 10, 8)
 	if err != nil {
-		return 0, "", fmt.Errorf("parse bot_id: %s => %w", parts[0], err)
+		return 0, "", fmt.Errorf("parse bot_id: %s => %v", parts[0], err)
 	}
 
 	if botID == 0 {

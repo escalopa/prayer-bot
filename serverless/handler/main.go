@@ -7,64 +7,47 @@ import (
 	"github.com/escalopa/prayer-bot/handler/internal"
 	"github.com/escalopa/prayer-bot/service"
 	"github.com/go-telegram/bot"
-	"github.com/go-telegram/bot/models"
 )
 
-type (
-	Storage interface {
-		LoadBotConfig(ctx context.Context) (map[uint8]*service.BotConfig, error)
-	}
+type Response struct {
+	StatusCode int    `json:"status_code"`
+	Body       string `json:"body"`
+}
 
-	Queue interface {
-		Push(ctx context.Context, event models.Update) error
-	}
-)
-
-func Handler(ctx context.Context, request []byte) error {
+func Handler(ctx context.Context, request []byte) (*Response, error) {
 	update, headers, err := internal.ParseRequest(request)
 	if err != nil {
-		return fmt.Errorf("parse request: %v", err)
+		return nil, fmt.Errorf("parse request: %v", err)
 	}
 
-	var (
-		storage Storage
-	)
-
-	storage, err = service.NewStorage()
+	storage, err := service.NewStorage()
 	if err != nil {
-		return fmt.Errorf("create S3 client: %w", err)
+		return nil, fmt.Errorf("create S3 client: %v", err)
+	}
+
+	queue, err := service.NewQueue()
+	if err != nil {
+		return nil, fmt.Errorf("create queue: %v", err)
 	}
 
 	botConfig, err := storage.LoadBotConfig(ctx)
 	if err != nil {
-		return fmt.Errorf("load bot config: %v", err)
+		return nil, fmt.Errorf("load bot config: %v", err)
 	}
 
 	botID, token, err := internal.Authenticate(botConfig, headers)
 	if err != nil {
-		fmt.Printf("authenticate: %v\n", err)
-		return nil // hide error from user
-	}
-	_ = botID // TODO: use it
-
-	opts := []bot.Option{
-		bot.WithDefaultHandler(handler),
+		return nil, fmt.Errorf("authenticate: %v\n", err)
 	}
 
-	b, err := bot.New(token, opts...)
+	handler := internal.NewHandler(botID, queue)
+
+	b, err := bot.New(token, handler.Opts()...)
 	if err != nil {
-		return fmt.Errorf("create bot: %v", err)
+		return nil, fmt.Errorf("create bot: %v", err)
 	}
 
 	b.ProcessUpdate(ctx, update)
-	return nil
-}
 
-func handler(ctx context.Context, b *bot.Bot, update *models.Update) {
-	if update.Message != nil {
-		_, _ = b.SendMessage(ctx, &bot.SendMessageParams{
-			ChatID: update.Message.Chat.ID,
-			Text:   update.Message.Text,
-		})
-	}
+	return &Response{StatusCode: 200, Body: "OK"}, nil
 }

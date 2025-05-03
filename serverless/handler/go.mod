@@ -6,7 +6,7 @@ require github.com/go-telegram/bot v1.15.0
 
 require (
 	github.com/aws/aws-sdk-go v1.55.7 // indirect
-	github.com/escalopa/prayer-bot v0.0.0-20250502204959-1177d3350df6
+	github.com/escalopa/prayer-bot v0.0.0-20250503030326-0ec4cf654331
 	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/uuid v1.6.0 // indirect

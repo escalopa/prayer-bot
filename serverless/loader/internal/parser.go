@@ -22,7 +22,7 @@ const (
 	columnsCount = 7 // (date, fajr, shuruq, dhuhr, asr, maghrib, isha)
 )
 
-func ParsePrayers(file io.Reader) (schedule []*domain.PrayerTimes, err error) {
+func parsePrayers(file io.Reader) (schedule []*domain.PrayerTimes, err error) {
 	reader := csv.NewReader(file)
 	reader.FieldsPerRecord = columnsCount
 	reader.TrimLeadingSpace = true

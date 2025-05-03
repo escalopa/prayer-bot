@@ -33,7 +33,7 @@ provider "yandex" {
 }
 
 #######################################
-#### object storage
+### object storage
 #######################################
 
 resource "yandex_storage_bucket" "bucket" {
@@ -43,7 +43,7 @@ resource "yandex_storage_bucket" "bucket" {
 }
 
 #######################################
-#### ydb
+### ydb
 #######################################
 
 resource "yandex_ydb_database_serverless" "ydb" {
@@ -148,11 +148,11 @@ resource "yandex_ydb_table" "prayers" {
 }
 
 #######################################
-#### message queue
+### message queue
 #######################################
 
 resource "yandex_iam_service_account" "mq_sa" {
-  name      = "mq-service-account"
+  name      = "mq-sa"
   folder_id = var.folder_id
 }
 
@@ -180,7 +180,7 @@ resource "yandex_message_queue" "standard_queue" {
 #######################################
 
 resource "yandex_iam_service_account" "loader_sa" {
-  name = "loader"
+  name = "loader-sa"
 }
 
 resource "yandex_resourcemanager_folder_iam_member" "loader_sa_function_role" {
@@ -212,14 +212,14 @@ data "archive_file" "loader_zip" {
 }
 
 resource "yandex_function" "loader_fn" {
-  name               = "loader"
+  name               = "loader-fn"
   runtime            = "golang121"
   entrypoint         = "main.Handler"
   memory             = 128
   execution_timeout  = 10
   service_account_id = yandex_iam_service_account.loader_sa.id
   folder_id          = var.folder_id
-  user_hash          = "v2" # change this to force updates
+  user_hash          = "v1"
 
   environment = {
     S3_BUCKET    = yandex_storage_bucket.bucket.bucket
@@ -257,7 +257,7 @@ resource "yandex_function_trigger" "loader_trigger" {
 #######################################
 
 resource "yandex_iam_service_account" "handler_sa" {
-  name = "handler"
+  name = "handler-sa"
 }
 
 resource "yandex_resourcemanager_folder_iam_member" "handler_sa_function_role" {
@@ -289,18 +289,19 @@ data "archive_file" "handler_zip" {
 }
 
 resource "yandex_function" "handler_fn" {
-  name               = "handler"
+  name               = "handler-fn"
   runtime            = "golang121"
   entrypoint         = "main.Handler"
   memory             = 128
   execution_timeout  = 10
   service_account_id = yandex_iam_service_account.handler_sa.id
   folder_id          = var.folder_id
-  user_hash          = "v1" # change this to force updates
+  user_hash          = "v1"
 
   environment = {
     S3_BUCKET  = yandex_storage_bucket.bucket.bucket
-    QUEUE_NAME = yandex_message_queue.standard_queue.name
+    SQS_URL    = yandex_message_queue.standard_queue.id
+    SQS_REGION = yandex_message_queue.standard_queue.region_id
 
     REGION     = var.region
     ACCESS_KEY = yandex_iam_service_account_static_access_key.handler_sa_keys.access_key
@@ -317,9 +318,74 @@ output "handler_fn_id" {
 }
 
 #######################################
-### serverless functions - notifier
+### serverless functions - sender
 #######################################
 
+resource "yandex_iam_service_account" "sender_sa" {
+  name = "sender-sa"
+}
+
+resource "yandex_resourcemanager_folder_iam_member" "sender_sa_storage_role" {
+  folder_id = var.folder_id
+  role      = "storage.viewer"
+  member    = "serviceAccount:${yandex_iam_service_account.sender_sa.id}"
+}
+
+resource "yandex_resourcemanager_folder_iam_member" "sender_sa_ydb_role" {
+  folder_id = var.folder_id
+  role      = "ydb.editor"
+  member    = "serviceAccount:${yandex_iam_service_account.sender_sa.id}"
+}
+
+resource "yandex_iam_service_account_static_access_key" "sender_sa_keys" {
+  service_account_id = yandex_iam_service_account.sender_sa.id
+}
+
+data "archive_file" "sender_zip" {
+  type        = "zip"
+  source_dir  = "${path.module}/serverless/sender"
+  output_path = "${path.module}/serverless/sender.zip"
+}
+
+resource "yandex_function" "sender_fn" {
+  name               = "sender-fn"
+  runtime            = "golang121"
+  entrypoint         = "main.Handler"
+  memory             = 128
+  execution_timeout  = 10
+  service_account_id = yandex_iam_service_account.sender_sa.id
+  folder_id          = var.folder_id
+  user_hash          = "v2"
+
+  environment = {
+    S3_BUCKET    = yandex_storage_bucket.bucket.bucket
+    YDB_ENDPOINT = yandex_ydb_database_serverless.ydb.ydb_full_endpoint
+
+    REGION     = var.region
+    ACCESS_KEY = yandex_iam_service_account_static_access_key.sender_sa_keys.access_key
+    SECRET_KEY = yandex_iam_service_account_static_access_key.sender_sa_keys.secret_key
+  }
+
+  content {
+    zip_filename = data.archive_file.sender_zip.output_path
+  }
+}
+
+resource "yandex_function_trigger" "sender_trigger" {
+  name = "sender"
+  function {
+    id                 = yandex_function.sender_fn.id
+    service_account_id = yandex_iam_service_account.sender_sa.id
+  }
+
+  message_queue {
+    batch_cutoff       = "1"
+    batch_size         = "1"
+    service_account_id = yandex_iam_service_account.sender_sa.id
+    queue_id           = yandex_message_queue.standard_queue.arn
+  }
+}
+
 #######################################
-### serverless functions - sender
+### serverless functions - notifier
 #######################################

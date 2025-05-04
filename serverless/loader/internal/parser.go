@@ -22,7 +22,7 @@ const (
 	columnsCount = 7 // (date, fajr, shuruq, dhuhr, asr, maghrib, isha)
 )
 
-func parsePrayers(file io.Reader) (schedule []*domain.PrayerTimes, err error) {
+func parsePrayerDays(file io.Reader) (prayerDays []*domain.PrayerDay, err error) {
 	reader := csv.NewReader(file)
 	reader.FieldsPerRecord = columnsCount
 	reader.TrimLeadingSpace = true
@@ -43,31 +43,31 @@ func parsePrayers(file io.Reader) (schedule []*domain.PrayerTimes, err error) {
 			return nil, err
 		}
 
-		prayer, err := parseRecord(record)
+		prayerDay, err := parseRecord(record)
 		if err != nil {
 			return nil, err
 		}
 
-		schedule = append(schedule, prayer)
+		prayerDays = append(prayerDays, prayerDay)
 	}
 
 	return
 }
 
 // parseRecord parses a record from the file
-func parseRecord(record []string) (*domain.PrayerTimes, error) {
+func parseRecord(record []string) (*domain.PrayerDay, error) {
 	if len(record) != columnsCount {
 		return nil, fmt.Errorf("parseRecord: invalid number of fields, expected 7, got %d", len(record))
 	}
 
-	// parse day date
-	day, err := parseDate(record[0])
+	// parse prayerDay's date
+	date, err := parseDate(record[0])
 	if err != nil {
 		return nil, err
 	}
 
-	// parse prayers times and convert into time.Time
-	prayers, err := parsePrayer(record[1:], day) // skip first record since it was date
+	// parse prayerDay's times
+	prayers, err := parsePrayer(record[1:], date) // skip first record since it was date
 	if err != nil {
 		return nil, err
 	}
@@ -75,8 +75,8 @@ func parseRecord(record []string) (*domain.PrayerTimes, error) {
 	// add 20 min since `shuruq` is 20 min after sunrise
 	prayers[1] = prayers[1].Add(20 * time.Minute)
 
-	prayer := domain.NewPrayerTimes(
-		day,
+	prayerDay := domain.NewPrayerDay(
+		date,
 		prayers[0], // fajr
 		prayers[1], // shuruq
 		prayers[2], // dhuhr
@@ -85,7 +85,7 @@ func parseRecord(record []string) (*domain.PrayerTimes, error) {
 		prayers[5], // isha
 	)
 
-	return prayer, nil
+	return prayerDay, nil
 }
 
 // parseDate get day date from string
@@ -97,16 +97,16 @@ func parseDate(line string) (time.Time, error) {
 	return domain.Date(t.Day(), t.Month(), t.Year(), loc), nil
 }
 
-// parsePrayer parses all day's prayers
-func parsePrayer(prayersStr []string, day time.Time) ([]time.Time, error) {
-	if len(prayersStr) != prayersCount {
-		return nil, fmt.Errorf("parsePrayer: unexpected number of prayers, expected 6, got %d", len(prayersStr))
+// parsePrayer parses prayerDay's times
+func parsePrayer(prayerTimes []string, day time.Time) ([]time.Time, error) {
+	if len(prayerTimes) != prayersCount {
+		return nil, fmt.Errorf("unexpected number of prayers: expected: %d got: %d", prayersCount, len(prayerTimes))
 	}
 
 	// convert prayers array to []time.Time
 	prayers := make([]time.Time, prayersCount)
-	for i, prayerTimeStr := range prayersStr {
-		prayer, err := convertToTime(prayerTimeStr, day, loc)
+	for i, prayerTime := range prayerTimes {
+		prayer, err := convertToTime(prayerTime, day, loc)
 		if err != nil {
 			return nil, err
 		}

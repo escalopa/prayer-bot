@@ -41,9 +41,14 @@ func Handler(ctx context.Context, requestBytes []byte) (*Response, error) {
 		return newResponse(http.StatusInternalServerError, "create storage: %v", err)
 	}
 
+	queue, err := service.NewQueue()
+	if err != nil {
+		return newResponse(http.StatusInternalServerError, "create queue: %v", err)
+	}
+
 	botConfig, err := storage.LoadBotConfig(ctx)
 	if err != nil {
-		return newResponse(http.StatusInternalServerError, "load bot config: %v", err)
+		return newResponse(http.StatusInternalServerError, "load botConfig: %v", err)
 	}
 
 	botID, err := internal.Authenticate(botConfig, request.Headers)
@@ -51,12 +56,13 @@ func Handler(ctx context.Context, requestBytes []byte) (*Response, error) {
 		return newResponse(http.StatusUnauthorized, "authenticate: %v", err)
 	}
 
-	queue, err := service.NewQueue()
-	if err != nil {
-		return newResponse(http.StatusInternalServerError, "create queue: %v", err)
+	payload := &domain.Payload{
+		Type: domain.PayloadTypeHandler,
+		Data: &domain.HandlerPayload{
+			BotID: botID,
+			Data:  request.Body,
+		},
 	}
-
-	payload := &domain.Payload{BotID: botID, Data: request.Body}
 
 	err = queue.Push(ctx, payload)
 	if err != nil {

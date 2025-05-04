@@ -9,13 +9,13 @@ import (
 )
 
 const (
-	telegramSecretTokenHeader = "X-Telegram-Bot-Api-Secret-Token"
+	telegramBotAPISecretTokenHeader = "X-Telegram-Bot-Api-Secret-Token"
 
 	secretTokenPartsCount = 2
 )
 
-func Authenticate(config map[uint8]*domain.BotConfig, headers map[string]string) (uint8, error) {
-	secretToken := headers[telegramSecretTokenHeader]
+func Authenticate(config map[int32]*domain.BotConfig, headers map[string]string) (int32, error) {
+	secretToken := headers[telegramBotAPISecretTokenHeader]
 	if secretToken == "" {
 		return 0, fmt.Errorf("empty secret token header")
 	}
@@ -34,7 +34,7 @@ func Authenticate(config map[uint8]*domain.BotConfig, headers map[string]string)
 		return 0, fmt.Errorf("bot_id cannot be 0")
 	}
 
-	botConfig, ok := config[uint8(botID)]
+	botConfig, ok := config[int32(botID)]
 	if !ok {
 		return 0, fmt.Errorf("bot config not found")
 	}
@@ -43,5 +43,5 @@ func Authenticate(config map[uint8]*domain.BotConfig, headers map[string]string)
 		return 0, fmt.Errorf("secret token mismatch")
 	}
 
-	return uint8(botID), nil
+	return int32(botID), nil
 }

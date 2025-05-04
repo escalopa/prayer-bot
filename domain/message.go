@@ -30,8 +30,8 @@ type (
 
 	// HandlerPayload sent by `handler-fn` to handle incoming messages from the user
 	HandlerPayload struct {
-		BotID int32       `json:"bot_id"`
-		Data  interface{} `json:"data"` // `*models.Update` (type is hidden explicitly to prevent extra import)
+		BotID int32  `json:"bot_id"`
+		Data  string `json:"data"` // data is a JSON string of `*models.Update`
 	}
 
 	// Payload main struct that is sent to the `queue` for process

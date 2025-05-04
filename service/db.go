@@ -2,12 +2,30 @@ package service
 
 import (
 	"context"
+	"errors"
+	"time"
 
 	"github.com/escalopa/prayer-bot/domain"
+	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb"
 	"github.com/ydb-platform/ydb-go-sdk/v3"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table"
+	"github.com/ydb-platform/ydb-go-sdk/v3/table/result"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table/types"
 	yc "github.com/ydb-platform/ydb-go-yc"
+)
+
+var (
+	readTx = table.TxControl(
+		table.BeginTx(table.WithOnlineReadOnly()),
+		table.CommitTx(),
+	)
+
+	writeTx = table.TxControl(
+		table.BeginTx(table.WithSerializableReadWrite()),
+		table.CommitTx(),
+	)
+
+	errNotFound = errors.New("not found")
 )
 
 type DB struct {
@@ -19,20 +37,357 @@ func NewDB(ctx context.Context) (*DB, error) {
 		yc.WithMetadataCredentials(),
 		yc.WithInternalCA(),
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &DB{client: sdk.Table()}, nil
+}
+
+func (db *DB) CreateChat(ctx context.Context, botID int32, chatID int64, languageCode string, notifyOffset int32, state string) error {
+	query := `
+		DECLARE $bot_id AS Int32;
+		DECLARE $chat_id AS Int64;
+		DECLARE $language_code AS Utf8;
+		DECLARE $notify_offset AS Int32;
+		DECLARE $state AS Utf8;
+
+		INSERT INTO chats (bot_id, chat_id, language_code, notify_offset, state, created_at)
+		VALUES ($bot_id, $chat_id, $language_code, $notify_offset, $state, CURRENT_TIMESTAMP());
+	`
+
+	params := table.NewQueryParameters(
+		table.ValueParam("$bot_id", types.Int32Value(botID)),
+		table.ValueParam("$chat_id", types.Int64Value(chatID)),
+		table.ValueParam("$language_code", types.BytesValue([]byte(languageCode))),
+		table.ValueParam("$notify_offset", types.Int32Value(notifyOffset)),
+		table.ValueParam("$state", types.BytesValue([]byte(state))),
+	)
+
+	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
+		_, _, err := s.Execute(ctx, writeTx, query, params)
+		return err
+	})
+
+	if err != nil {
+		if ydb.IsOperationError(err, Ydb.StatusIds_PRECONDITION_FAILED) { // chat already exists
+			return nil
+		}
+		return err
+	}
+
+	return nil
+}
+
+func (db *DB) GetChat(ctx context.Context, botID int32, chatID int64) (chat *domain.Chat, _ error) {
+	query := `
+		DECLARE $bot_id AS Int32;
+		DECLARE $chat_id AS int64;
+
+		SELECT bot_id, chat_id, state, language_code, notify_message_id
+		FROM chats
+		WHERE bot_id = $bot_id AND chat_id = $chat_id;
+	`
+
+	params := table.NewQueryParameters(
+		table.ValueParam("$bot_id", types.Int32Value(botID)),
+		table.ValueParam("$chat_id", types.Int64Value(chatID)),
+	)
+
+	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
+		_, res, err := s.Execute(ctx, readTx, query, params)
+		if err != nil {
+			return err
+		}
+
+		defer func(res result.Result) { _ = res.Close() }(res)
+		if res.NextResultSet(ctx) && res.NextRow() {
+			chat = &domain.Chat{}
+			err = res.Scan(
+				&chat.BotID,
+				&chat.ChatID,
+				&chat.State,
+				&chat.LanguageCode,
+				&chat.NotifyMessageID,
+			)
+			if err != nil {
+				return err
+			}
+			return nil
+		}
+
+		return errNotFound
+	})
+
+	if err != nil {
+		if ydb.IsOperationError(err, Ydb.StatusIds_NOT_FOUND) {
+			return nil, errNotFound
+		}
+		return nil, err
+	}
+
+	return chat, nil
+}
+
+func (db *DB) GetSubscribers(ctx context.Context, botID int32) (chatIDs []int64, _ error) {
+	query := `
+		DECLARE $bot_id AS Int32;
+
+		SELECT chat_id
+		FROM chats
+		WHERE bot_id = $bot_id AND subscribed = true;
+	`
+
+	params := table.NewQueryParameters(table.ValueParam("$bot_id", types.Int32Value(botID)))
+	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
+		_, res, err := s.Execute(ctx, readTx, query, params)
+		if err != nil {
+			return err
+		}
+
+		defer func(res result.Result) { _ = res.Close() }(res)
+		for res.NextResultSet(ctx) {
+			for res.NextRow() {
+				var chatID int64
+				err = res.Scan(&chatID)
+				if err != nil {
+					return err
+				}
+				chatIDs = append(chatIDs, chatID)
+			}
+		}
+
+		return nil
+	})
 
 	if err != nil {
 		return nil, err
 	}
 
-	client := sdk.Table()
-
-	return &DB{client: client}, nil
+	return chatIDs, nil
 }
 
-func (db *DB) StorePrayers(ctx context.Context, botID uint8, rows []*domain.PrayerTimes) error {
+func (db *DB) GetSubscribersByOffset(ctx context.Context, botID int32, offset int32) (chatIDs []int64, _ error) {
+	query := `
+		DECLARE $bot_id AS Int32;
+		DECLARE $offset AS Int32;
+
+		SELECT chat_id
+		FROM chats
+		WHERE bot_id = $bot_id AND subscribed = true AND notify_offset = $offset;
+	`
+
+	params := table.NewQueryParameters(
+		table.ValueParam("$bot_id", types.Int32Value(botID)),
+		table.ValueParam("$offset", types.Int32Value(offset)),
+	)
+
+	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
+		_, res, err := s.Execute(ctx, readTx, query, params)
+		if err != nil {
+			return err
+		}
+
+		defer func(res result.Result) { _ = res.Close() }(res)
+		for res.NextResultSet(ctx) {
+			for res.NextRow() {
+				var chatID int64
+				err = res.Scan(&chatID)
+				if err != nil {
+					return err
+				}
+				chatIDs = append(chatIDs, chatID)
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return chatIDs, nil
+}
+
+func (db *DB) SetLanguageCode(ctx context.Context, botID int32, chatID int64, languageCode string) error {
+	query := `
+		DECLARE $bot_id AS Int32;
+		DECLARE $chat_id AS Int64;
+		DECLARE $language_code AS Utf8;
+
+		UPDATE chats
+		SET language_code = $language_code
+		WHERE bot_id = $bot_id AND chat_id = $chat_id;
+	`
+
+	params := table.NewQueryParameters(
+		table.ValueParam("$bot_id", types.Int32Value(botID)),
+		table.ValueParam("$chat_id", types.Int64Value(chatID)),
+		table.ValueParam("$language_code", types.BytesValue([]byte(languageCode))),
+	)
+
+	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
+		_, _, err := s.Execute(ctx, writeTx, query, params)
+		return err
+	})
+
+	return err
+}
+
+func (db *DB) SetSubscribed(ctx context.Context, botID int32, chatID int64, subscribed bool) error {
+	query := `
+		DECLARE $bot_id AS Int32;
+		DECLARE $chat_id AS Int64;
+		DECLARE $subscribed AS Bool;
+
+		UPDATE chats
+		SET subscribed = $subscribed, subscribed_at = CASE WHEN $subscribed THEN CURRENT_TIMESTAMP() ELSE NULL END
+		WHERE bot_id = $bot_id AND chat_id = $chat_id;
+	`
+
+	params := table.NewQueryParameters(
+		table.ValueParam("$bot_id", types.Int32Value(botID)),
+		table.ValueParam("$chat_id", types.Int64Value(chatID)),
+		table.ValueParam("$subscribed", types.BoolValue(subscribed)),
+	)
+
+	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
+		_, _, err := s.Execute(ctx, writeTx, query, params)
+		return err
+	})
+
+	return err
+}
+
+func (db *DB) SetNotifyOffset(ctx context.Context, botID int32, chatID int64, notifyOffset int32) error {
+	query := `
+		DECLARE $bot_id AS Int32;
+		DECLARE $chat_id AS Int64;
+		DECLARE $notify_offset AS Int32;
+
+		UPDATE chats
+		SET notify_offset = $notify_offset
+		WHERE bot_id = $bot_id AND chat_id = $chat_id;
+	`
+
+	params := table.NewQueryParameters(
+		table.ValueParam("$bot_id", types.Int32Value(botID)),
+		table.ValueParam("$chat_id", types.Int64Value(chatID)),
+		table.ValueParam("$notify_offset", types.Int32Value(notifyOffset)),
+	)
+
+	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
+		_, _, err := s.Execute(ctx, writeTx, query, params)
+		return err
+	})
+
+	return err
+}
+
+func (db *DB) SetNotifyMessageID(ctx context.Context, botID int32, chatID int64, notifyMessageID int32) error {
+	query := `
+		DECLARE $bot_id AS Int32;
+		DECLARE $chat_id AS Int64;
+		DECLARE $notify_message_id AS Int32;
+
+		UPDATE chats
+		SET notify_message_id = $notify_message_id
+		WHERE bot_id = $bot_id AND chat_id = $chat_id;
+	`
+
+	params := table.NewQueryParameters(
+		table.ValueParam("$bot_id", types.Int32Value(botID)),
+		table.ValueParam("$chat_id", types.Int64Value(chatID)),
+		table.ValueParam("$notify_message_id", types.Int32Value(notifyMessageID)),
+	)
+
+	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
+		_, _, err := s.Execute(ctx, writeTx, query, params)
+		return err
+	})
+
+	return err
+}
+
+func (db *DB) SetState(ctx context.Context, botID int32, chatID int64, state string) error {
+	query := `
+		DECLARE $bot_id AS Int32;
+		DECLARE $chat_id AS Int64;
+		DECLARE $state AS Utf8;
+
+		UPDATE chats
+		SET state = $state
+		WHERE bot_id = $bot_id AND chat_id = $chat_id;
+	`
+
+	params := table.NewQueryParameters(
+		table.ValueParam("$bot_id", types.Int32Value(botID)),
+		table.ValueParam("$chat_id", types.Int64Value(chatID)),
+		table.ValueParam("$state", types.BytesValue([]byte(state))),
+	)
+
+	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
+		_, _, err := s.Execute(ctx, writeTx, query, params)
+		return err
+	})
+
+	return err
+}
+
+func (db *DB) GetPrayerDay(ctx context.Context, botID int32, date time.Time) (prayerDay *domain.PrayerDay, _ error) {
+	query := `
+		DECLARE $bot_id AS Int32;
+		DECLARE $date AS Date;
+
+		SELECT bot_id, prayer_date, fajr, shuruq, dhuhr, asr, maghrib, isha
+		FROM prayers
+		WHERE bot_id = $bot_id AND prayer_date = $date;
+	`
+
+	params := table.NewQueryParameters(
+		table.ValueParam("$bot_id", types.Int32Value(botID)),
+		table.ValueParam("$date", types.DateValueFromTime(date)),
+	)
+
+	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
+		_, res, err := s.Execute(ctx, readTx, query, params)
+		if err != nil {
+			return err
+		}
+
+		defer func(res result.Result) { _ = res.Close() }(res)
+		if res.NextResultSet(ctx) && res.NextRow() {
+			prayerDay = &domain.PrayerDay{}
+			err = res.Scan(
+				&prayerDay.Date,
+				&prayerDay.Fajr, &prayerDay.Shuruq,
+				&prayerDay.Dhuhr, &prayerDay.Asr,
+				&prayerDay.Maghrib, &prayerDay.Isha,
+			)
+			if err != nil {
+				return err
+			}
+			return nil
+		}
+
+		return errNotFound
+	})
+
+	if err != nil {
+		if ydb.IsOperationError(err, Ydb.StatusIds_NOT_FOUND) {
+			return nil, errNotFound
+		}
+		return nil, err
+	}
+
+	return prayerDay, nil
+}
+
+func (db *DB) SetPrayerDays(ctx context.Context, botID int32, rows []*domain.PrayerDay) error {
 	query := `
 		DECLARE $items AS List<Struct<
-			bot_id: Uint8,
+			bot_id: Int32,
 			prayer_date: Date,
 			fajr: Datetime,
 			shuruq: Datetime,
@@ -49,10 +404,10 @@ func (db *DB) StorePrayers(ctx context.Context, botID uint8, rows []*domain.Pray
 	values := make([]types.Value, 0, len(rows))
 	for _, row := range rows {
 		values = append(values, types.StructValue(
-			types.StructFieldValue("bot_id", types.Uint8Value(botID)),
+			types.StructFieldValue("bot_id", types.Int32Value(botID)),
 			types.StructFieldValue("prayer_date", types.DateValueFromTime(row.Date)),
 			types.StructFieldValue("fajr", types.DatetimeValueFromTime(row.Fajr)),
-			types.StructFieldValue("shuruq", types.DatetimeValueFromTime(row.Fajr)),
+			types.StructFieldValue("shuruq", types.DatetimeValueFromTime(row.Shuruq)),
 			types.StructFieldValue("dhuhr", types.DatetimeValueFromTime(row.Dhuhr)),
 			types.StructFieldValue("asr", types.DatetimeValueFromTime(row.Asr)),
 			types.StructFieldValue("maghrib", types.DatetimeValueFromTime(row.Maghrib)),
@@ -60,17 +415,70 @@ func (db *DB) StorePrayers(ctx context.Context, botID uint8, rows []*domain.Pray
 		))
 	}
 
+	params := table.NewQueryParameters(table.ValueParam("$items", types.ListValue(values...)))
 	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
-		_, _, err := s.Execute(
-			ctx,
-			table.TxControl(table.BeginTx(table.WithSerializableReadWrite()), table.CommitTx()),
-			query,
-			table.NewQueryParameters(
-				table.ValueParam("$items", types.ListValue(values...)),
-			),
-		)
+		_, _, err := s.Execute(ctx, writeTx, query, params)
 		return err
 	})
 
 	return err
+}
+
+func (db *DB) GetStats(ctx context.Context, botID int32) (*domain.Stats, error) {
+	query := `
+		DECLARE $bot_id AS Int32;
+
+		SELECT
+			COUNT(*) AS users,
+			COUNT_IF(subscribed) AS subscribed,
+			COUNT_IF(NOT subscribed) AS unsubscribed
+		FROM chats
+		WHERE bot_id = $bot_id;
+
+		SELECT
+			language_code,
+			COUNT(*) AS count
+		FROM chats
+		WHERE bot_id = $bot_id
+		GROUP BY language_code;
+	`
+
+	stats := &domain.Stats{LanguagesGrouped: make(map[string]int)}
+
+	params := table.NewQueryParameters(table.ValueParam("$bot_id", types.Int32Value(botID)))
+	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
+		_, res, err := s.Execute(ctx, readTx, query, params)
+		if err != nil {
+			return err
+		}
+
+		if res.NextResultSet(ctx) && res.NextRow() {
+			err = res.Scan(&stats.Users, &stats.Subscribed, &stats.Unsubscribed)
+			if err != nil {
+				return err
+			}
+		}
+
+		if res.NextResultSet(ctx) {
+			for res.NextRow() {
+				var (
+					languageCode string
+					count        int
+				)
+
+				err = res.Scan(&languageCode, &count)
+				if err != nil {
+					return err
+				}
+				stats.LanguagesGrouped[languageCode] = count
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return stats, nil
 }

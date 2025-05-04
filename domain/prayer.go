@@ -1,10 +1,13 @@
 package domain
 
-import "time"
+import (
+	"time"
+)
 
-type PrayerID uint8
+type PrayerID int
 
 const (
+	PrayerIDUnknown PrayerID = 0
 	PrayerIDFajr    PrayerID = 1
 	PrayerIDShuruq  PrayerID = 2
 	PrayerIDDhuhr   PrayerID = 3
@@ -13,26 +16,7 @@ const (
 	PrayerIDIsha    PrayerID = 6
 )
 
-func (p PrayerID) String() string {
-	switch p {
-	case PrayerIDFajr:
-		return "fajr"
-	case PrayerIDShuruq:
-		return "shuruq"
-	case PrayerIDDhuhr:
-		return "dhuhr"
-	case PrayerIDAsr:
-		return "asr"
-	case PrayerIDMaghrib:
-		return "maghrib"
-	case PrayerIDIsha:
-		return "isha"
-	default:
-		return "unknown"
-	}
-}
-
-type PrayerTimes struct {
+type PrayerDay struct {
 	Date    time.Time `json:"date"`
 	Fajr    time.Time `json:"fajr"`
 	Shuruq  time.Time `json:"shuruq"`
@@ -42,7 +26,7 @@ type PrayerTimes struct {
 	Isha    time.Time `json:"isha"`
 }
 
-func NewPrayerTimes(
+func NewPrayerDay(
 	date time.Time,
 	fajr time.Time,
 	shuruq time.Time,
@@ -50,8 +34,8 @@ func NewPrayerTimes(
 	asr time.Time,
 	maghrib time.Time,
 	isha time.Time,
-) *PrayerTimes {
-	return &PrayerTimes{
+) *PrayerDay {
+	return &PrayerDay{
 		Date:    date,
 		Fajr:    fajr,
 		Shuruq:  shuruq,

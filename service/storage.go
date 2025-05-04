@@ -30,9 +30,7 @@ func NewStorage() (*Storage, error) {
 		return nil, fmt.Errorf("create session: %v", err)
 	}
 
-	client := s3.New(sess, config)
-
-	return &Storage{client: client}, nil
+	return &Storage{client: s3.New(sess)}, nil
 }
 
 func (s *Storage) Get(ctx context.Context, bucket string, key string) ([]byte, error) {
@@ -59,13 +57,13 @@ const (
 	botConfigKey = "bot_config.json"
 )
 
-func (s *Storage) LoadBotConfig(ctx context.Context) (map[uint8]*domain.BotConfig, error) {
+func (s *Storage) LoadBotConfig(ctx context.Context) (map[int32]*domain.BotConfig, error) {
 	data, err := s.Get(ctx, cfg.s3.bucket, botConfigKey)
 	if err != nil {
-		return nil, fmt.Errorf("load bot config: %v", err)
+		return nil, fmt.Errorf("get botConfig: %v", err)
 	}
 
-	var config map[uint8]*domain.BotConfig
+	var config map[int32]*domain.BotConfig
 
 	err = json.Unmarshal(data, &config)
 	if err != nil {

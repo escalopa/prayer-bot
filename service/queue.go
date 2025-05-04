@@ -27,15 +27,13 @@ func NewQueue() (*Queue, error) {
 		return nil, fmt.Errorf("create session: %v", err)
 	}
 
-	client := sqs.New(sess)
-
-	return &Queue{client: client}, nil
+	return &Queue{client: sqs.New(sess)}, nil
 }
 
-func (q *Queue) Push(ctx context.Context, payload *domain.HandlePayload) error {
+func (q *Queue) Push(ctx context.Context, payload *domain.Payload) error {
 	b, err := payload.Marshal()
 	if err != nil {
-		return fmt.Errorf("marshal payload: %w", err)
+		return fmt.Errorf("marshal payload: %s", err)
 	}
 
 	input := &sqs.SendMessageInput{

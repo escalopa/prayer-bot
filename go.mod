@@ -4,6 +4,7 @@ go 1.21
 
 require (
 	github.com/aws/aws-sdk-go v1.55.7
+	github.com/ydb-platform/ydb-go-genproto v0.0.0-20241112172322-ea1f63298f77
 	github.com/ydb-platform/ydb-go-sdk/v3 v3.108.0
 	github.com/ydb-platform/ydb-go-yc v0.12.3
 )
@@ -15,7 +16,6 @@ require (
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/jonboulle/clockwork v0.3.0 // indirect
 	github.com/yandex-cloud/go-genproto v0.0.0-20240819112322-98a264d392f6 // indirect
-	github.com/ydb-platform/ydb-go-genproto v0.0.0-20241112172322-ea1f63298f77 // indirect
 	github.com/ydb-platform/ydb-go-yc-metadata v0.6.1 // indirect
 	golang.org/x/net v0.33.0 // indirect
 	golang.org/x/sync v0.10.0 // indirect

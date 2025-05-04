@@ -32,9 +32,9 @@ provider "yandex" {
   zone      = var.region
 }
 
-#######################################
-### object storage
-#######################################
+###########################
+### s3
+###########################
 
 resource "yandex_storage_bucket" "bucket" {
   bucket    = "prayer-bot-bucket"
@@ -42,9 +42,9 @@ resource "yandex_storage_bucket" "bucket" {
   max_size  = 1073741824 # 1 GB in bytes
 }
 
-#######################################
+###########################
 ### ydb
-#######################################
+###########################
 
 resource "yandex_ydb_database_serverless" "ydb" {
   name                = "prayer-bot-ydb"
@@ -58,35 +58,40 @@ resource "yandex_ydb_database_serverless" "ydb" {
   }
 }
 
-resource "yandex_ydb_table" "users" {
+resource "yandex_ydb_table" "ydb_table_chats" {
   connection_string = yandex_ydb_database_serverless.ydb.ydb_full_endpoint
-  path              = "users"
+  path              = "chats"
 
-  primary_key = ["chat_id", "bot_id"]
+  primary_key = ["bot_id", "chat_id"]
 
   column {
     name = "chat_id"
-    type = "Uint64"
+    type = "Int64"
   }
 
   column {
     name = "bot_id"
-    type = "Uint8"
+    type = "Int32"
   }
 
   column {
-    name = "language"
+    name = "language_code"
     type = "Utf8"
   }
 
   column {
-    name = "notify_before"
-    type = "Uint8"
+    name = "state"
+    type = "Utf8"
   }
 
   column {
-    name = "last_notify_message_id"
-    type = "Uint64"
+    name = "notify_offset"
+    type = "Int32"
+  }
+
+  column {
+    name = "notify_message_id"
+    type = "Int32"
   }
 
   column {
@@ -105,7 +110,7 @@ resource "yandex_ydb_table" "users" {
   }
 }
 
-resource "yandex_ydb_table" "prayers" {
+resource "yandex_ydb_table" "ydb_table_prayers" {
   connection_string = yandex_ydb_database_serverless.ydb.ydb_full_endpoint
   path              = "prayers"
 
@@ -113,7 +118,7 @@ resource "yandex_ydb_table" "prayers" {
 
   column {
     name = "bot_id"
-    type = "Uint8"
+    type = "Int32"
   }
 
   column {
@@ -147,23 +152,23 @@ resource "yandex_ydb_table" "prayers" {
   }
 }
 
-#######################################
-### message queue
-#######################################
+###########################
+### ymq
+###########################
 
-resource "yandex_iam_service_account" "mq_sa" {
-  name      = "mq-sa"
+resource "yandex_iam_service_account" "ymq_sa" {
+  name      = "ymq-sa"
   folder_id = var.folder_id
 }
 
-resource "yandex_resourcemanager_folder_iam_member" "mq_sa_editor" {
+resource "yandex_resourcemanager_folder_iam_member" "ymq_sa_editor" {
   folder_id = var.folder_id
   role      = "editor"
-  member    = "serviceAccount:${yandex_iam_service_account.mq_sa.id}"
+  member    = "serviceAccount:${yandex_iam_service_account.ymq_sa.id}"
 }
 
-resource "yandex_iam_service_account_static_access_key" "mq_sa_keys" {
-  service_account_id = yandex_iam_service_account.mq_sa.id
+resource "yandex_iam_service_account_static_access_key" "ymq_sa_keys" {
+  service_account_id = yandex_iam_service_account.ymq_sa.id
 }
 
 resource "yandex_message_queue" "standard_queue" {
@@ -171,31 +176,39 @@ resource "yandex_message_queue" "standard_queue" {
   visibility_timeout_seconds = 600
   receive_wait_time_seconds  = 20
   message_retention_seconds  = 1209600 # 14 days
-  access_key                 = yandex_iam_service_account_static_access_key.mq_sa_keys.access_key
-  secret_key                 = yandex_iam_service_account_static_access_key.mq_sa_keys.secret_key
+  access_key                 = yandex_iam_service_account_static_access_key.ymq_sa_keys.access_key
+  secret_key                 = yandex_iam_service_account_static_access_key.ymq_sa_keys.secret_key
 }
 
-#######################################
-### serverless functions - loader
-#######################################
+###########################
+### trigger
+###########################
+
+resource "yandex_iam_service_account" "trigger_sa" {
+  name = "trigger-sa"
+}
+
+resource "yandex_resourcemanager_folder_iam_member" "trigger_sa_invoker" {
+  folder_id = var.folder_id
+  role      = "functions.functionInvoker"
+  member    = "serviceAccount:${yandex_iam_service_account.trigger_sa.id}"
+}
+
+###########################
+### loader-sa
+###########################
 
 resource "yandex_iam_service_account" "loader_sa" {
   name = "loader-sa"
 }
 
-resource "yandex_resourcemanager_folder_iam_member" "loader_sa_function_role" {
-  folder_id = var.folder_id
-  role      = "functions.functionInvoker"
-  member    = "serviceAccount:${yandex_iam_service_account.loader_sa.id}"
-}
-
-resource "yandex_resourcemanager_folder_iam_member" "loader_sa_storage_role" {
+resource "yandex_resourcemanager_folder_iam_member" "loader_sa_storage" {
   folder_id = var.folder_id
   role      = "storage.viewer"
   member    = "serviceAccount:${yandex_iam_service_account.loader_sa.id}"
 }
 
-resource "yandex_resourcemanager_folder_iam_member" "loader_sa_ydb_role" {
+resource "yandex_resourcemanager_folder_iam_member" "loader_sa_ydb" {
   folder_id = var.folder_id
   role      = "ydb.editor"
   member    = "serviceAccount:${yandex_iam_service_account.loader_sa.id}"
@@ -204,6 +217,10 @@ resource "yandex_resourcemanager_folder_iam_member" "loader_sa_ydb_role" {
 resource "yandex_iam_service_account_static_access_key" "loader_sa_keys" {
   service_account_id = yandex_iam_service_account.loader_sa.id
 }
+
+###########################
+### loader-fn
+###########################
 
 data "archive_file" "loader_zip" {
   type        = "zip"
@@ -216,10 +233,10 @@ resource "yandex_function" "loader_fn" {
   runtime            = "golang121"
   entrypoint         = "main.Handler"
   memory             = 128
-  execution_timeout  = 10
+  execution_timeout  = 5
   service_account_id = yandex_iam_service_account.loader_sa.id
   folder_id          = var.folder_id
-  user_hash          = "v1"
+  user_hash          = "v3"
 
   environment = {
     S3_BUCKET    = yandex_storage_bucket.bucket.bucket
@@ -239,48 +256,52 @@ resource "yandex_function_trigger" "loader_trigger" {
   name = "loader"
   function {
     id                 = yandex_function.loader_fn.id
-    service_account_id = yandex_iam_service_account.loader_sa.id
+    service_account_id = yandex_iam_service_account.trigger_sa.id
   }
 
   object_storage {
     bucket_id    = yandex_storage_bucket.bucket.id
     batch_cutoff = "1"
     batch_size   = "1"
-    create       = true  # trigger on object creation
-    update       = true  # trigger on object update
-    delete       = false # don't trigger on object deletion
+    create       = true
+    update       = true
+    delete       = false
   }
 }
 
-#######################################
-### serverless functions - handler
-#######################################
+###########################
+### handler-sa
+###########################
 
 resource "yandex_iam_service_account" "handler_sa" {
   name = "handler-sa"
 }
 
-resource "yandex_resourcemanager_folder_iam_member" "handler_sa_function_role" {
+resource "yandex_resourcemanager_folder_iam_member" "handler_sa_invoker" {
   folder_id = var.folder_id
   role      = "functions.functionInvoker"
   member    = "system:allUsers" // allow public access
 }
 
-resource "yandex_resourcemanager_folder_iam_member" "handler_sa_storage_role" {
+resource "yandex_resourcemanager_folder_iam_member" "handler_sa_queue" {
   folder_id = var.folder_id
-  role      = "storage.viewer"
+  role      = "ymq.writer"
   member    = "serviceAccount:${yandex_iam_service_account.handler_sa.id}"
 }
 
-resource "yandex_resourcemanager_folder_iam_member" "handler_sa_queue_role" {
+resource "yandex_resourcemanager_folder_iam_member" "handler_sa_storage" {
   folder_id = var.folder_id
-  role      = "ymq.writer"
+  role      = "storage.viewer"
   member    = "serviceAccount:${yandex_iam_service_account.handler_sa.id}"
 }
 
 resource "yandex_iam_service_account_static_access_key" "handler_sa_keys" {
   service_account_id = yandex_iam_service_account.handler_sa.id
 }
+
+###########################
+### handler-fn
+###########################
 
 data "archive_file" "handler_zip" {
   type        = "zip"
@@ -293,10 +314,10 @@ resource "yandex_function" "handler_fn" {
   runtime            = "golang121"
   entrypoint         = "main.Handler"
   memory             = 128
-  execution_timeout  = 10
+  execution_timeout  = 5
   service_account_id = yandex_iam_service_account.handler_sa.id
   folder_id          = var.folder_id
-  user_hash          = "v1"
+  user_hash          = "v3"
 
   environment = {
     S3_BUCKET  = yandex_storage_bucket.bucket.bucket
@@ -314,24 +335,30 @@ resource "yandex_function" "handler_fn" {
 }
 
 output "handler_fn_id" {
-  value = yandex_function.handler_fn.id
+  value = yandex_function.handler_fn.id // used to set Webhook URL on Telegram
 }
 
-#######################################
-### serverless functions - sender
-#######################################
+###########################
+### sender-sa
+###########################
 
 resource "yandex_iam_service_account" "sender_sa" {
   name = "sender-sa"
 }
 
-resource "yandex_resourcemanager_folder_iam_member" "sender_sa_storage_role" {
+resource "yandex_resourcemanager_folder_iam_member" "sender_sa_queue" {
+  folder_id = var.folder_id
+  role      = "ymq.reader"
+  member    = "serviceAccount:${yandex_iam_service_account.sender_sa.id}"
+}
+
+resource "yandex_resourcemanager_folder_iam_member" "sender_sa_storage" {
   folder_id = var.folder_id
   role      = "storage.viewer"
   member    = "serviceAccount:${yandex_iam_service_account.sender_sa.id}"
 }
 
-resource "yandex_resourcemanager_folder_iam_member" "sender_sa_ydb_role" {
+resource "yandex_resourcemanager_folder_iam_member" "sender_sa_ydb" {
   folder_id = var.folder_id
   role      = "ydb.editor"
   member    = "serviceAccount:${yandex_iam_service_account.sender_sa.id}"
@@ -340,6 +367,10 @@ resource "yandex_resourcemanager_folder_iam_member" "sender_sa_ydb_role" {
 resource "yandex_iam_service_account_static_access_key" "sender_sa_keys" {
   service_account_id = yandex_iam_service_account.sender_sa.id
 }
+
+###########################
+### sender-fn
+###########################
 
 data "archive_file" "sender_zip" {
   type        = "zip"
@@ -351,11 +382,11 @@ resource "yandex_function" "sender_fn" {
   name               = "sender-fn"
   runtime            = "golang121"
   entrypoint         = "main.Handler"
-  memory             = 128
+  memory             = 256
   execution_timeout  = 10
   service_account_id = yandex_iam_service_account.sender_sa.id
   folder_id          = var.folder_id
-  user_hash          = "v2"
+  user_hash          = "v3"
 
   environment = {
     S3_BUCKET    = yandex_storage_bucket.bucket.bucket
@@ -375,7 +406,7 @@ resource "yandex_function_trigger" "sender_trigger" {
   name = "sender"
   function {
     id                 = yandex_function.sender_fn.id
-    service_account_id = yandex_iam_service_account.sender_sa.id
+    service_account_id = yandex_iam_service_account.trigger_sa.id
   }
 
   message_queue {
@@ -386,6 +417,80 @@ resource "yandex_function_trigger" "sender_trigger" {
   }
 }
 
-#######################################
-### serverless functions - notifier
-#######################################
+###########################
+### notifier-sa
+###########################
+
+resource "yandex_iam_service_account" "notifier_sa" {
+  name = "notifier-sa"
+}
+
+resource "yandex_resourcemanager_folder_iam_member" "notifier_sa_queue" {
+  folder_id = var.folder_id
+  role      = "ymq.writer"
+  member    = "serviceAccount:${yandex_iam_service_account.notifier_sa.id}"
+}
+
+resource "yandex_resourcemanager_folder_iam_member" "notifier_sa_ydb" {
+  folder_id = var.folder_id
+  role      = "ydb.viewer"
+  member    = "serviceAccount:${yandex_iam_service_account.notifier_sa.id}"
+}
+
+resource "yandex_resourcemanager_folder_iam_member" "notifier_sa_storage" {
+  folder_id = var.folder_id
+  role      = "storage.viewer"
+  member    = "serviceAccount:${yandex_iam_service_account.notifier_sa.id}"
+}
+
+resource "yandex_iam_service_account_static_access_key" "notifier_sa_keys" {
+  service_account_id = yandex_iam_service_account.notifier_sa.id
+}
+
+###########################
+### notifier-fn
+###########################
+
+data "archive_file" "notifier_zip" {
+  type        = "zip"
+  source_dir  = "${path.module}/serverless/notifier"
+  output_path = "${path.module}/serverless/notifier.zip"
+}
+
+resource "yandex_function" "notifier_fn" {
+  name               = "notifier-fn"
+  runtime            = "golang121"
+  entrypoint         = "main.Handler"
+  memory             = 128
+  execution_timeout  = 5
+  service_account_id = yandex_iam_service_account.notifier_sa.id
+  folder_id          = var.folder_id
+  user_hash          = "v3"
+
+  environment = {
+    S3_BUCKET    = yandex_storage_bucket.bucket.bucket
+    SQS_URL      = yandex_message_queue.standard_queue.id
+    SQS_REGION   = yandex_message_queue.standard_queue.region_id
+    YDB_ENDPOINT = yandex_ydb_database_serverless.ydb.ydb_full_endpoint
+
+    REGION     = var.region
+    ACCESS_KEY = yandex_iam_service_account_static_access_key.notifier_sa_keys.access_key
+    SECRET_KEY = yandex_iam_service_account_static_access_key.notifier_sa_keys.secret_key
+  }
+
+  content {
+    zip_filename = data.archive_file.notifier_zip.output_path
+  }
+}
+
+resource "yandex_function_trigger" "notifier_trigger" {
+  name = "notifier"
+  function {
+    id                 = yandex_function.notifier_fn.id
+    service_account_id = yandex_iam_service_account.trigger_sa.id
+  }
+
+  timer {
+    cron_expression = "* * * * ? *" # every minute
+  }
+}

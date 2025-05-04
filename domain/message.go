@@ -2,6 +2,14 @@ package domain
 
 import (
 	"encoding/json"
+	"fmt"
+)
+
+type PayloadType string
+
+const (
+	PayloadTypeHandler  PayloadType = "handler"
+	PayloadTypeNotifier PayloadType = "notifier"
 )
 
 type (
@@ -28,6 +36,7 @@ type (
 
 	// Payload main struct that is sent to the `queue` for process
 	Payload struct {
+		Type PayloadType `json:"type"` // one of [`Handler`, `Notifier`]
 		Data interface{} `json:"data"` // one of [`HandlerPayload`, `NotifierPayload`]
 	}
 )
@@ -38,4 +47,18 @@ func (p *Payload) Marshal() ([]byte, error) {
 
 func (p *Payload) Unmarshal(data []byte) error {
 	return json.Unmarshal(data, p)
+}
+
+func Unmarshal[T any](data interface{}) (*T, error) {
+	b, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+
+	var t T
+	if err := json.Unmarshal(b, &t); err != nil {
+		return nil, fmt.Errorf("unmarshal: %T got: %T: %v", t, data, err)
+	}
+
+	return &t, nil
 }

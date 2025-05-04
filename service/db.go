@@ -51,17 +51,19 @@ func (db *DB) CreateChat(ctx context.Context, botID int32, chatID int64, languag
 		DECLARE $language_code AS Utf8;
 		DECLARE $notify_offset AS Int32;
 		DECLARE $state AS Utf8;
+		DECLARE $subscribed AS Bool;
 
-		INSERT INTO chats (bot_id, chat_id, language_code, notify_offset, state, created_at)
-		VALUES ($bot_id, $chat_id, $language_code, $notify_offset, $state, CURRENT_TIMESTAMP());
+		INSERT INTO chats (bot_id, chat_id, language_code, notify_offset, state, subscribed, subscribed_at)
+		VALUES ($bot_id, $chat_id, $language_code, $notify_offset, $state, $subscribed CURRENT_TIMESTAMP());
 	`
 
 	params := table.NewQueryParameters(
 		table.ValueParam("$bot_id", types.Int32Value(botID)),
 		table.ValueParam("$chat_id", types.Int64Value(chatID)),
-		table.ValueParam("$language_code", types.BytesValue([]byte(languageCode))),
+		table.ValueParam("$language_code", types.UTF8Value(languageCode)),
 		table.ValueParam("$notify_offset", types.Int32Value(notifyOffset)),
-		table.ValueParam("$state", types.BytesValue([]byte(state))),
+		table.ValueParam("$state", types.UTF8Value(state)),
+		table.ValueParam("$subscribed", types.BoolValue(false)),
 	)
 
 	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
@@ -103,7 +105,7 @@ func (db *DB) GetChat(ctx context.Context, botID int32, chatID int64) (chat *dom
 		defer func(res result.Result) { _ = res.Close() }(res)
 		if res.NextResultSet(ctx) && res.NextRow() {
 			chat = &domain.Chat{}
-			err = res.Scan(
+			err = res.ScanWithDefaults(
 				&chat.BotID,
 				&chat.ChatID,
 				&chat.State,
@@ -149,7 +151,7 @@ func (db *DB) GetSubscribers(ctx context.Context, botID int32) (chatIDs []int64,
 		for res.NextResultSet(ctx) {
 			for res.NextRow() {
 				var chatID int64
-				err = res.Scan(&chatID)
+				err = res.ScanWithDefaults(&chatID)
 				if err != nil {
 					return err
 				}
@@ -192,7 +194,7 @@ func (db *DB) GetSubscribersByOffset(ctx context.Context, botID int32, offset in
 		for res.NextResultSet(ctx) {
 			for res.NextRow() {
 				var chatID int64
-				err = res.Scan(&chatID)
+				err = res.ScanWithDefaults(&chatID)
 				if err != nil {
 					return err
 				}
@@ -224,7 +226,7 @@ func (db *DB) SetLanguageCode(ctx context.Context, botID int32, chatID int64, la
 	params := table.NewQueryParameters(
 		table.ValueParam("$bot_id", types.Int32Value(botID)),
 		table.ValueParam("$chat_id", types.Int64Value(chatID)),
-		table.ValueParam("$language_code", types.BytesValue([]byte(languageCode))),
+		table.ValueParam("$language_code", types.UTF8Value(languageCode)),
 	)
 
 	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
@@ -324,7 +326,7 @@ func (db *DB) SetState(ctx context.Context, botID int32, chatID int64, state str
 	params := table.NewQueryParameters(
 		table.ValueParam("$bot_id", types.Int32Value(botID)),
 		table.ValueParam("$chat_id", types.Int64Value(chatID)),
-		table.ValueParam("$state", types.BytesValue([]byte(state))),
+		table.ValueParam("$state", types.UTF8Value(state)),
 	)
 
 	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
@@ -340,7 +342,7 @@ func (db *DB) GetPrayerDay(ctx context.Context, botID int32, date time.Time) (pr
 		DECLARE $bot_id AS Int32;
 		DECLARE $date AS Date;
 
-		SELECT bot_id, prayer_date, fajr, shuruq, dhuhr, asr, maghrib, isha
+		SELECT prayer_date, fajr, shuruq, dhuhr, asr, maghrib, isha
 		FROM prayers
 		WHERE bot_id = $bot_id AND prayer_date = $date;
 	`
@@ -359,7 +361,7 @@ func (db *DB) GetPrayerDay(ctx context.Context, botID int32, date time.Time) (pr
 		defer func(res result.Result) { _ = res.Close() }(res)
 		if res.NextResultSet(ctx) && res.NextRow() {
 			prayerDay = &domain.PrayerDay{}
-			err = res.Scan(
+			err = res.ScanWithDefaults(
 				&prayerDay.Date,
 				&prayerDay.Fajr, &prayerDay.Shuruq,
 				&prayerDay.Dhuhr, &prayerDay.Asr,
@@ -452,8 +454,9 @@ func (db *DB) GetStats(ctx context.Context, botID int32) (*domain.Stats, error) 
 			return err
 		}
 
+		defer func(res result.Result) { _ = res.Close() }(res)
 		if res.NextResultSet(ctx) && res.NextRow() {
-			err = res.Scan(&stats.Users, &stats.Subscribed, &stats.Unsubscribed)
+			err = res.ScanWithDefaults(&stats.Users, &stats.Subscribed, &stats.Unsubscribed)
 			if err != nil {
 				return err
 			}
@@ -466,7 +469,7 @@ func (db *DB) GetStats(ctx context.Context, botID int32) (*domain.Stats, error) 
 					count        int
 				)
 
-				err = res.Scan(&languageCode, &count)
+				err = res.ScanWithDefaults(&languageCode, &count)
 				if err != nil {
 					return err
 				}
@@ -481,4 +484,8 @@ func (db *DB) GetStats(ctx context.Context, botID int32) (*domain.Stats, error) 
 	}
 
 	return stats, nil
+}
+
+func (db *DB) Close() error {
+	return db.Close()
 }

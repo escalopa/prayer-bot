@@ -1,0 +1,103 @@
+name: "English"
+
+weekday:
+  0: "Sunday"
+  1: "Monday"
+  2: "Tuesday"
+  3: "Wednesday"
+  4: "Thursday"
+  5: "Friday"
+  6: "Saturday"
+
+month:
+  1: "January"
+  2: "February"
+  3: "March"
+  4: "April"
+  5: "May"
+  6: "June"
+  7: "July"
+  8: "August"
+  9: "September"
+  10: "October"
+  11: "November"
+  12: "December"
+
+prayer:
+  1: "Fajr"
+  2: "Shuruq"
+  3: "Dhuhr"
+  4: "Asr"
+  5: "Maghrib"
+  6: "Isha"
+
+prayer_date: "📅 Choose a date to view prayers."
+
+notify_offset:
+  start: "⏰ Pick how early you want to be notified."
+  success: "✅ Notification time saved."
+
+language:
+  start: "🌐 Pick your preferred language."
+  success: "✅ Language changed to <b>%s</b>."
+
+subscription_success: "✅ You’re now subscribed to prayer alerts."
+unsubscription_success: "✅ You’ve unsubscribed from prayer alerts."
+
+prayer_soon: "⏳ <b>%s</b> is in <b>%s</b>."
+prayer_arrived: "🕌 It’s time for <b>%s</b>."
+
+help: |
+  Need help? 😊 Here’s what I can do: 👇
+  
+  <b>Prayer Times</b>
+  ⏰ /today – Today’s times  
+  📅 /date – Times for a chosen day  
+  ⏳ /next – When’s the next prayer?  
+  📨 /notify – Set a reminder offset  
+  🔔 /subscribe – Get daily alerts  
+  🔕 /unsubscribe – Stop alerts  
+
+  <b>Settings:</b>
+  🌐 /language – Change language  
+
+  <b>Support:</b>
+  📖 /help – Show this guide  
+  🐞 /bug – Report a problem  
+  💬 /feedback – Send feedback
+
+feedback:
+  start: "💬 Share your feedback! (Or type /cancel to stop)"
+  success: "✅ Thank you! Your feedback has been sent."
+
+bug_report:
+  start: "🐞 Describe the bug you found (or /cancel to skip)."
+  success: "✅ Thanks! Your report has been received."
+
+help_admin: |
+  👨‍💻 <b>Admin Tools:</b>
+  
+  📩 /reply – Reply to users
+  📊 /stats – Bot usage stats
+  📢 /announce – Send message to everyone
+
+reply:
+  start: "✍️ Type your reply below."
+  success: "✅ Reply sent."
+
+announce:
+  start: "📢 What would you like to announce?"
+  success: "✅ Announcement delivered."
+
+stats: |
+  📊 Bot Stats:
+  • Users: %d  
+  • Subscribed: %d  
+  • Unsubscribed: %d  
+
+  🌍 Languages used:
+  %s
+
+cancel: "✖️ Cancelled."
+cancel_noop: "✖️ Nothing to cancel."
+error: "⚠️ Something went wrong. Please try again."

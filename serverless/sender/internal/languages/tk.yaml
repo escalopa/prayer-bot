@@ -1,0 +1,103 @@
+name: "Türkmençe"
+
+weekday:
+  0: "Ýekşenbe"
+  1: "Duşenbe"
+  2: "Sişenbe"
+  3: "Çarşenbe"
+  4: "Penşenbe"
+  5: "Anna"
+  6: "Şenbe"
+
+month:
+  1: "Ýanwar"
+  2: "Fewral"
+  3: "Mart"
+  4: "Aprel"
+  5: "Maý"
+  6: "Iýun"
+  7: "Iýul"
+  8: "Awgust"
+  9: "Sentýabr"
+  10: "Oktýabr"
+  11: "Noýabr"
+  12: "Dekabr"
+
+prayer:
+  1: "Sabah"
+  2: "Gün doguşy"
+  3: "Günortan"
+  4: "Ikindi"
+  5: "Agşam"
+  6: "Giçlik"
+
+prayer_date: "📅 Namaz wagtyny görmek üçin senäni saýlaň."
+
+notify_offset:
+  start: "⏰ Namazdan öň bildiriş wagtyny saýlaň."
+  success: "✅ Bildiriş wagty ýatda saklandy."
+
+language:
+  start: "🌐 Halaýan diliňizi saýlaň."
+  success: "✅ Dil <b>%s</b> hökmünde saýlandy."
+
+subscription_success: "✅ Namaz bildirişlerine abuna boldyňyz."
+unsubscription_success: "✅ Namaz bildirişlerinden abunaňyz ýatyryldy."
+
+prayer_soon: "⏳ <b>%s</b> <b>%s</b> soň."
+prayer_arrived: "🕌 <b>%s</b> wagty geldi."
+
+help: |
+  Kömek gerekmi? 😊 Men aşakdakylary edip bilýärin: 👇
+
+  <b>Namaz wagtlary</b>
+  ⏰ /today – Şu günki wagtlar
+  📅 /date – Saýlanan gün üçin wagtlar
+  ⏳ /next – Indiki namaz
+  📨 /notify – Bildiriş wagtyny sazlaň
+  🔔 /subscribe – Bildirişlere abuna boluň
+  🔕 /unsubscribe – Bildirişlerden çykmak
+
+  <b>Sazlamalar:</b>
+  🌐 /language – Dili üýtgetmek
+
+  <b>Goldaw:</b>
+  📖 /help – Bu kömek habaryny görkez
+  🐞 /bug – Mesele barada habar beriň
+  💬 /feedback – Teswir iberiň
+
+feedback:
+  start: "💬 Teswiriňizi iberiň! (ýa-da /cancel ýazyp bes ediň)"
+  success: "✅ Sag boluň! Teswiriňiz iberildi."
+
+bug_report:
+  start: "🐞 Düşündiriň, näsazlyk nämede? (/cancel bilen bes ediň)"
+  success: "✅ Sag boluň! Hasabatyňyz kabul edildi."
+
+help_admin: |
+  👨‍💻 <b>Admin gurallary:</b>
+
+  📩 /reply – Ulanyjylara jogap beriň
+  📊 /stats – Bot statistikasy
+  📢 /announce – Ähli ulanyjylara bildiriş iberiň
+
+reply:
+  start: "✍️ Jogabyňyzy aşakda ýazyň."
+  success: "✅ Jogap iberildi."
+
+announce:
+  start: "📢 Näme bildiriş bermek isleýärsiňiz?"
+  success: "✅ Bildiriş iberildi."
+
+stats: |
+  📊 Bot statistikasy:
+  • Ulanyjylar: %d
+  • Abuna bolanlar: %d
+  • Abuna bolmadyklar: %d
+
+  🌍 Ulanylýan diller:
+  %s
+
+cancel: "✖️ Bes edildi."
+cancel_noop: "✖️ Bes etmeli zat ýok."
+error: "⚠️ Näsazlyk ýüze çykdy. Gaýtadan synanyşyň."

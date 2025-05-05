@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# This script fetches the `access token`, `cloudID`, and `folderID` from Yandex Cloud
+# and stores them in a `terraform.tfvars` file.
+
 set -e
 
 # check input arguments

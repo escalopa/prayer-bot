@@ -25,7 +25,8 @@ var (
 		table.CommitTx(),
 	)
 
-	errNotFound = errors.New("not found")
+	ErrNotFound      = errors.New("not found")
+	ErrAlreadyExists = errors.New("already exists")
 )
 
 type DB struct {
@@ -73,7 +74,7 @@ func (db *DB) CreateChat(ctx context.Context, botID int32, chatID int64, languag
 
 	if err != nil {
 		if ydb.IsOperationError(err, Ydb.StatusIds_PRECONDITION_FAILED) { // chat already exists
-			return nil
+			return ErrAlreadyExists
 		}
 		return err
 	}
@@ -118,17 +119,71 @@ func (db *DB) GetChat(ctx context.Context, botID int32, chatID int64) (chat *dom
 			return nil
 		}
 
-		return errNotFound
+		return ErrNotFound
 	})
 
 	if err != nil {
 		if ydb.IsOperationError(err, Ydb.StatusIds_NOT_FOUND) {
-			return nil, errNotFound
+			return nil, ErrNotFound
 		}
 		return nil, err
 	}
 
 	return chat, nil
+}
+
+func (db *DB) GetChats(ctx context.Context, botID int32, chatIDs []int64) (chats []*domain.Chat, _ error) {
+	query := `
+		DECLARE $bot_id AS Int32;
+		DECLARE $chat_ids AS List<Int64>;
+
+		SELECT bot_id, chat_id, state, language_code, notify_message_id
+		FROM chats
+		WHERE bot_id = $bot_id AND chat_id IN $chat_ids;
+	`
+
+	values := make([]types.Value, len(chatIDs))
+	for i, chatID := range chatIDs {
+		values[i] = types.Int64Value(chatID)
+	}
+
+	params := table.NewQueryParameters(
+		table.ValueParam("$bot_id", types.Int32Value(botID)),
+		table.ValueParam("$chat_ids", types.ListValue(values...)),
+	)
+
+	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
+		_, res, err := s.Execute(ctx, readTx, query, params)
+		if err != nil {
+			return err
+		}
+
+		defer func(res result.Result) { _ = res.Close() }(res)
+		if res.NextResultSet(ctx) {
+			for res.NextRow() {
+				chat := &domain.Chat{}
+				err = res.ScanWithDefaults(
+					&chat.BotID,
+					&chat.ChatID,
+					&chat.State,
+					&chat.LanguageCode,
+					&chat.NotifyMessageID,
+				)
+				if err != nil {
+					return err
+				}
+				chats = append(chats, chat)
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return chats, nil
 }
 
 func (db *DB) GetSubscribers(ctx context.Context, botID int32) (chatIDs []int64, _ error) {
@@ -373,12 +428,12 @@ func (db *DB) GetPrayerDay(ctx context.Context, botID int32, date time.Time) (pr
 			return nil
 		}
 
-		return errNotFound
+		return ErrNotFound
 	})
 
 	if err != nil {
 		if ydb.IsOperationError(err, Ydb.StatusIds_NOT_FOUND) {
-			return nil, errNotFound
+			return nil, ErrNotFound
 		}
 		return nil, err
 	}
@@ -403,9 +458,9 @@ func (db *DB) SetPrayerDays(ctx context.Context, botID int32, rows []*domain.Pra
 		SELECT * FROM AS_TABLE($items);
 	`
 
-	values := make([]types.Value, 0, len(rows))
-	for _, row := range rows {
-		values = append(values, types.StructValue(
+	values := make([]types.Value, len(rows))
+	for i, row := range rows {
+		values[i] = types.StructValue(
 			types.StructFieldValue("bot_id", types.Int32Value(botID)),
 			types.StructFieldValue("prayer_date", types.DateValueFromTime(row.Date)),
 			types.StructFieldValue("fajr", types.DatetimeValueFromTime(row.Fajr)),
@@ -414,7 +469,7 @@ func (db *DB) SetPrayerDays(ctx context.Context, botID int32, rows []*domain.Pra
 			types.StructFieldValue("asr", types.DatetimeValueFromTime(row.Asr)),
 			types.StructFieldValue("maghrib", types.DatetimeValueFromTime(row.Maghrib)),
 			types.StructFieldValue("isha", types.DatetimeValueFromTime(row.Isha)),
-		))
+		)
 	}
 
 	params := table.NewQueryParameters(table.ValueParam("$items", types.ListValue(values...)))

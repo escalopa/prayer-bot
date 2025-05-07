@@ -49,13 +49,21 @@ func Handler(ctx context.Context, event *Event) error {
 	if err != nil {
 		return fmt.Errorf("create db: %v", err)
 	}
+	defer func() {
+		if err := db.Close(); err != nil {
+			fmt.Printf("close db: %v", err)
+		}
+	}()
 
 	botConfig, err := storage.LoadBotConfig(ctx)
 	if err != nil {
 		return fmt.Errorf("load botConfig: %v", err)
 	}
 
-	handler := internal.NewHandler(botConfig, db)
+	handler, err := internal.NewHandler(botConfig, db)
+	if err != nil {
+		return fmt.Errorf("create handler: %v", err)
+	}
 
 	for _, msg := range event.Messages {
 		body := msg.Details.Message.Body

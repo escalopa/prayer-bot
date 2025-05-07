@@ -33,27 +33,32 @@ func Handler(ctx context.Context, requestBytes []byte) (*Response, error) {
 	request := &Request{}
 
 	if err := json.Unmarshal(requestBytes, &request); err != nil {
-		return newResponse(http.StatusBadRequest, "unmarshal request body: %v", err)
+		fmt.Printf("unmarshal: %v", err)
+		return newResponse(http.StatusBadRequest, "unmarshal request body")
 	}
 
 	storage, err := service.NewStorage()
 	if err != nil {
-		return newResponse(http.StatusInternalServerError, "create storage: %v", err)
+		fmt.Printf("create storage: %v", err)
+		return newResponse(http.StatusInternalServerError, "create storage")
 	}
 
 	queue, err := service.NewQueue()
 	if err != nil {
-		return newResponse(http.StatusInternalServerError, "create queue: %v", err)
+		fmt.Printf("create queue: %v", err)
+		return newResponse(http.StatusInternalServerError, "create queue")
 	}
 
 	botConfig, err := storage.LoadBotConfig(ctx)
 	if err != nil {
-		return newResponse(http.StatusInternalServerError, "load botConfig: %v", err)
+		fmt.Printf("load botConfig: %v", err)
+		return newResponse(http.StatusInternalServerError, "load botConfig")
 	}
 
 	botID, err := internal.Authenticate(botConfig, request.Headers)
 	if err != nil {
-		return newResponse(http.StatusUnauthorized, "authenticate: %v", err)
+		fmt.Printf("unauthorized: %v", err)
+		return newResponse(http.StatusUnauthorized, "unauthorized")
 	}
 
 	payload := &domain.Payload{
@@ -66,7 +71,8 @@ func Handler(ctx context.Context, requestBytes []byte) (*Response, error) {
 
 	err = queue.Push(ctx, payload)
 	if err != nil {
-		return newResponse(http.StatusInternalServerError, fmt.Sprintf("push payload: %v", err))
+		fmt.Printf("push payload: %v", err)
+		return newResponse(http.StatusInternalServerError, "push payload")
 	}
 
 	return newResponse(http.StatusOK, "success")

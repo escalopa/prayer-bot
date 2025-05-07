@@ -41,7 +41,7 @@ func NewHandler(config map[int32]*domain.BotConfig, storage Storage, db DB) *Han
 	}
 }
 
-func (h Handler) Process(ctx context.Context, bucket string, key string) error {
+func (h Handler) Do(ctx context.Context, bucket string, key string) error {
 	if !strings.HasSuffix(key, filenameSuffix) { // ignore non csv files
 		return nil
 	}

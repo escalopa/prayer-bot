@@ -42,6 +42,11 @@ func Handler(ctx context.Context, event *Event) error {
 	if err != nil {
 		return fmt.Errorf("create db: %v", err)
 	}
+	defer func() {
+		if err := db.Close(); err != nil {
+			fmt.Printf("close db: %v", err)
+		}
+	}()
 
 	botConfig, err := storage.LoadBotConfig(ctx)
 	if err != nil {
@@ -54,7 +59,7 @@ func Handler(ctx context.Context, event *Event) error {
 		bucket := msg.Details.BucketID
 		key := msg.Details.ObjectID
 
-		err = handler.Process(ctx, bucket, key)
+		err = handler.Do(ctx, bucket, key)
 		if err != nil {
 			return err
 		}

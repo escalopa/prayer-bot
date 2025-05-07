@@ -11,19 +11,24 @@ import (
 )
 
 func Handler(ctx context.Context) error {
+	storage, err := service.NewStorage()
+	if err != nil {
+		return fmt.Errorf("create storage: %v", err)
+	}
+
 	db, err := service.NewDB(ctx)
 	if err != nil {
 		return fmt.Errorf("create db: %v", err)
 	}
+	defer func() {
+		if err := db.Close(); err != nil {
+			fmt.Printf("close db: %v", err)
+		}
+	}()
 
 	queue, err := service.NewQueue()
 	if err != nil {
 		return fmt.Errorf("create queue: %v", err)
-	}
-
-	storage, err := service.NewStorage()
-	if err != nil {
-		return fmt.Errorf("create storage: %v", err)
 	}
 
 	botConfig, err := storage.LoadBotConfig(ctx)
@@ -33,20 +38,20 @@ func Handler(ctx context.Context) error {
 
 	handler := internal.NewHandler(db, queue)
 
-	list := make(map[int32]*time.Location, len(botConfig))
+	botLocation := make(map[int32]*time.Location, len(botConfig))
 	for botID, config := range botConfig {
 		location, err := time.LoadLocation(config.Location)
 		if err != nil {
 			return fmt.Errorf("load timezone location: %q bot_id %d: %v", config.Location, botID, err)
 		}
-		list[botID] = location
+		botLocation[botID] = location
 	}
 
-	errG, errCtx := errgroup.WithContext(ctx)
-	for botID, loc := range list {
-		botID, loc := botID, loc // TODO: remove after update to go1.23
+	errG := &errgroup.Group{}
+	for botID, loc := range botLocation {
+		botID, loc := botID, loc
 		errG.Go(func() error {
-			return handler.Process(errCtx, botID, loc)
+			return handler.Do(ctx, botID, loc)
 		})
 	}
 

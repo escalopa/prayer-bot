@@ -34,7 +34,7 @@ func NewHandler(db DB, queue Queue) *Handler {
 
 }
 
-func (h *Handler) Process(ctx context.Context, botID int32, location *time.Location) error {
+func (h *Handler) Do(ctx context.Context, botID int32, location *time.Location) error {
 	prayerID, left, err := h.getPrayer(ctx, botID, location)
 	if err != nil {
 		return err

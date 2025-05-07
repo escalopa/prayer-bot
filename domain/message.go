@@ -15,6 +15,7 @@ const (
 type (
 	BotConfig struct {
 		BotID    int32  `json:"bot_id"`
+		OwnerID  int64  `json:"owner_id"`
 		Token    string `json:"token"`
 		Secret   string `json:"secret"`
 		Location string `json:"location"`

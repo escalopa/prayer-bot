@@ -475,6 +475,11 @@ func (h *Handler) remindUser(
 		return fmt.Errorf("send message: bot_id: %d chat_id: %d err: %v", chat.BotID, chat.ChatID, err)
 	}
 
+	err = h.db.SetReminderMessageID(ctx, chat.BotID, chat.ChatID, int32(res.ID))
+	if err != nil {
+		return fmt.Errorf("set remind_message_id: bot_id: %d chat_id: %d err: %v", chat.BotID, chat.ChatID, err)
+	}
+
 	if chat.ReminderMessageID == 0 { // no message to delete
 		return nil
 	}
@@ -485,11 +490,6 @@ func (h *Handler) remindUser(
 	})
 	if err != nil {
 		return fmt.Errorf("delete message: bot_id: %d chat_id: %d err: %v", chat.BotID, chat.ChatID, err)
-	}
-
-	err = h.db.SetReminderMessageID(ctx, chat.BotID, chat.ChatID, int32(res.ID))
-	if err != nil {
-		return fmt.Errorf("set remind message id: bot_id: %d chat_id: %d err: %v", chat.BotID, chat.ChatID, err)
 	}
 
 	return nil

@@ -103,11 +103,6 @@ resource "yandex_ydb_table" "ydb_table_chats" {
     name = "subscribed_at"
     type = "Datetime"
   }
-
-  column {
-    name = "created_at"
-    type = "Datetime"
-  }
 }
 
 resource "yandex_ydb_table" "ydb_table_prayers" {
@@ -236,7 +231,7 @@ resource "yandex_function" "loader_fn" {
   execution_timeout  = 5
   service_account_id = yandex_iam_service_account.loader_sa.id
   folder_id          = var.folder_id
-  user_hash          = "v2"
+  user_hash          = "v3"
 
   environment = {
     S3_BUCKET    = yandex_storage_bucket.bucket.bucket
@@ -317,7 +312,7 @@ resource "yandex_function" "dispatcher_fn" {
   execution_timeout  = 5
   service_account_id = yandex_iam_service_account.dispatcher_sa.id
   folder_id          = var.folder_id
-  user_hash          = "v2"
+  user_hash          = "v3"
 
   environment = {
     S3_BUCKET  = yandex_storage_bucket.bucket.bucket
@@ -386,7 +381,7 @@ resource "yandex_function" "sender_fn" {
   execution_timeout  = 10
   service_account_id = yandex_iam_service_account.sender_sa.id
   folder_id          = var.folder_id
-  user_hash          = "v2"
+  user_hash          = "v3"
 
   environment = {
     S3_BUCKET    = yandex_storage_bucket.bucket.bucket
@@ -465,7 +460,7 @@ resource "yandex_function" "reminder_fn" {
   execution_timeout  = 5
   service_account_id = yandex_iam_service_account.reminder_sa.id
   folder_id          = var.folder_id
-  user_hash          = "v2"
+  user_hash          = "v3"
 
   environment = {
     S3_BUCKET    = yandex_storage_bucket.bucket.bucket

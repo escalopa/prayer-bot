@@ -37,9 +37,9 @@ type (
 	}
 
 	Stats struct {
-		Users            int            // count of users using the bot
-		Subscribed       int            // count of subscribed users
-		Unsubscribed     int            // count of unsubscribed users
-		LanguagesGrouped map[string]int // count of users using a language
+		Users            uint64            // count of users using the bot
+		Subscribed       uint64            // count of subscribed users
+		Unsubscribed     uint64            // count of unsubscribed users
+		LanguagesGrouped map[string]uint64 // count of users using a language
 	}
 )

@@ -55,7 +55,7 @@ func (db *DB) CreateChat(ctx context.Context, botID int32, chatID int64, languag
 		DECLARE $subscribed AS Bool;
 
 		INSERT INTO chats (bot_id, chat_id, language_code, notify_offset, state, subscribed, subscribed_at)
-		VALUES ($bot_id, $chat_id, $language_code, $notify_offset, $state, $subscribed CURRENT_TIMESTAMP());
+		VALUES ($bot_id, $chat_id, $language_code, $notify_offset, $state, $subscribed, CurrentUtcDatetime());
 	`
 
 	params := table.NewQueryParameters(
@@ -152,6 +152,50 @@ func (db *DB) GetChats(ctx context.Context, botID int32, chatIDs []int64) (chats
 		table.ValueParam("$chat_ids", types.ListValue(values...)),
 	)
 
+	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
+		_, res, err := s.Execute(ctx, readTx, query, params)
+		if err != nil {
+			return err
+		}
+
+		defer func(res result.Result) { _ = res.Close() }(res)
+		if res.NextResultSet(ctx) {
+			for res.NextRow() {
+				chat := &domain.Chat{}
+				err = res.ScanWithDefaults(
+					&chat.BotID,
+					&chat.ChatID,
+					&chat.State,
+					&chat.LanguageCode,
+					&chat.NotifyMessageID,
+				)
+				if err != nil {
+					return err
+				}
+				chats = append(chats, chat)
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return chats, nil
+}
+
+func (db *DB) GetAllChats(ctx context.Context, botID int32) (chats []*domain.Chat, _ error) {
+	query := `
+		DECLARE $bot_id AS Int32;
+
+		SELECT bot_id, chat_id, state, language_code, notify_message_id
+		FROM chats
+		WHERE bot_id = $bot_id;
+	`
+
+	params := table.NewQueryParameters(table.ValueParam("$bot_id", types.Int32Value(botID)))
 	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
 		_, res, err := s.Execute(ctx, readTx, query, params)
 		if err != nil {
@@ -299,7 +343,7 @@ func (db *DB) SetSubscribed(ctx context.Context, botID int32, chatID int64, subs
 		DECLARE $subscribed AS Bool;
 
 		UPDATE chats
-		SET subscribed = $subscribed, subscribed_at = CASE WHEN $subscribed THEN CURRENT_TIMESTAMP() ELSE NULL END
+		SET subscribed = $subscribed, subscribed_at = CASE WHEN $subscribed THEN CurrentUtcDatetime() ELSE NULL END
 		WHERE bot_id = $bot_id AND chat_id = $chat_id;
 	`
 
@@ -500,7 +544,7 @@ func (db *DB) GetStats(ctx context.Context, botID int32) (*domain.Stats, error) 
 		GROUP BY language_code;
 	`
 
-	stats := &domain.Stats{LanguagesGrouped: make(map[string]int)}
+	stats := &domain.Stats{LanguagesGrouped: make(map[string]uint64)}
 
 	params := table.NewQueryParameters(table.ValueParam("$bot_id", types.Int32Value(botID)))
 	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
@@ -521,7 +565,7 @@ func (db *DB) GetStats(ctx context.Context, botID int32) (*domain.Stats, error) 
 			for res.NextRow() {
 				var (
 					languageCode string
-					count        int
+					count        uint64
 				)
 
 				err = res.ScanWithDefaults(&languageCode, &count)
@@ -539,8 +583,4 @@ func (db *DB) GetStats(ctx context.Context, botID int32) (*domain.Stats, error) 
 	}
 
 	return stats, nil
-}
-
-func (db *DB) Close() error {
-	return db.Close()
 }

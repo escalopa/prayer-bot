@@ -2,43 +2,46 @@ package domain
 
 import (
 	"encoding/json"
-	"fmt"
+	"strconv"
+	"time"
 )
 
 type PayloadType string
 
 const (
-	PayloadTypeHandler  PayloadType = "handler"
-	PayloadTypeNotifier PayloadType = "notifier"
+	PayloadTypeDispatcher PayloadType = "dispatcher"
+	PayloadTypeReminder   PayloadType = "reminder"
 )
 
 type (
+	location time.Location
+
 	BotConfig struct {
-		BotID    int32  `json:"bot_id"`
-		OwnerID  int64  `json:"owner_id"`
-		Token    string `json:"token"`
-		Secret   string `json:"secret"`
-		Location string `json:"location"`
+		BotID    int32     `json:"bot_id"`
+		OwnerID  int64     `json:"owner_id"`
+		Token    string    `json:"token"`
+		Secret   string    `json:"secret"`
+		Location *location `json:"location"`
 	}
 
-	// NotifierPayload sent by `notifier-fn` to notify users about prayer times
-	NotifierPayload struct {
-		BotID        int32        `json:"bot_id"`
-		ChatIDs      []int64      `json:"chat_ids"`
-		PrayerID     PrayerID     `json:"prayer_id"`
-		NotifyOffset NotifyOffset `json:"notify_offset"`
+	// ReminderPayload sent by `reminder-fn` to notify users about prayer times
+	ReminderPayload struct {
+		BotID          int32    `json:"bot_id"`
+		ChatIDs        []int64  `json:"chat_ids"`
+		PrayerID       PrayerID `json:"prayer_id"`
+		ReminderOffset int32    `json:"reminder_offset"`
 	}
 
-	// HandlerPayload sent by `handler-fn` to handle incoming messages from the user
-	HandlerPayload struct {
+	// DispatcherPayload sent by `dispatcher-fn` to handle incoming messages from the user
+	DispatcherPayload struct {
 		BotID int32  `json:"bot_id"`
 		Data  string `json:"data"` // data is a JSON string of `*models.Update`
 	}
 
 	// Payload main struct that is sent to the `queue` for process
 	Payload struct {
-		Type PayloadType `json:"type"` // one of [`Handler`, `Notifier`]
-		Data interface{} `json:"data"` // one of [`HandlerPayload`, `NotifierPayload`]
+		Type PayloadType `json:"type"` // one of [`dispatcher`, `reminder`]
+		Data interface{} `json:"data"` // one of [`DispatcherPayload`, `ReminderPayload`]
 	}
 )
 
@@ -50,16 +53,24 @@ func (p *Payload) Unmarshal(data []byte) error {
 	return json.Unmarshal(data, p)
 }
 
-func Unmarshal[T any](data interface{}) (*T, error) {
-	b, err := json.Marshal(data)
+func (l *location) UnmarshalJSON(bytes []byte) error {
+	data, err := strconv.Unquote(string(bytes))
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	var t T
-	if err := json.Unmarshal(b, &t); err != nil {
-		return nil, fmt.Errorf("unmarshal: %T got: %T: %v", t, data, err)
+	loc, err := time.LoadLocation(data)
+	if err != nil {
+		return err
 	}
 
-	return &t, nil
+	*l = location(*loc)
+	return nil
+}
+
+func (l *location) V() *time.Location {
+	if l == nil {
+		return nil
+	}
+	return (*time.Location)(l)
 }

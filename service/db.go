@@ -50,19 +50,19 @@ func (db *DB) CreateChat(ctx context.Context, botID int32, chatID int64, languag
 		DECLARE $bot_id AS Int32;
 		DECLARE $chat_id AS Int64;
 		DECLARE $language_code AS Utf8;
-		DECLARE $notify_offset AS Int32;
+		DECLARE $reminder_offset AS Int32;
 		DECLARE $state AS Utf8;
 		DECLARE $subscribed AS Bool;
 
 		INSERT INTO chats (bot_id, chat_id, language_code, notify_offset, state, subscribed, subscribed_at)
-		VALUES ($bot_id, $chat_id, $language_code, $notify_offset, $state, $subscribed, CurrentUtcDatetime());
+		VALUES ($bot_id, $chat_id, $language_code, $reminder_offset, $state, $subscribed, CurrentUtcDatetime());
 	`
 
 	params := table.NewQueryParameters(
 		table.ValueParam("$bot_id", types.Int32Value(botID)),
 		table.ValueParam("$chat_id", types.Int64Value(chatID)),
 		table.ValueParam("$language_code", types.UTF8Value(languageCode)),
-		table.ValueParam("$notify_offset", types.Int32Value(notifyOffset)),
+		table.ValueParam("$reminder_offset", types.Int32Value(notifyOffset)),
 		table.ValueParam("$state", types.UTF8Value(state)),
 		table.ValueParam("$subscribed", types.BoolValue(false)),
 	)
@@ -111,7 +111,7 @@ func (db *DB) GetChat(ctx context.Context, botID int32, chatID int64) (chat *dom
 				&chat.ChatID,
 				&chat.State,
 				&chat.LanguageCode,
-				&chat.NotifyMessageID,
+				&chat.ReminderMessageID,
 			)
 			if err != nil {
 				return err
@@ -132,7 +132,7 @@ func (db *DB) GetChat(ctx context.Context, botID int32, chatID int64) (chat *dom
 	return chat, nil
 }
 
-func (db *DB) GetChats(ctx context.Context, botID int32, chatIDs []int64) (chats []*domain.Chat, _ error) {
+func (db *DB) GetChatsByIDs(ctx context.Context, botID int32, chatIDs []int64) (chats []*domain.Chat, _ error) {
 	query := `
 		DECLARE $bot_id AS Int32;
 		DECLARE $chat_ids AS List<Int64>;
@@ -167,7 +167,7 @@ func (db *DB) GetChats(ctx context.Context, botID int32, chatIDs []int64) (chats
 					&chat.ChatID,
 					&chat.State,
 					&chat.LanguageCode,
-					&chat.NotifyMessageID,
+					&chat.ReminderMessageID,
 				)
 				if err != nil {
 					return err
@@ -186,7 +186,7 @@ func (db *DB) GetChats(ctx context.Context, botID int32, chatIDs []int64) (chats
 	return chats, nil
 }
 
-func (db *DB) GetAllChats(ctx context.Context, botID int32) (chats []*domain.Chat, _ error) {
+func (db *DB) GetChats(ctx context.Context, botID int32) (chats []*domain.Chat, _ error) {
 	query := `
 		DECLARE $bot_id AS Int32;
 
@@ -211,7 +211,7 @@ func (db *DB) GetAllChats(ctx context.Context, botID int32) (chats []*domain.Cha
 					&chat.ChatID,
 					&chat.State,
 					&chat.LanguageCode,
-					&chat.NotifyMessageID,
+					&chat.ReminderMessageID,
 				)
 				if err != nil {
 					return err
@@ -361,21 +361,21 @@ func (db *DB) SetSubscribed(ctx context.Context, botID int32, chatID int64, subs
 	return err
 }
 
-func (db *DB) SetNotifyOffset(ctx context.Context, botID int32, chatID int64, notifyOffset int32) error {
+func (db *DB) SetReminderOffset(ctx context.Context, botID int32, chatID int64, offset int32) error {
 	query := `
 		DECLARE $bot_id AS Int32;
 		DECLARE $chat_id AS Int64;
-		DECLARE $notify_offset AS Int32;
+		DECLARE $reminder_offset AS Int32;
 
 		UPDATE chats
-		SET notify_offset = $notify_offset
+		SET notify_offset = $reminder_offset
 		WHERE bot_id = $bot_id AND chat_id = $chat_id;
 	`
 
 	params := table.NewQueryParameters(
 		table.ValueParam("$bot_id", types.Int32Value(botID)),
 		table.ValueParam("$chat_id", types.Int64Value(chatID)),
-		table.ValueParam("$notify_offset", types.Int32Value(notifyOffset)),
+		table.ValueParam("$reminder_offset", types.Int32Value(offset)),
 	)
 
 	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
@@ -386,21 +386,21 @@ func (db *DB) SetNotifyOffset(ctx context.Context, botID int32, chatID int64, no
 	return err
 }
 
-func (db *DB) SetNotifyMessageID(ctx context.Context, botID int32, chatID int64, notifyMessageID int32) error {
+func (db *DB) SetReminderMessageID(ctx context.Context, botID int32, chatID int64, notifyMessageID int32) error {
 	query := `
 		DECLARE $bot_id AS Int32;
 		DECLARE $chat_id AS Int64;
-		DECLARE $notify_message_id AS Int32;
+		DECLARE $reminder_message_id AS Int32;
 
 		UPDATE chats
-		SET notify_message_id = $notify_message_id
+		SET notify_message_id = $reminder_message_id
 		WHERE bot_id = $bot_id AND chat_id = $chat_id;
 	`
 
 	params := table.NewQueryParameters(
 		table.ValueParam("$bot_id", types.Int32Value(botID)),
 		table.ValueParam("$chat_id", types.Int64Value(chatID)),
-		table.ValueParam("$notify_message_id", types.Int32Value(notifyMessageID)),
+		table.ValueParam("$reminder_message_id", types.Int32Value(notifyMessageID)),
 	)
 
 	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {

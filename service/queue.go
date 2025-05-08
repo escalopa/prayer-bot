@@ -30,7 +30,7 @@ func NewQueue() (*Queue, error) {
 	return &Queue{client: sqs.New(sess)}, nil
 }
 
-func (q *Queue) Push(ctx context.Context, payload *domain.Payload) error {
+func (q *Queue) Enqueue(ctx context.Context, payload *domain.Payload) error {
 	b, err := payload.Marshal()
 	if err != nil {
 		return fmt.Errorf("marshal payload: %s", err)

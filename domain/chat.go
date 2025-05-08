@@ -1,39 +1,38 @@
 package domain
 
-type NotifyOffset int32
+type reminderOffset int32
 
 const (
-	NotifyOffset0m  NotifyOffset = 0
-	NotifyOffset5m  NotifyOffset = 5
-	NotifyOffset10m NotifyOffset = 10
-	NotifyOffset15m NotifyOffset = 15
-	NotifyOffset20m NotifyOffset = 20
-	NotifyOffset30m NotifyOffset = 30
-	NotifyOffset45m NotifyOffset = 45
-	NotifyOffset60m NotifyOffset = 60
-	NotifyOffset90m NotifyOffset = 90
+	reminderOffset5m  reminderOffset = 5
+	reminderOffset10m reminderOffset = 10
+	reminderOffset15m reminderOffset = 15
+	reminderOffset20m reminderOffset = 20
+	reminderOffset30m reminderOffset = 30
+	reminderOffset45m reminderOffset = 45
+	reminderOffset60m reminderOffset = 60
+	reminderOffset90m reminderOffset = 90
 )
 
-func NotifyOffsets() []int32 {
+func ReminderOffsets() []int32 {
 	return []int32{
-		int32(NotifyOffset5m),
-		int32(NotifyOffset10m),
-		int32(NotifyOffset15m),
-		int32(NotifyOffset20m),
-		int32(NotifyOffset30m),
-		int32(NotifyOffset45m),
-		int32(NotifyOffset60m),
-		int32(NotifyOffset90m),
+		int32(reminderOffset5m),
+		int32(reminderOffset10m),
+		int32(reminderOffset15m),
+		int32(reminderOffset20m),
+		int32(reminderOffset30m),
+		int32(reminderOffset45m),
+		int32(reminderOffset60m),
+		int32(reminderOffset90m),
 	}
 }
 
 type (
 	Chat struct {
-		BotID           int32
-		ChatID          int64
-		State           string
-		LanguageCode    string
-		NotifyMessageID int32
+		BotID             int32
+		ChatID            int64
+		State             string
+		LanguageCode      string
+		ReminderMessageID int32
 	}
 
 	Stats struct {

@@ -28,7 +28,7 @@ func ReminderOffsets() []int32 {
 
 type (
 	Chat struct {
-		BotID             int32
+		BotID             int64
 		ChatID            int64
 		State             string
 		LanguageCode      string

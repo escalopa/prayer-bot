@@ -13,17 +13,17 @@ type (
 	contextBotIDKey struct{}
 )
 
-func setContextBotID(ctx context.Context, botID int32) context.Context {
+func setContextBotID(ctx context.Context, botID int64) context.Context {
 	return context.WithValue(ctx, contextBotIDKey{}, botID)
 }
 
-func getContextBotID(ctx context.Context) int32 {
-	botID, _ := ctx.Value(contextBotIDKey{}).(int32)
+func getContextBotID(ctx context.Context) int64 {
+	botID, _ := ctx.Value(contextBotIDKey{}).(int64)
 	return botID
 }
 
 // formatPrayerDay formats the domain.PrayerDay into a string.
-func (h *Handler) formatPrayerDay(botID int32, date *domain.PrayerDay, languageCode string) string {
+func (h *Handler) formatPrayerDay(botID int64, date *domain.PrayerDay, languageCode string) string {
 	loc := h.cfg[botID].Location.V()
 	text := h.lp.GetText(languageCode)
 	return fmt.Sprintf(prayerText,
@@ -37,7 +37,7 @@ func (h *Handler) formatPrayerDay(botID int32, date *domain.PrayerDay, languageC
 	)
 }
 
-func (h *Handler) now(botID int32) time.Time {
+func (h *Handler) now(botID int64) time.Time {
 	return domain.Now(h.cfg[botID].Location.V())
 }
 

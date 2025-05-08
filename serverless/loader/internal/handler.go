@@ -23,17 +23,17 @@ type (
 	}
 
 	DB interface {
-		SetPrayerDays(ctx context.Context, botID int32, prayerDays []*domain.PrayerDay) error
+		SetPrayerDays(ctx context.Context, botID int64, prayerDays []*domain.PrayerDay) error
 	}
 
 	Handler struct {
-		config  map[int32]*domain.BotConfig
+		config  map[int64]*domain.BotConfig
 		storage Storage
 		db      DB
 	}
 )
 
-func NewHandler(config map[int32]*domain.BotConfig, storage Storage, db DB) *Handler {
+func NewHandler(config map[int64]*domain.BotConfig, storage Storage, db DB) *Handler {
 	return &Handler{
 		config:  config,
 		storage: storage,
@@ -75,16 +75,16 @@ func (h Handler) Do(ctx context.Context, bucket string, key string) error {
 	return nil
 }
 
-func extractBotID(filename string) (int32, error) {
+func extractBotID(filename string) (int64, error) {
 	parts := strings.Split(path.Base(filename), filenameSplitter)
 	if len(parts) != filenameParts {
 		return 0, fmt.Errorf("unexpected filename format: %q", filename)
 	}
 
-	botID, err := strconv.ParseUint(parts[0], 10, 8)
+	botID, err := strconv.ParseInt(parts[0], 10, 8)
 	if err != nil {
 		return 0, fmt.Errorf("parse bot_id: %s: %v", parts[0], err)
 	}
 
-	return int32(botID), nil
+	return botID, nil
 }

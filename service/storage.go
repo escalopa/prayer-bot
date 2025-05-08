@@ -57,13 +57,13 @@ const (
 	botConfigKey = "bot_config.json"
 )
 
-func (s *Storage) LoadBotConfig(ctx context.Context) (map[int32]*domain.BotConfig, error) {
+func (s *Storage) LoadBotConfig(ctx context.Context) (map[int64]*domain.BotConfig, error) {
 	data, err := s.Get(ctx, cfg.s3.bucket, botConfigKey)
 	if err != nil {
 		return nil, fmt.Errorf("get botConfig: %v", err)
 	}
 
-	var config map[int32]*domain.BotConfig
+	var config map[int64]*domain.BotConfig
 
 	err = json.Unmarshal(data, &config)
 	if err != nil {

@@ -17,7 +17,7 @@ type (
 	location time.Location
 
 	BotConfig struct {
-		BotID    int32     `json:"bot_id"`
+		BotID    int64     `json:"bot_id"`
 		OwnerID  int64     `json:"owner_id"`
 		Token    string    `json:"token"`
 		Secret   string    `json:"secret"`
@@ -26,7 +26,7 @@ type (
 
 	// ReminderPayload sent by `reminder-fn` to remind users about prayer times
 	ReminderPayload struct {
-		BotID          int32    `json:"bot_id"`
+		BotID          int64    `json:"bot_id"`
 		ChatIDs        []int64  `json:"chat_ids"`
 		PrayerID       PrayerID `json:"prayer_id"`
 		ReminderOffset int32    `json:"reminder_offset"`
@@ -34,7 +34,7 @@ type (
 
 	// DispatcherPayload sent by `dispatcher-fn` to handle incoming messages from the user
 	DispatcherPayload struct {
-		BotID int32  `json:"bot_id"`
+		BotID int64  `json:"bot_id"`
 		Data  string `json:"data"` // data is a JSON string of `*models.Update`
 	}
 

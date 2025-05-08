@@ -17,33 +17,33 @@ import (
 
 type (
 	DB interface {
-		CreateChat(ctx context.Context, botID int32, chatID int64, languageCode string, reminderOffset int32, state string) error
-		GetChat(ctx context.Context, botID int32, chatID int64) (chat *domain.Chat, _ error)
-		GetChatsByIDs(ctx context.Context, botID int32, chatIDs []int64) (chats []*domain.Chat, _ error)
-		GetChats(ctx context.Context, botID int32) (chats []*domain.Chat, _ error)
+		CreateChat(ctx context.Context, botID int64, chatID int64, languageCode string, reminderOffset int32, state string) error
+		GetChat(ctx context.Context, botID int64, chatID int64) (chat *domain.Chat, _ error)
+		GetChatsByIDs(ctx context.Context, botID int64, chatIDs []int64) (chats []*domain.Chat, _ error)
+		GetChats(ctx context.Context, botID int64) (chats []*domain.Chat, _ error)
 
-		SetState(ctx context.Context, botID int32, chatID int64, state string) error
-		SetSubscribed(ctx context.Context, botID int32, chatID int64, subscribed bool) error
-		SetLanguageCode(ctx context.Context, botID int32, chatID int64, languageCode string) error
-		SetReminderOffset(ctx context.Context, botID int32, chatID int64, reminderOffset int32) error
-		SetReminderMessageID(ctx context.Context, botID int32, chatID int64, reminderMessageID int32) error
+		SetState(ctx context.Context, botID int64, chatID int64, state string) error
+		SetSubscribed(ctx context.Context, botID int64, chatID int64, subscribed bool) error
+		SetLanguageCode(ctx context.Context, botID int64, chatID int64, languageCode string) error
+		SetReminderOffset(ctx context.Context, botID int64, chatID int64, reminderOffset int32) error
+		SetReminderMessageID(ctx context.Context, botID int64, chatID int64, reminderMessageID int32) error
 
-		GetPrayerDay(ctx context.Context, botID int32, date time.Time) (*domain.PrayerDay, error)
+		GetPrayerDay(ctx context.Context, botID int64, date time.Time) (*domain.PrayerDay, error)
 
-		GetStats(ctx context.Context, botID int32) (*domain.Stats, error)
+		GetStats(ctx context.Context, botID int64) (*domain.Stats, error)
 	}
 
 	Handler struct {
-		cfg map[int32]*domain.BotConfig
+		cfg map[int64]*domain.BotConfig
 		lp  *languagesProvider
 		db  DB
 
-		bots   map[int32]*bot.Bot
+		bots   map[int64]*bot.Bot
 		botsMu sync.Mutex
 	}
 )
 
-func NewHandler(cfg map[int32]*domain.BotConfig, db DB) (*Handler, error) {
+func NewHandler(cfg map[int64]*domain.BotConfig, db DB) (*Handler, error) {
 	lp, err := newLanguageProvider()
 	if err != nil {
 		return nil, fmt.Errorf("create language provider: %v", err)
@@ -53,7 +53,7 @@ func NewHandler(cfg map[int32]*domain.BotConfig, db DB) (*Handler, error) {
 		cfg:  cfg,
 		lp:   lp,
 		db:   db,
-		bots: make(map[int32]*bot.Bot),
+		bots: make(map[int64]*bot.Bot),
 	}, nil
 }
 
@@ -161,7 +161,7 @@ func (h *Handler) Do(ctx context.Context, body string) error {
 	}
 }
 
-func (h *Handler) getBot(botID int32) (*bot.Bot, error) {
+func (h *Handler) getBot(botID int64) (*bot.Bot, error) {
 	h.botsMu.Lock()
 	defer h.botsMu.Unlock()
 

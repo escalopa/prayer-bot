@@ -45,9 +45,9 @@ func NewDB(ctx context.Context) (*DB, error) {
 	return &DB{client: sdk.Table()}, nil
 }
 
-func (db *DB) CreateChat(ctx context.Context, botID int32, chatID int64, languageCode string, reminderOffset int32, state string) error {
+func (db *DB) CreateChat(ctx context.Context, botID int64, chatID int64, languageCode string, reminderOffset int32, state string) error {
 	query := `
-		DECLARE $bot_id AS Int32;
+		DECLARE $bot_id AS Int64;
 		DECLARE $chat_id AS Int64;
 		DECLARE $language_code AS Utf8;
 		DECLARE $reminder_offset AS Int32;
@@ -59,7 +59,7 @@ func (db *DB) CreateChat(ctx context.Context, botID int32, chatID int64, languag
 	`
 
 	params := table.NewQueryParameters(
-		table.ValueParam("$bot_id", types.Int32Value(botID)),
+		table.ValueParam("$bot_id", types.Int64Value(botID)),
 		table.ValueParam("$chat_id", types.Int64Value(chatID)),
 		table.ValueParam("$language_code", types.UTF8Value(languageCode)),
 		table.ValueParam("$reminder_offset", types.Int32Value(reminderOffset)),
@@ -82,9 +82,9 @@ func (db *DB) CreateChat(ctx context.Context, botID int32, chatID int64, languag
 	return nil
 }
 
-func (db *DB) GetChat(ctx context.Context, botID int32, chatID int64) (chat *domain.Chat, _ error) {
+func (db *DB) GetChat(ctx context.Context, botID int64, chatID int64) (chat *domain.Chat, _ error) {
 	query := `
-		DECLARE $bot_id AS Int32;
+		DECLARE $bot_id AS Int64;
 		DECLARE $chat_id AS int64;
 
 		SELECT bot_id, chat_id, state, language_code, reminder_message_id
@@ -93,7 +93,7 @@ func (db *DB) GetChat(ctx context.Context, botID int32, chatID int64) (chat *dom
 	`
 
 	params := table.NewQueryParameters(
-		table.ValueParam("$bot_id", types.Int32Value(botID)),
+		table.ValueParam("$bot_id", types.Int64Value(botID)),
 		table.ValueParam("$chat_id", types.Int64Value(chatID)),
 	)
 
@@ -132,9 +132,9 @@ func (db *DB) GetChat(ctx context.Context, botID int32, chatID int64) (chat *dom
 	return chat, nil
 }
 
-func (db *DB) GetChatsByIDs(ctx context.Context, botID int32, chatIDs []int64) (chats []*domain.Chat, _ error) {
+func (db *DB) GetChatsByIDs(ctx context.Context, botID int64, chatIDs []int64) (chats []*domain.Chat, _ error) {
 	query := `
-		DECLARE $bot_id AS Int32;
+		DECLARE $bot_id AS Int64;
 		DECLARE $chat_ids AS List<Int64>;
 
 		SELECT bot_id, chat_id, state, language_code, reminder_message_id
@@ -148,7 +148,7 @@ func (db *DB) GetChatsByIDs(ctx context.Context, botID int32, chatIDs []int64) (
 	}
 
 	params := table.NewQueryParameters(
-		table.ValueParam("$bot_id", types.Int32Value(botID)),
+		table.ValueParam("$bot_id", types.Int64Value(botID)),
 		table.ValueParam("$chat_ids", types.ListValue(values...)),
 	)
 
@@ -186,16 +186,16 @@ func (db *DB) GetChatsByIDs(ctx context.Context, botID int32, chatIDs []int64) (
 	return chats, nil
 }
 
-func (db *DB) GetChats(ctx context.Context, botID int32) (chats []*domain.Chat, _ error) {
+func (db *DB) GetChats(ctx context.Context, botID int64) (chats []*domain.Chat, _ error) {
 	query := `
-		DECLARE $bot_id AS Int32;
+		DECLARE $bot_id AS Int64;
 
 		SELECT bot_id, chat_id, state, language_code, reminder_message_id
 		FROM chats
 		WHERE bot_id = $bot_id;
 	`
 
-	params := table.NewQueryParameters(table.ValueParam("$bot_id", types.Int32Value(botID)))
+	params := table.NewQueryParameters(table.ValueParam("$bot_id", types.Int64Value(botID)))
 	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
 		_, res, err := s.Execute(ctx, readTx, query, params)
 		if err != nil {
@@ -230,16 +230,16 @@ func (db *DB) GetChats(ctx context.Context, botID int32) (chats []*domain.Chat, 
 	return chats, nil
 }
 
-func (db *DB) GetSubscribers(ctx context.Context, botID int32) (chatIDs []int64, _ error) {
+func (db *DB) GetSubscribers(ctx context.Context, botID int64) (chatIDs []int64, _ error) {
 	query := `
-		DECLARE $bot_id AS Int32;
+		DECLARE $bot_id AS Int64;
 
 		SELECT chat_id
 		FROM chats
 		WHERE bot_id = $bot_id AND subscribed = true;
 	`
 
-	params := table.NewQueryParameters(table.ValueParam("$bot_id", types.Int32Value(botID)))
+	params := table.NewQueryParameters(table.ValueParam("$bot_id", types.Int64Value(botID)))
 	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
 		_, res, err := s.Execute(ctx, readTx, query, params)
 		if err != nil {
@@ -268,9 +268,9 @@ func (db *DB) GetSubscribers(ctx context.Context, botID int32) (chatIDs []int64,
 	return chatIDs, nil
 }
 
-func (db *DB) GetSubscribersByOffset(ctx context.Context, botID int32, offset int32) (chatIDs []int64, _ error) {
+func (db *DB) GetSubscribersByOffset(ctx context.Context, botID int64, offset int32) (chatIDs []int64, _ error) {
 	query := `
-		DECLARE $bot_id AS Int32;
+		DECLARE $bot_id AS Int64;
 		DECLARE $offset AS Int32;
 
 		SELECT chat_id
@@ -279,7 +279,7 @@ func (db *DB) GetSubscribersByOffset(ctx context.Context, botID int32, offset in
 	`
 
 	params := table.NewQueryParameters(
-		table.ValueParam("$bot_id", types.Int32Value(botID)),
+		table.ValueParam("$bot_id", types.Int64Value(botID)),
 		table.ValueParam("$offset", types.Int32Value(offset)),
 	)
 
@@ -311,9 +311,9 @@ func (db *DB) GetSubscribersByOffset(ctx context.Context, botID int32, offset in
 	return chatIDs, nil
 }
 
-func (db *DB) SetLanguageCode(ctx context.Context, botID int32, chatID int64, languageCode string) error {
+func (db *DB) SetLanguageCode(ctx context.Context, botID int64, chatID int64, languageCode string) error {
 	query := `
-		DECLARE $bot_id AS Int32;
+		DECLARE $bot_id AS Int64;
 		DECLARE $chat_id AS Int64;
 		DECLARE $language_code AS Utf8;
 
@@ -323,7 +323,7 @@ func (db *DB) SetLanguageCode(ctx context.Context, botID int32, chatID int64, la
 	`
 
 	params := table.NewQueryParameters(
-		table.ValueParam("$bot_id", types.Int32Value(botID)),
+		table.ValueParam("$bot_id", types.Int64Value(botID)),
 		table.ValueParam("$chat_id", types.Int64Value(chatID)),
 		table.ValueParam("$language_code", types.UTF8Value(languageCode)),
 	)
@@ -336,9 +336,9 @@ func (db *DB) SetLanguageCode(ctx context.Context, botID int32, chatID int64, la
 	return err
 }
 
-func (db *DB) SetSubscribed(ctx context.Context, botID int32, chatID int64, subscribed bool) error {
+func (db *DB) SetSubscribed(ctx context.Context, botID int64, chatID int64, subscribed bool) error {
 	query := `
-		DECLARE $bot_id AS Int32;
+		DECLARE $bot_id AS Int64;
 		DECLARE $chat_id AS Int64;
 		DECLARE $subscribed AS Bool;
 
@@ -348,7 +348,7 @@ func (db *DB) SetSubscribed(ctx context.Context, botID int32, chatID int64, subs
 	`
 
 	params := table.NewQueryParameters(
-		table.ValueParam("$bot_id", types.Int32Value(botID)),
+		table.ValueParam("$bot_id", types.Int64Value(botID)),
 		table.ValueParam("$chat_id", types.Int64Value(chatID)),
 		table.ValueParam("$subscribed", types.BoolValue(subscribed)),
 	)
@@ -361,9 +361,9 @@ func (db *DB) SetSubscribed(ctx context.Context, botID int32, chatID int64, subs
 	return err
 }
 
-func (db *DB) SetReminderOffset(ctx context.Context, botID int32, chatID int64, offset int32) error {
+func (db *DB) SetReminderOffset(ctx context.Context, botID int64, chatID int64, offset int32) error {
 	query := `
-		DECLARE $bot_id AS Int32;
+		DECLARE $bot_id AS Int64;
 		DECLARE $chat_id AS Int64;
 		DECLARE $reminder_offset AS Int32;
 
@@ -373,7 +373,7 @@ func (db *DB) SetReminderOffset(ctx context.Context, botID int32, chatID int64, 
 	`
 
 	params := table.NewQueryParameters(
-		table.ValueParam("$bot_id", types.Int32Value(botID)),
+		table.ValueParam("$bot_id", types.Int64Value(botID)),
 		table.ValueParam("$chat_id", types.Int64Value(chatID)),
 		table.ValueParam("$reminder_offset", types.Int32Value(offset)),
 	)
@@ -386,9 +386,9 @@ func (db *DB) SetReminderOffset(ctx context.Context, botID int32, chatID int64, 
 	return err
 }
 
-func (db *DB) SetReminderMessageID(ctx context.Context, botID int32, chatID int64, reminderMessageID int32) error {
+func (db *DB) SetReminderMessageID(ctx context.Context, botID int64, chatID int64, reminderMessageID int32) error {
 	query := `
-		DECLARE $bot_id AS Int32;
+		DECLARE $bot_id AS Int64;
 		DECLARE $chat_id AS Int64;
 		DECLARE $reminder_message_id AS Int32;
 
@@ -398,7 +398,7 @@ func (db *DB) SetReminderMessageID(ctx context.Context, botID int32, chatID int6
 	`
 
 	params := table.NewQueryParameters(
-		table.ValueParam("$bot_id", types.Int32Value(botID)),
+		table.ValueParam("$bot_id", types.Int64Value(botID)),
 		table.ValueParam("$chat_id", types.Int64Value(chatID)),
 		table.ValueParam("$reminder_message_id", types.Int32Value(reminderMessageID)),
 	)
@@ -411,9 +411,9 @@ func (db *DB) SetReminderMessageID(ctx context.Context, botID int32, chatID int6
 	return err
 }
 
-func (db *DB) SetState(ctx context.Context, botID int32, chatID int64, state string) error {
+func (db *DB) SetState(ctx context.Context, botID int64, chatID int64, state string) error {
 	query := `
-		DECLARE $bot_id AS Int32;
+		DECLARE $bot_id AS Int64;
 		DECLARE $chat_id AS Int64;
 		DECLARE $state AS Utf8;
 
@@ -423,7 +423,7 @@ func (db *DB) SetState(ctx context.Context, botID int32, chatID int64, state str
 	`
 
 	params := table.NewQueryParameters(
-		table.ValueParam("$bot_id", types.Int32Value(botID)),
+		table.ValueParam("$bot_id", types.Int64Value(botID)),
 		table.ValueParam("$chat_id", types.Int64Value(chatID)),
 		table.ValueParam("$state", types.UTF8Value(state)),
 	)
@@ -436,9 +436,9 @@ func (db *DB) SetState(ctx context.Context, botID int32, chatID int64, state str
 	return err
 }
 
-func (db *DB) GetPrayerDay(ctx context.Context, botID int32, date time.Time) (prayerDay *domain.PrayerDay, _ error) {
+func (db *DB) GetPrayerDay(ctx context.Context, botID int64, date time.Time) (prayerDay *domain.PrayerDay, _ error) {
 	query := `
-		DECLARE $bot_id AS Int32;
+		DECLARE $bot_id AS Int64;
 		DECLARE $date AS Date;
 
 		SELECT prayer_date, fajr, shuruq, dhuhr, asr, maghrib, isha
@@ -447,7 +447,7 @@ func (db *DB) GetPrayerDay(ctx context.Context, botID int32, date time.Time) (pr
 	`
 
 	params := table.NewQueryParameters(
-		table.ValueParam("$bot_id", types.Int32Value(botID)),
+		table.ValueParam("$bot_id", types.Int64Value(botID)),
 		table.ValueParam("$date", types.DateValueFromTime(date)),
 	)
 
@@ -485,7 +485,7 @@ func (db *DB) GetPrayerDay(ctx context.Context, botID int32, date time.Time) (pr
 	return prayerDay, nil
 }
 
-func (db *DB) SetPrayerDays(ctx context.Context, botID int32, rows []*domain.PrayerDay) error {
+func (db *DB) SetPrayerDays(ctx context.Context, botID int64, rows []*domain.PrayerDay) error {
 	query := `
 		DECLARE $items AS List<Struct<
 			bot_id: Int32,
@@ -505,7 +505,7 @@ func (db *DB) SetPrayerDays(ctx context.Context, botID int32, rows []*domain.Pra
 	values := make([]types.Value, len(rows))
 	for i, row := range rows {
 		values[i] = types.StructValue(
-			types.StructFieldValue("bot_id", types.Int32Value(botID)),
+			types.StructFieldValue("bot_id", types.Int64Value(botID)),
 			types.StructFieldValue("prayer_date", types.DateValueFromTime(row.Date)),
 			types.StructFieldValue("fajr", types.DatetimeValueFromTime(row.Fajr)),
 			types.StructFieldValue("shuruq", types.DatetimeValueFromTime(row.Shuruq)),
@@ -525,9 +525,9 @@ func (db *DB) SetPrayerDays(ctx context.Context, botID int32, rows []*domain.Pra
 	return err
 }
 
-func (db *DB) GetStats(ctx context.Context, botID int32) (*domain.Stats, error) {
+func (db *DB) GetStats(ctx context.Context, botID int64) (*domain.Stats, error) {
 	query := `
-		DECLARE $bot_id AS Int32;
+		DECLARE $bot_id AS Int64;
 
 		SELECT
 			COUNT(*) AS users,
@@ -546,7 +546,7 @@ func (db *DB) GetStats(ctx context.Context, botID int32) (*domain.Stats, error) 
 
 	stats := &domain.Stats{LanguagesGrouped: make(map[string]uint64)}
 
-	params := table.NewQueryParameters(table.ValueParam("$bot_id", types.Int32Value(botID)))
+	params := table.NewQueryParameters(table.ValueParam("$bot_id", types.Int64Value(botID)))
 	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
 		_, res, err := s.Execute(ctx, readTx, query, params)
 		if err != nil {

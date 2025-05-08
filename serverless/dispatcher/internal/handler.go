@@ -17,12 +17,12 @@ type (
 	}
 
 	Handler struct {
-		cfg map[int32]*domain.BotConfig
+		cfg map[int64]*domain.BotConfig
 		q   Queue
 	}
 )
 
-func NewHandler(cfg map[int32]*domain.BotConfig, queue Queue) *Handler {
+func NewHandler(cfg map[int64]*domain.BotConfig, queue Queue) *Handler {
 	return &Handler{
 		cfg: cfg,
 		q:   queue,
@@ -51,7 +51,7 @@ func (h *Handler) Do(ctx context.Context, body string, headers map[string]string
 	return nil
 }
 
-func (h *Handler) authenticate(headers map[string]string) (int32, error) {
+func (h *Handler) authenticate(headers map[string]string) (int64, error) {
 	secretToken := headers[telegramBotAPISecretTokenHeader]
 	if secretToken == "" {
 		return 0, fmt.Errorf("empty secret token header")

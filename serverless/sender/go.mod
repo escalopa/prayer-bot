@@ -3,7 +3,7 @@ module github.com/escalopa/prayer-bot/sender
 go 1.21
 
 require (
-	github.com/escalopa/prayer-bot v0.0.0-20250508181623-a9498f6862f6
+	github.com/escalopa/prayer-bot v0.0.0-20250508205509-ee44466063c0
 	github.com/go-telegram/bot v1.15.0
 	golang.org/x/sync v0.10.0
 	gopkg.in/yaml.v3 v3.0.1

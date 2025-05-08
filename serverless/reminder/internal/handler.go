@@ -11,9 +11,9 @@ import (
 
 type (
 	DB interface {
-		GetPrayerDay(ctx context.Context, botID int32, date time.Time) (*domain.PrayerDay, error)
-		GetSubscribers(ctx context.Context, botID int32) ([]int64, error)
-		GetSubscribersByOffset(ctx context.Context, botID int32, offset int32) ([]int64, error)
+		GetPrayerDay(ctx context.Context, botID int64, date time.Time) (*domain.PrayerDay, error)
+		GetSubscribers(ctx context.Context, botID int64) ([]int64, error)
+		GetSubscribersByOffset(ctx context.Context, botID int64, offset int32) ([]int64, error)
 	}
 
 	Queue interface {
@@ -21,13 +21,13 @@ type (
 	}
 
 	Handler struct {
-		cfg   map[int32]*domain.BotConfig
+		cfg   map[int64]*domain.BotConfig
 		db    DB
 		queue Queue
 	}
 )
 
-func NewHandler(cfg map[int32]*domain.BotConfig, db DB, queue Queue) *Handler {
+func NewHandler(cfg map[int64]*domain.BotConfig, db DB, queue Queue) *Handler {
 	return &Handler{
 		cfg:   cfg,
 		db:    db,
@@ -36,7 +36,7 @@ func NewHandler(cfg map[int32]*domain.BotConfig, db DB, queue Queue) *Handler {
 
 }
 
-func (h *Handler) Do(ctx context.Context, botID int32) error {
+func (h *Handler) Do(ctx context.Context, botID int64) error {
 	prayerID, left, err := h.getPrayer(ctx, botID, h.cfg[botID].Location.V())
 	if err != nil {
 		return err
@@ -75,7 +75,7 @@ func (h *Handler) Do(ctx context.Context, botID int32) error {
 	return nil
 }
 
-func (h *Handler) getPrayer(ctx context.Context, botID int32, loc *time.Location) (domain.PrayerID, int32, error) {
+func (h *Handler) getPrayer(ctx context.Context, botID int64, loc *time.Location) (domain.PrayerID, int32, error) {
 	date := domain.Now(loc)
 	prayerDay, err := h.db.GetPrayerDay(ctx, botID, date)
 	if err != nil {

@@ -71,7 +71,7 @@ resource "yandex_ydb_table" "ydb_table_chats" {
 
   column {
     name = "bot_id"
-    type = "Int32"
+    type = "Int64"
   }
 
   column {
@@ -118,7 +118,7 @@ resource "yandex_ydb_table" "ydb_table_prayers" {
 
   column {
     name = "bot_id"
-    type = "Int32"
+    type = "Int64"
   }
 
   column {

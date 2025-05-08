@@ -85,12 +85,12 @@ resource "yandex_ydb_table" "ydb_table_chats" {
   }
 
   column {
-    name = "notify_offset"
+    name = "reminder_offset"
     type = "Int32"
   }
 
   column {
-    name = "notify_message_id"
+    name = "reminder_message_id"
     type = "Int32"
   }
 
@@ -236,7 +236,7 @@ resource "yandex_function" "loader_fn" {
   execution_timeout  = 5
   service_account_id = yandex_iam_service_account.loader_sa.id
   folder_id          = var.folder_id
-  user_hash          = "v3"
+  user_hash          = "v2"
 
   environment = {
     S3_BUCKET    = yandex_storage_bucket.bucket.bucket
@@ -270,54 +270,54 @@ resource "yandex_function_trigger" "loader_trigger" {
 }
 
 ###########################
-### handler-sa
+### dispatcher-sa
 ###########################
 
-resource "yandex_iam_service_account" "handler_sa" {
-  name = "handler-sa"
+resource "yandex_iam_service_account" "dispatcher_sa" {
+  name = "dispatcher-sa"
 }
 
-resource "yandex_resourcemanager_folder_iam_member" "handler_sa_invoker" {
+resource "yandex_resourcemanager_folder_iam_member" "dispatcher_sa_invoker" {
   folder_id = var.folder_id
   role      = "functions.functionInvoker"
   member    = "system:allUsers" // allow public access
 }
 
-resource "yandex_resourcemanager_folder_iam_member" "handler_sa_queue" {
+resource "yandex_resourcemanager_folder_iam_member" "dispatcher_sa_queue" {
   folder_id = var.folder_id
   role      = "ymq.writer"
-  member    = "serviceAccount:${yandex_iam_service_account.handler_sa.id}"
+  member    = "serviceAccount:${yandex_iam_service_account.dispatcher_sa.id}"
 }
 
-resource "yandex_resourcemanager_folder_iam_member" "handler_sa_storage" {
+resource "yandex_resourcemanager_folder_iam_member" "dispatcher_sa_storage" {
   folder_id = var.folder_id
   role      = "storage.viewer"
-  member    = "serviceAccount:${yandex_iam_service_account.handler_sa.id}"
+  member    = "serviceAccount:${yandex_iam_service_account.dispatcher_sa.id}"
 }
 
-resource "yandex_iam_service_account_static_access_key" "handler_sa_keys" {
-  service_account_id = yandex_iam_service_account.handler_sa.id
+resource "yandex_iam_service_account_static_access_key" "dispatcher_sa_keys" {
+  service_account_id = yandex_iam_service_account.dispatcher_sa.id
 }
 
 ###########################
-### handler-fn
+### dispatcher-fn
 ###########################
 
-data "archive_file" "handler_zip" {
+data "archive_file" "dispatcher_zip" {
   type        = "zip"
-  source_dir  = "${path.module}/serverless/handler"
-  output_path = "${path.module}/serverless/handler.zip"
+  source_dir  = "${path.module}/serverless/dispatcher"
+  output_path = "${path.module}/serverless/dispatcher.zip"
 }
 
-resource "yandex_function" "handler_fn" {
-  name               = "handler-fn"
+resource "yandex_function" "dispatcher_fn" {
+  name               = "dispatcher-fn"
   runtime            = "golang121"
   entrypoint         = "main.Handler"
   memory             = 128
   execution_timeout  = 5
-  service_account_id = yandex_iam_service_account.handler_sa.id
+  service_account_id = yandex_iam_service_account.dispatcher_sa.id
   folder_id          = var.folder_id
-  user_hash          = "v3"
+  user_hash          = "v2"
 
   environment = {
     S3_BUCKET  = yandex_storage_bucket.bucket.bucket
@@ -325,17 +325,17 @@ resource "yandex_function" "handler_fn" {
     SQS_REGION = yandex_message_queue.standard_queue.region_id
 
     REGION     = var.region
-    ACCESS_KEY = yandex_iam_service_account_static_access_key.handler_sa_keys.access_key
-    SECRET_KEY = yandex_iam_service_account_static_access_key.handler_sa_keys.secret_key
+    ACCESS_KEY = yandex_iam_service_account_static_access_key.dispatcher_sa_keys.access_key
+    SECRET_KEY = yandex_iam_service_account_static_access_key.dispatcher_sa_keys.secret_key
   }
 
   content {
-    zip_filename = data.archive_file.handler_zip.output_path
+    zip_filename = data.archive_file.dispatcher_zip.output_path
   }
 }
 
-output "handler_fn_id" {
-  value = yandex_function.handler_fn.id // used to set Webhook URL on Telegram
+output "dispatcher_fn_id" {
+  value = yandex_function.dispatcher_fn.id // used to set Webhook URL on Telegram
 }
 
 ###########################
@@ -382,11 +382,11 @@ resource "yandex_function" "sender_fn" {
   name               = "sender-fn"
   runtime            = "golang121"
   entrypoint         = "main.Handler"
-  memory             = 256
+  memory             = 512
   execution_timeout  = 10
   service_account_id = yandex_iam_service_account.sender_sa.id
   folder_id          = var.folder_id
-  user_hash          = "v3"
+  user_hash          = "v2"
 
   environment = {
     S3_BUCKET    = yandex_storage_bucket.bucket.bucket
@@ -418,54 +418,54 @@ resource "yandex_function_trigger" "sender_trigger" {
 }
 
 ###########################
-### notifier-sa
+### reminder-sa
 ###########################
 
-resource "yandex_iam_service_account" "notifier_sa" {
-  name = "notifier-sa"
+resource "yandex_iam_service_account" "reminder_sa" {
+  name = "reminder-sa"
 }
 
-resource "yandex_resourcemanager_folder_iam_member" "notifier_sa_queue" {
+resource "yandex_resourcemanager_folder_iam_member" "reminder_sa_queue" {
   folder_id = var.folder_id
   role      = "ymq.writer"
-  member    = "serviceAccount:${yandex_iam_service_account.notifier_sa.id}"
+  member    = "serviceAccount:${yandex_iam_service_account.reminder_sa.id}"
 }
 
-resource "yandex_resourcemanager_folder_iam_member" "notifier_sa_ydb" {
+resource "yandex_resourcemanager_folder_iam_member" "reminder_sa_ydb" {
   folder_id = var.folder_id
   role      = "ydb.viewer"
-  member    = "serviceAccount:${yandex_iam_service_account.notifier_sa.id}"
+  member    = "serviceAccount:${yandex_iam_service_account.reminder_sa.id}"
 }
 
-resource "yandex_resourcemanager_folder_iam_member" "notifier_sa_storage" {
+resource "yandex_resourcemanager_folder_iam_member" "reminder_sa_storage" {
   folder_id = var.folder_id
   role      = "storage.viewer"
-  member    = "serviceAccount:${yandex_iam_service_account.notifier_sa.id}"
+  member    = "serviceAccount:${yandex_iam_service_account.reminder_sa.id}"
 }
 
-resource "yandex_iam_service_account_static_access_key" "notifier_sa_keys" {
-  service_account_id = yandex_iam_service_account.notifier_sa.id
+resource "yandex_iam_service_account_static_access_key" "reminder_sa_keys" {
+  service_account_id = yandex_iam_service_account.reminder_sa.id
 }
 
 ###########################
-### notifier-fn
+### reminder-fn
 ###########################
 
-data "archive_file" "notifier_zip" {
+data "archive_file" "reminder_zip" {
   type        = "zip"
-  source_dir  = "${path.module}/serverless/notifier"
-  output_path = "${path.module}/serverless/notifier.zip"
+  source_dir  = "${path.module}/serverless/reminder"
+  output_path = "${path.module}/serverless/reminder.zip"
 }
 
-resource "yandex_function" "notifier_fn" {
-  name               = "notifier-fn"
+resource "yandex_function" "reminder_fn" {
+  name               = "reminder-fn"
   runtime            = "golang121"
   entrypoint         = "main.Handler"
   memory             = 128
   execution_timeout  = 5
-  service_account_id = yandex_iam_service_account.notifier_sa.id
+  service_account_id = yandex_iam_service_account.reminder_sa.id
   folder_id          = var.folder_id
-  user_hash          = "v3"
+  user_hash          = "v2"
 
   environment = {
     S3_BUCKET    = yandex_storage_bucket.bucket.bucket
@@ -474,19 +474,19 @@ resource "yandex_function" "notifier_fn" {
     YDB_ENDPOINT = yandex_ydb_database_serverless.ydb.ydb_full_endpoint
 
     REGION     = var.region
-    ACCESS_KEY = yandex_iam_service_account_static_access_key.notifier_sa_keys.access_key
-    SECRET_KEY = yandex_iam_service_account_static_access_key.notifier_sa_keys.secret_key
+    ACCESS_KEY = yandex_iam_service_account_static_access_key.reminder_sa_keys.access_key
+    SECRET_KEY = yandex_iam_service_account_static_access_key.reminder_sa_keys.secret_key
   }
 
   content {
-    zip_filename = data.archive_file.notifier_zip.output_path
+    zip_filename = data.archive_file.reminder_zip.output_path
   }
 }
 
-resource "yandex_function_trigger" "notifier_trigger" {
-  name = "notifier"
+resource "yandex_function_trigger" "reminder_trigger" {
+  name = "reminder"
   function {
-    id                 = yandex_function.notifier_fn.id
+    id                 = yandex_function.reminder_fn.id
     service_account_id = yandex_iam_service_account.trigger_sa.id
   }
 

@@ -3,9 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
-	"time"
 
-	"github.com/escalopa/prayer-bot/notifier/internal"
+	"github.com/escalopa/prayer-bot/reminder/internal"
 	"github.com/escalopa/prayer-bot/service"
 	"golang.org/x/sync/errgroup"
 )
@@ -31,29 +30,19 @@ func Handler(ctx context.Context) error {
 		return fmt.Errorf("load botConfig: %v", err)
 	}
 
-	handler := internal.NewHandler(db, queue)
-
-	botLocation := make(map[int32]*time.Location, len(botConfig))
-	for botID, config := range botConfig {
-		location, err := time.LoadLocation(config.Location)
-		if err != nil {
-			return fmt.Errorf("load timezone location: %q bot_id %d: %v", config.Location, botID, err)
-		}
-		botLocation[botID] = location
-	}
+	handler := internal.NewHandler(botConfig, db, queue)
 
 	errG := &errgroup.Group{}
-	for botID, loc := range botLocation {
-		botID, loc := botID, loc
+	for botID := range botConfig {
+		botID := botID
 		errG.Go(func() error {
-			return handler.Do(ctx, botID, loc)
+			if err := handler.Do(ctx, botID); err != nil {
+				return fmt.Errorf("handler do: %v", err)
+			}
+			return nil
 		})
 	}
 
-	err = errG.Wait()
-	if err != nil {
-		return fmt.Errorf("run: %v", err)
-	}
-
+	_ = errG.Wait()
 	return nil
 }

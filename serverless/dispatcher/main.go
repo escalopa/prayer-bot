@@ -6,8 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/escalopa/prayer-bot/domain"
-	"github.com/escalopa/prayer-bot/handler/internal"
+	"github.com/escalopa/prayer-bot/dispatcher/internal"
 	"github.com/escalopa/prayer-bot/service"
 )
 
@@ -55,24 +54,11 @@ func Handler(ctx context.Context, requestBytes []byte) (*Response, error) {
 		return newResponse(http.StatusInternalServerError, "load botConfig")
 	}
 
-	botID, err := internal.Authenticate(botConfig, request.Headers)
-	if err != nil {
-		fmt.Printf("unauthorized: %v", err)
-		return newResponse(http.StatusUnauthorized, "unauthorized")
-	}
+	handler := internal.NewHandler(botConfig, queue)
 
-	payload := &domain.Payload{
-		Type: domain.PayloadTypeHandler,
-		Data: &domain.HandlerPayload{
-			BotID: botID,
-			Data:  request.Body,
-		},
-	}
-
-	err = queue.Push(ctx, payload)
-	if err != nil {
-		fmt.Printf("push payload: %v", err)
-		return newResponse(http.StatusInternalServerError, "push payload")
+	if err := handler.Do(ctx, request.Body, request.Headers); err != nil {
+		fmt.Printf("handler do: %v", err)
+		return newResponse(http.StatusInternalServerError, "handler do")
 	}
 
 	return newResponse(http.StatusOK, "success")

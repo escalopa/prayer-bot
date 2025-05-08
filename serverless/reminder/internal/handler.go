@@ -17,34 +17,36 @@ type (
 	}
 
 	Queue interface {
-		Push(ctx context.Context, payload *domain.Payload) error
+		Enqueue(ctx context.Context, payload *domain.Payload) error
 	}
 
 	Handler struct {
+		cfg   map[int32]*domain.BotConfig
 		db    DB
 		queue Queue
 	}
 )
 
-func NewHandler(db DB, queue Queue) *Handler {
+func NewHandler(cfg map[int32]*domain.BotConfig, db DB, queue Queue) *Handler {
 	return &Handler{
+		cfg:   cfg,
 		db:    db,
 		queue: queue,
 	}
 
 }
 
-func (h *Handler) Do(ctx context.Context, botID int32, location *time.Location) error {
-	prayerID, left, err := h.getPrayer(ctx, botID, location)
+func (h *Handler) Do(ctx context.Context, botID int32) error {
+	prayerID, left, err := h.getPrayer(ctx, botID, h.cfg[botID].Location.V())
 	if err != nil {
 		return err
 	}
 
 	var chatIDs []int64
 	switch {
-	case left == int32(domain.NotifyOffset0m):
+	case left == 0:
 		chatIDs, err = h.db.GetSubscribers(ctx, botID)
-	case slices.Contains(domain.NotifyOffsets(), left):
+	case slices.Contains(domain.ReminderOffsets(), left):
 		chatIDs, err = h.db.GetSubscribersByOffset(ctx, botID, left)
 	}
 
@@ -56,18 +58,18 @@ func (h *Handler) Do(ctx context.Context, botID int32, location *time.Location) 
 	}
 
 	payload := &domain.Payload{
-		Type: domain.PayloadTypeNotifier,
-		Data: &domain.NotifierPayload{
-			BotID:        botID,
-			ChatIDs:      chatIDs,
-			PrayerID:     prayerID,
-			NotifyOffset: domain.NotifyOffset(left),
+		Type: domain.PayloadTypeReminder,
+		Data: &domain.ReminderPayload{
+			BotID:    botID,
+			ChatIDs:  chatIDs,
+			PrayerID: prayerID,
+			Offset:   left,
 		},
 	}
 
-	err = h.queue.Push(ctx, payload)
+	err = h.queue.Enqueue(ctx, payload)
 	if err != nil {
-		return fmt.Errorf("failed to push notifier payload: %w", err)
+		return fmt.Errorf("enqueue reminder payload: %v", err)
 	}
 
 	return nil

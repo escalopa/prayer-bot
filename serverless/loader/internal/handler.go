@@ -71,7 +71,7 @@ func (h Handler) Do(ctx context.Context, bucket string, key string) error {
 		return fmt.Errorf("store prayers: %s: %v", key, err)
 	}
 
-	fmt.Printf("processed file: %q bot_id: %d\n", key, botID)
+	fmt.Printf("set prayers done file: %q bot_id: %d\n", key, botID)
 	return nil
 }
 

@@ -1,0 +1,497 @@
+package internal
+
+import (
+	"context"
+	"fmt"
+	"strings"
+	"time"
+
+	"github.com/escalopa/prayer-bot/domain"
+	"github.com/go-telegram/bot"
+	"github.com/go-telegram/bot/models"
+)
+
+const (
+	defaultLanguageCode = "en"
+
+	prayerDayFormat  = "02.01.2006"
+	prayerTimeFormat = "15:04"
+	prayerText       = `
+🗓 %s,  %s
+
+🕊 %s — %s  
+🌤 %s — %s  
+☀️ %s — %s  
+🌇 %s — %s  
+🌅 %s — %s  
+🌙 %s — %s
+`
+)
+
+type command string
+
+const (
+	// user commands
+
+	startCommand       command = "start"
+	helpCommand        command = "help"
+	todayCommand       command = "today"
+	dateCommand        command = "date" // 2 stages
+	nextCommand        command = "next"
+	remindCommand      command = "remind"   // 1 stage
+	bugCommand         command = "bug"      // 1 stage
+	feedbackCommand    command = "feedback" // 1 stage
+	languageCommand    command = "language" // 1 stage
+	subscribeCommand   command = "subscribe"
+	unsubscribeCommand command = "unsubscribe"
+	cancelCommand      command = "cancel"
+
+	// admin commands
+
+	adminCommand    command = "admin"
+	replyCommand    command = "reply" // 1 stage
+	statsCommand    command = "stats"
+	announceCommand command = "announce" // 1 stage
+)
+
+func (c command) String() string {
+	return string(c)
+}
+
+func (h *Handler) start(ctx context.Context, b *bot.Bot, update *models.Update) error {
+	return h.help(ctx, b, update)
+}
+
+func (h *Handler) help(ctx context.Context, b *bot.Bot, update *models.Update) error {
+	chat, err := h.getChat(ctx, update)
+	if err != nil {
+		return fmt.Errorf("help: get chat: %v", err)
+	}
+
+	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
+		ChatID:    chat.ChatID,
+		Text:      h.lp.GetText(chat.LanguageCode).Help,
+		ParseMode: models.ParseModeMarkdown,
+	})
+	if err != nil {
+		return fmt.Errorf("help: send message: %v", err)
+	}
+
+	h.resetState(ctx, chat)
+	return nil
+}
+
+func (h *Handler) today(ctx context.Context, b *bot.Bot, update *models.Update) error {
+	chat, err := h.getChat(ctx, update)
+	if err != nil {
+		return fmt.Errorf("today: get chat: %v", err)
+	}
+
+	prayerDay, err := h.db.GetPrayerDay(ctx, chat.BotID, h.now(chat.BotID))
+	if err != nil {
+		return fmt.Errorf("today: get prayer day: %v", err)
+	}
+
+	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
+		ChatID: chat.ChatID,
+		Text:   h.formatPrayerDay(prayerDay, chat.LanguageCode),
+	})
+	if err != nil {
+		return fmt.Errorf("today: send message: %v", err)
+	}
+
+	h.resetState(ctx, chat)
+	return nil
+}
+
+func (h *Handler) date(ctx context.Context, b *bot.Bot, update *models.Update) error {
+	chat, err := h.getChat(ctx, update)
+	if err != nil {
+		return fmt.Errorf("date: get chat: %v", err)
+	}
+
+	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
+		ChatID:      chat.ChatID,
+		Text:        h.lp.GetText(chat.LanguageCode).PrayerDate,
+		ReplyMarkup: h.monthsKeyboard(chat.LanguageCode),
+	})
+	if err != nil {
+		return fmt.Errorf("date: send message: %v", err)
+	}
+
+	h.resetState(ctx, chat)
+	return nil
+}
+
+func (h *Handler) next(ctx context.Context, b *bot.Bot, update *models.Update) error {
+	chat, err := h.getChat(ctx, update)
+	if err != nil {
+		return fmt.Errorf("next: get chat: %v", err)
+	}
+
+	date := h.now(chat.BotID)
+	prayerDay, err := h.db.GetPrayerDay(ctx, chat.BotID, date)
+	if err != nil {
+		return fmt.Errorf("next: get prayer day: %v", err)
+	}
+
+	prayerID, duration := domain.PrayerIDUnknown, time.Duration(0)
+	switch {
+	case prayerDay.Fajr.After(date):
+		prayerID, duration = domain.PrayerIDFajr, prayerDay.Fajr.Sub(date)
+	case prayerDay.Shuruq.After(date):
+		prayerID, duration = domain.PrayerIDShuruq, prayerDay.Shuruq.Sub(date)
+	case prayerDay.Dhuhr.After(date):
+		prayerID, duration = domain.PrayerIDDhuhr, prayerDay.Dhuhr.Sub(date)
+	case prayerDay.Asr.After(date):
+		prayerID, duration = domain.PrayerIDAsr, prayerDay.Asr.Sub(date)
+	case prayerDay.Maghrib.After(date):
+		prayerID, duration = domain.PrayerIDMaghrib, prayerDay.Maghrib.Sub(date)
+	case prayerDay.Isha.After(date):
+		prayerID, duration = domain.PrayerIDIsha, prayerDay.Isha.Sub(date)
+	}
+
+	// when no prayer time is found, return the first prayer of the next day
+	if prayerID == domain.PrayerIDUnknown || duration == 0 {
+		nextDate := domain.Date(date.Day()+1, date.Month(), date.Year(), date.Location())
+		prayerDay, err = h.db.GetPrayerDay(ctx, chat.BotID, nextDate)
+		if err != nil {
+			return fmt.Errorf("next: get prayer day: %v", err)
+		}
+		prayerID, duration = domain.PrayerIDFajr, prayerDay.Fajr.Sub(date)
+	}
+
+	text := h.lp.GetText(chat.LanguageCode)
+	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
+		ChatID:    chat.ChatID,
+		Text:      fmt.Sprintf(text.PrayerSoon, text.Prayer[int(prayerID)], formatDuration(duration)),
+		ParseMode: models.ParseModeMarkdown,
+	})
+	if err != nil {
+		return fmt.Errorf("next: send message: %v", err)
+	}
+
+	h.resetState(ctx, chat)
+	return nil
+}
+
+func (h *Handler) remind(ctx context.Context, b *bot.Bot, update *models.Update) error {
+	chat, err := h.getChat(ctx, update)
+	if err != nil {
+		return fmt.Errorf("remind: get chat: %v", err)
+	}
+
+	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
+		ChatID:      chat.ChatID,
+		Text:        h.lp.GetText(chat.LanguageCode).Remind.Start,
+		ReplyMarkup: h.remindKeyboard(),
+	})
+	if err != nil {
+		return fmt.Errorf("remind: send message: %v", err)
+	}
+
+	h.resetState(ctx, chat)
+	return nil
+}
+
+func (h *Handler) bug(ctx context.Context, b *bot.Bot, update *models.Update) error {
+	chat, err := h.getChat(ctx, update)
+	if err != nil {
+		return fmt.Errorf("bug: get chat: %v", err)
+	}
+
+	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
+		ChatID: chat.ChatID,
+		Text:   h.lp.GetText(chat.LanguageCode).Bug.Start,
+	})
+	if err != nil {
+		return fmt.Errorf("bug: send message: %v", err)
+	}
+
+	err = h.db.SetState(ctx, chat.BotID, chat.ChatID, bugState.String())
+	if err != nil {
+		return fmt.Errorf("bug: set state: %v", err)
+	}
+
+	return nil
+}
+
+func (h *Handler) feedback(ctx context.Context, b *bot.Bot, update *models.Update) error {
+	chat, err := h.getChat(ctx, update)
+	if err != nil {
+		return fmt.Errorf("feedback: get chat: %v", err)
+	}
+
+	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
+		ChatID: chat.ChatID,
+		Text:   h.lp.GetText(chat.LanguageCode).Feedback.Start,
+	})
+	if err != nil {
+		return fmt.Errorf("feedback: send message: %v", err)
+	}
+
+	err = h.db.SetState(ctx, chat.BotID, chat.ChatID, feedbackState.String())
+	if err != nil {
+		return fmt.Errorf("feedback: set state: %v", err)
+	}
+
+	return nil
+}
+
+func (h *Handler) language(ctx context.Context, b *bot.Bot, update *models.Update) error {
+	chat, err := h.getChat(ctx, update)
+	if err != nil {
+		return fmt.Errorf("language: get chat: %v", err)
+	}
+
+	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
+		ChatID:      chat.ChatID,
+		Text:        h.lp.GetText(chat.LanguageCode).Language.Start,
+		ReplyMarkup: h.languagesKeyboard(),
+	})
+	if err != nil {
+		return fmt.Errorf("language: send message: %v", err)
+	}
+
+	h.resetState(ctx, chat)
+	return nil
+}
+
+func (h *Handler) subscribe(ctx context.Context, b *bot.Bot, update *models.Update) error {
+	chat, err := h.getChat(ctx, update)
+	if err != nil {
+		return fmt.Errorf("subscribe: get chat: %v", err)
+	}
+
+	err = h.db.SetSubscribed(ctx, chat.BotID, chat.ChatID, true)
+	if err != nil {
+		return fmt.Errorf("subscribe: set subscribed: %v", err)
+	}
+
+	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
+		ChatID: chat.ChatID,
+		Text:   h.lp.GetText(chat.LanguageCode).SubscriptionSuccess,
+	})
+	if err != nil {
+		fmt.Printf("subscribe: send message: %v", err)
+	}
+
+	h.resetState(ctx, chat)
+	return nil
+}
+
+func (h *Handler) unsubscribe(ctx context.Context, b *bot.Bot, update *models.Update) error {
+	chat, err := h.getChat(ctx, update)
+	if err != nil {
+		return fmt.Errorf("unsubscribe: get chat: %v", err)
+	}
+
+	err = h.db.SetSubscribed(ctx, chat.BotID, chat.ChatID, false)
+	if err != nil {
+		return fmt.Errorf("unsubscribe: set subscribed: %v", err)
+	}
+
+	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
+		ChatID: chat.ChatID,
+		Text:   h.lp.GetText(chat.LanguageCode).UnsubscriptionSuccess,
+	})
+	if err != nil {
+		return fmt.Errorf("unsubscribe: send message: %v", err)
+	}
+
+	h.resetState(ctx, chat)
+	return nil
+}
+
+func (h *Handler) admin(ctx context.Context, b *bot.Bot, update *models.Update) error {
+	chat, err := h.getChat(ctx, update)
+	if err != nil {
+		return fmt.Errorf("admin: get chat: %v", err)
+	}
+
+	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
+		ChatID:    chat.ChatID,
+		Text:      h.lp.GetText(chat.LanguageCode).HelpAdmin,
+		ParseMode: models.ParseModeMarkdown,
+	})
+	if err != nil {
+		return fmt.Errorf("admin: send message: %v", err)
+	}
+
+	h.resetState(ctx, chat)
+	return nil
+}
+
+func (h *Handler) reply(ctx context.Context, b *bot.Bot, update *models.Update) error {
+	chat, err := h.getChat(ctx, update)
+	if err != nil {
+		return fmt.Errorf("reply: get chat: %v", err)
+	}
+
+	err = h.db.SetState(ctx, chat.BotID, chat.ChatID, string(replyState))
+	if err != nil {
+		return fmt.Errorf("reply: set state: %v", err)
+	}
+
+	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
+		ChatID: chat.ChatID,
+		Text:   h.lp.GetText(chat.LanguageCode).Reply.Start,
+	})
+	if err != nil {
+		return fmt.Errorf("reply: send message: %v", err)
+	}
+
+	h.resetState(ctx, chat)
+	return nil
+}
+
+func (h *Handler) stats(ctx context.Context, b *bot.Bot, update *models.Update) error {
+	chat, err := h.getChat(ctx, update)
+	if err != nil {
+		return fmt.Errorf("stats: get chat: %v", err)
+	}
+
+	stats, err := h.db.GetStats(ctx, chat.BotID)
+	if err != nil {
+		return fmt.Errorf("stats: get stats: %v", err)
+	}
+
+	languagesStats := &strings.Builder{}
+	for _, lang := range h.lp.GetLanguages() {
+		row := fmt.Sprintf("%s: %d\n", lang.Code, stats.LanguagesGrouped[lang.Code])
+		languagesStats.WriteString(row)
+	}
+
+	message := fmt.Sprintf(h.lp.GetText(chat.LanguageCode).Stats,
+		stats.Users,
+		stats.Subscribed,
+		stats.Unsubscribed,
+		languagesStats.String(),
+	)
+	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
+		ChatID: chat.ChatID,
+		Text:   message,
+	})
+	if err != nil {
+		return fmt.Errorf("stats: send message: %v", err)
+	}
+
+	h.resetState(ctx, chat)
+	return nil
+}
+
+func (h *Handler) announce(ctx context.Context, b *bot.Bot, update *models.Update) error {
+	chat, err := h.getChat(ctx, update)
+	if err != nil {
+		return fmt.Errorf("announce: get chat: %v", err)
+	}
+
+	err = h.db.SetState(ctx, chat.BotID, chat.ChatID, string(announceState))
+	if err != nil {
+		return fmt.Errorf("announce: set state: %v", err)
+	}
+
+	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
+		ChatID: chat.ChatID,
+		Text:   h.lp.GetText(chat.LanguageCode).Announce.Start,
+	})
+	if err != nil {
+		return fmt.Errorf("announce: send message: %v", err)
+	}
+
+	h.resetState(ctx, chat)
+	return nil
+}
+
+func (h *Handler) cancel(ctx context.Context, b *bot.Bot, update *models.Update) error {
+	chat, err := h.getChat(ctx, update)
+	if err != nil {
+		return fmt.Errorf("cancel: get chat: %v", err)
+	}
+
+	if chat.State == string(defaultState) {
+		_, err = b.SendMessage(ctx, &bot.SendMessageParams{
+			ChatID: chat.ChatID,
+			Text:   h.lp.GetText(chat.LanguageCode).Noop,
+		})
+		if err != nil {
+			return fmt.Errorf("cancel: send message: %v", err)
+		}
+		return nil
+	}
+
+	err = h.db.SetState(ctx, chat.BotID, chat.ChatID, string(defaultState))
+	if err != nil {
+		return fmt.Errorf("cancel: set state: %v", err)
+	}
+
+	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
+		ChatID: chat.ChatID,
+		Text:   h.lp.GetText(chat.LanguageCode).Cancel,
+	})
+	if err != nil {
+		return fmt.Errorf("cancel: send message: %v", err)
+	}
+
+	return nil
+}
+
+func (h *Handler) resetState(ctx context.Context, chat *domain.Chat) {
+	if chat.State == string(defaultState) {
+		return
+	}
+
+	err := h.db.SetState(ctx, chat.BotID, chat.ChatID, string(defaultState))
+	if err != nil {
+		fmt.Printf("reset state: bot_id: %d chat_id: %d err: %v", chat.BotID, chat.ChatID, err)
+	}
+}
+
+func (h *Handler) remindUser(
+	ctx context.Context,
+	b *bot.Bot,
+	chat *domain.Chat,
+	prayerID domain.PrayerID,
+	reminderOffset int32,
+) error {
+	var (
+		text            = h.lp.GetText(chat.LanguageCode)
+		duration        = time.Duration(reminderOffset) * time.Minute
+		prayer, message = text.Prayer[int(prayerID)], ""
+	)
+
+	switch {
+	case duration == 0:
+		message = fmt.Sprintf(text.PrayerArrived, prayer)
+	default:
+		message = fmt.Sprintf(text.PrayerSoon, prayer, formatDuration(duration))
+	}
+
+	res, err := b.SendMessage(ctx, &bot.SendMessageParams{
+		ChatID:    chat.ChatID,
+		Text:      message,
+		ParseMode: models.ParseModeMarkdown,
+	})
+	if err != nil {
+		return fmt.Errorf("send message: bot_id: %d chat_id: %d err: %v", chat.BotID, chat.ChatID, err)
+	}
+
+	if chat.ReminderMessageID == 0 { // no message to delete
+		return nil
+	}
+
+	_, err = b.DeleteMessage(ctx, &bot.DeleteMessageParams{
+		ChatID:    chat.ChatID,
+		MessageID: int(chat.ReminderMessageID),
+	})
+	if err != nil {
+		return fmt.Errorf("delete message: bot_id: %d chat_id: %d err: %v", chat.BotID, chat.ChatID, err)
+	}
+
+	err = h.db.SetReminderMessageID(ctx, chat.BotID, chat.ChatID, int32(res.ID))
+	if err != nil {
+		return fmt.Errorf("set remind message id: bot_id: %d chat_id: %d err: %v", chat.BotID, chat.ChatID, err)
+	}
+
+	return nil
+}

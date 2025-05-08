@@ -1,0 +1,103 @@
+name: "Türkmençe"
+
+weekday:
+  0: "Ýekşenbe"
+  1: "Duşenbe"
+  2: "Sişenbe"
+  3: "Çarşenbe"
+  4: "Penşenbe"
+  5: "Anna"
+  6: "Şenbe"
+
+month:
+  1: "Ýanwar"
+  2: "Fewral"
+  3: "Mart"
+  4: "Aprel"
+  5: "Maý"
+  6: "Iýun"
+  7: "Iýul"
+  8: "Awgust"
+  9: "Sentýabr"
+  10: "Oktýabr"
+  11: "Noýabr"
+  12: "Dekabr"
+
+prayer:
+  1: "Fäjir"
+  2: "Şuruk"
+  3: "Gündiz"
+  4: "Ikindi"
+  5: "Agşam"
+  6: "Gije"
+
+prayer_date: "📅 Namaz wagtyny görmek üçin senäni saýlaň"
+
+remind:
+  start: "⏰ Näçe minut öň duýduryş isleýärsiňiz?"
+  success: "✅ Duýduryş wagty *%d* minut goýuldy"
+
+language:
+  start: "🌐 Halaýan diliňizi saýlaň"
+  success: "✅ Dil *%s* diýip üýtgedildi"
+
+subscription_success: "✅ Namaz duýduryşlaryna abuna boldyňyz"
+unsubscription_success: "✅ Namaz duýduryşlaryna abuna bolmagyňyz bes edildi"
+
+prayer_soon: "⏳ *%s* soň *%s*"
+prayer_arrived: "🕌 *%s* wagty geldi"
+
+help: |
+  Kömek gerekmi? 😊 Men şulary edip bilýärin: 👇
+  
+  *Namazlar:*
+
+  ⏰ /today – Şu günki wagtlar  
+  📅 /date – Saýlanan gün üçin wagtlar  
+  ⏳ /next – Indiki namaz haçan?  
+  📨 /remind – Namazdan öň duýduryş goýmak
+  🔔 /subscribe – Her gün duýduryş almak  
+  🔕 /unsubscribe – Duýduryşlary bes etmek  
+
+  *Sazlamalar:*
+
+  🌐 /language – Dili üýtgetmek  
+
+  *Goldaw:*
+
+  📖 /help – Bu görkezmäni görkez  
+  🐞 /bug – Nädogrulygy habar ber  
+  💬 /feedback – Pikiriňizi iberiň
+
+feedback:
+  start: "💬 Pikirleriňizi paýlaşyň! (ýa-da /cancel ýazyp duruzuň)"
+  success: "✅ Sag boluň! Pikirleriňiz ugradyldy"
+
+bug:
+  start: "🐞 Tapylan nädogrulygy düşündiriň (ýa-da /cancel ýazyp duruzuň)"
+  success: "✅ Sag boluň! Nädogrulyk hasaba alyndy"
+
+help_admin: |
+  📩 /reply – Ulanyjylara jogap bermek
+  📊 /stats – Baryň statistikasyny görmek
+  📢 /announce – Ähli ulanyjylara habar ugratmak
+
+reply:
+  start: "✍️ Jogabyňyzy aşakda ýazyň"
+  success: "✅ Jogap ugradyldy"
+
+announce:
+  start: "📢 Näme habar bermek isleýärsiňiz?"
+  success: "✅ Habar ugradyldy"
+
+stats: |
+  📊 Bot statistikalary:
+  • Ulanyjylar: %d  
+  • Abuna bolanlar: %d  
+  • Abuna bolmadyklar: %d  
+
+  🌍 Ulanylýan diller:
+  %s
+
+cancel: "✖✅ Amal ýatyryldy"
+noop: "😴️ Hiç hili hereket edilmedi"

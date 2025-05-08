@@ -3,8 +3,9 @@ module github.com/escalopa/prayer-bot/sender
 go 1.21
 
 require (
-	github.com/escalopa/prayer-bot v0.0.0-20250508121336-5eafcade3be7
+	github.com/escalopa/prayer-bot v0.0.0-20250508181442-c0a509058509
 	github.com/go-telegram/bot v1.15.0
+	golang.org/x/sync v0.10.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -21,7 +22,6 @@ require (
 	github.com/ydb-platform/ydb-go-yc v0.12.3 // indirect
 	github.com/ydb-platform/ydb-go-yc-metadata v0.6.1 // indirect
 	golang.org/x/net v0.33.0 // indirect
-	golang.org/x/sync v0.10.0 // indirect
 	golang.org/x/sys v0.28.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 	google.golang.org/genproto v0.0.0-20240123012728-ef4313101c80 // indirect

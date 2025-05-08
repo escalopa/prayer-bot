@@ -34,8 +34,8 @@ type (
 
 		PrayerDate string `yaml:"prayer_date"`
 
-		NotifyOffset InteractiveMessage `yaml:"notify_offset"`
-		Language     InteractiveMessage `yaml:"language"`
+		Remind   InteractiveMessage `yaml:"remind"`
+		Language InteractiveMessage `yaml:"language"`
 
 		SubscriptionSuccess   string `yaml:"subscription_success"`
 		UnsubscriptionSuccess string `yaml:"unsubscription_success"`

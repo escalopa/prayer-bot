@@ -10,17 +10,15 @@ import (
 )
 
 const (
-	daysPerRow   = 5
-	monthsPerRow = 3
-
-	notifyPerRow = 4
-
 	languagesPerRow = 2
+	monthsPerRow    = 3
+	remindPerRow    = 4
+	daysPerRow      = 5
 )
 
 func (h *Handler) languagesKeyboard() *models.InlineKeyboardMarkup {
 	languages := h.lp.GetLanguages()
-	rows, emptyButtons := rowsCount(len(languages), languagesPerRow)
+	rows, empty := layoutRowsInfo(len(languages), languagesPerRow)
 
 	kb := &models.InlineKeyboardMarkup{InlineKeyboard: make([][]models.InlineKeyboardButton, rows)}
 
@@ -31,11 +29,11 @@ func (h *Handler) languagesKeyboard() *models.InlineKeyboardMarkup {
 		}
 		kb.InlineKeyboard[row] = append(kb.InlineKeyboard[row], models.InlineKeyboardButton{
 			Text:         lang.Name,
-			CallbackData: fmt.Sprintf("%s%s", callbackLanguage, lang.Code),
+			CallbackData: fmt.Sprintf("%s%s", languageQuery, lang.Code),
 		})
 	}
 
-	for i := 0; i < emptyButtons; i++ {
+	for i := 0; i < empty; i++ {
 		kb.InlineKeyboard[row] = append(kb.InlineKeyboard[row], emptyButton())
 	}
 
@@ -44,7 +42,7 @@ func (h *Handler) languagesKeyboard() *models.InlineKeyboardMarkup {
 
 func (h *Handler) monthsKeyboard(languageCode string) *models.InlineKeyboardMarkup {
 	months := h.lp.GetText(languageCode).GetMonths()
-	rows, _ := rowsCount(len(months), monthsPerRow)
+	rows, _ := layoutRowsInfo(len(months), monthsPerRow)
 
 	kb := &models.InlineKeyboardMarkup{InlineKeyboard: make([][]models.InlineKeyboardButton, rows)}
 
@@ -55,7 +53,7 @@ func (h *Handler) monthsKeyboard(languageCode string) *models.InlineKeyboardMark
 		}
 		kb.InlineKeyboard[row] = append(kb.InlineKeyboard[row], models.InlineKeyboardButton{
 			Text:         month.Name,
-			CallbackData: fmt.Sprintf("%s%d", callbackDateMonth, month.ID),
+			CallbackData: fmt.Sprintf("%s%d", monthQuery, month.ID),
 		})
 	}
 
@@ -63,8 +61,8 @@ func (h *Handler) monthsKeyboard(languageCode string) *models.InlineKeyboardMark
 }
 
 func (h *Handler) daysKeyboard(now time.Time, month int) *models.InlineKeyboardMarkup {
-	days := daysInMonth(month, now)
-	rows, emptyButtons := rowsCount(days, daysPerRow)
+	days := daysInMonth(time.Month(month), now)
+	rows, empty := layoutRowsInfo(days, daysPerRow)
 
 	kb := &models.InlineKeyboardMarkup{InlineKeyboard: make([][]models.InlineKeyboardButton, rows)}
 
@@ -77,35 +75,35 @@ func (h *Handler) daysKeyboard(now time.Time, month int) *models.InlineKeyboardM
 		day := i + 1
 		kb.InlineKeyboard[row] = append(kb.InlineKeyboard[row], models.InlineKeyboardButton{
 			Text:         strconv.Itoa(day),
-			CallbackData: fmt.Sprintf("%s%d%s%d", callbackDateDay, month, callbackDataSplitter, day),
+			CallbackData: fmt.Sprintf("%s%d%s%d", dayQuery, month, dataSplitterQuery, day),
 		})
 	}
 
-	for i := 0; i < emptyButtons; i++ {
+	for i := 0; i < empty; i++ {
 		kb.InlineKeyboard[row] = append(kb.InlineKeyboard[row], emptyButton())
 	}
 
 	return kb
 }
 
-func (h *Handler) notifyKeyboard() *models.InlineKeyboardMarkup {
-	offsets := domain.NotifyOffsets()
-	rows, emptyButtons := rowsCount(len(offsets), notifyPerRow)
+func (h *Handler) remindKeyboard() *models.InlineKeyboardMarkup {
+	reminderOffsets := domain.ReminderOffsets()
+	rows, empty := layoutRowsInfo(len(reminderOffsets), remindPerRow)
 
 	kb := &models.InlineKeyboardMarkup{InlineKeyboard: make([][]models.InlineKeyboardButton, rows)}
 
 	row := 0
-	for i, offset := range offsets {
-		if i%notifyPerRow == 0 && i != 0 {
+	for i, offset := range reminderOffsets {
+		if i%remindPerRow == 0 && i != 0 {
 			row++
 		}
 		kb.InlineKeyboard[row] = append(kb.InlineKeyboard[row], models.InlineKeyboardButton{
 			Text:         strconv.Itoa(int(offset)),
-			CallbackData: fmt.Sprintf("%s%d", callbackNotify, offset),
+			CallbackData: fmt.Sprintf("%s%d", remindQuery, offset),
 		})
 	}
 
-	for i := 0; i < emptyButtons; i++ {
+	for i := 0; i < empty; i++ {
 		kb.InlineKeyboard[row] = append(kb.InlineKeyboard[row], emptyButton())
 	}
 
@@ -113,8 +111,5 @@ func (h *Handler) notifyKeyboard() *models.InlineKeyboardMarkup {
 }
 
 func emptyButton() models.InlineKeyboardButton {
-	return models.InlineKeyboardButton{
-		Text:         " ",
-		CallbackData: " ",
-	}
+	return models.InlineKeyboardButton{Text: " ", CallbackData: emptyQuery.String()}
 }

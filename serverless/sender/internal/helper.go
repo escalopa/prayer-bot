@@ -2,6 +2,7 @@ package internal
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -21,11 +22,6 @@ func getContextBotID(ctx context.Context) int32 {
 	return botID
 }
 
-func (h *Handler) now(botID int32) time.Time {
-	loc, _ := time.LoadLocation(h.cfg[botID].Location)
-	return domain.Now(loc)
-}
-
 // formatPrayerDay formats the domain.PrayerDay into a string.
 func (h *Handler) formatPrayerDay(date *domain.PrayerDay, languageCode string) string {
 	text := h.lp.GetText(languageCode)
@@ -40,19 +36,23 @@ func (h *Handler) formatPrayerDay(date *domain.PrayerDay, languageCode string) s
 	)
 }
 
-// daysInMonth returns the number of days in a month.
-func daysInMonth(m int, t time.Time) int {
-	// month is incremented by 1 and day is 0 because we want the last day of the month.
-	return time.Date(t.Year(), time.Month(m+1), 0, 0, 0, 0, 0, t.Location()).Day()
+func (h *Handler) now(botID int32) time.Time {
+	return domain.Now(h.cfg[botID].Location.V())
 }
 
-// rowsCount calculates number of rows needed to display input count and number of empty cells in the last row.
-func rowsCount(inputCount, inputPerRow int) (int, int) {
-	if inputCount%inputPerRow == 0 {
-		return inputCount / inputPerRow, 0
+// daysInMonth returns the number of days in a month.
+func daysInMonth(month time.Month, t time.Time) int {
+	// month is incremented by 1 and day is 0 because we want the last day of the month.
+	return time.Date(t.Year(), month+1, 0, 0, 0, 0, 0, t.Location()).Day()
+}
+
+// layoutRowsInfo calculates number of rows needed to display input count and number of empty cells in the last row.
+func layoutRowsInfo(totalItems, itemsPerRow int) (int, int) {
+	if totalItems%itemsPerRow == 0 {
+		return totalItems / itemsPerRow, 0
 	}
-	reminder := inputPerRow - (inputCount % inputPerRow)
-	return (inputCount / inputPerRow) + 1, reminder
+	empty := itemsPerRow - (totalItems % itemsPerRow)
+	return (totalItems / itemsPerRow) + 1, empty
 }
 
 // formatDuration formats the duration into a string with hours and minutes only.
@@ -63,4 +63,18 @@ func formatDuration(d time.Duration) string {
 		return fmt.Sprintf("%dm", m)
 	}
 	return fmt.Sprintf("%dh%dm", h, m)
+}
+
+func unmarshalPayload[T any](data interface{}) (*T, error) {
+	b, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+
+	var t T
+	if err := json.Unmarshal(b, &t); err != nil {
+		return nil, fmt.Errorf("unmarshal: %T got: %T: %v", t, data, err)
+	}
+
+	return &t, nil
 }

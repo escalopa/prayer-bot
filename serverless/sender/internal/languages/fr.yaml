@@ -1,0 +1,103 @@
+name: "Français"
+
+weekday:
+  0: "Dimanche"
+  1: "Lundi"
+  2: "Mardi"
+  3: "Mercredi"
+  4: "Jeudi"
+  5: "Vendredi"
+  6: "Samedi"
+
+month:
+  1: "Janvier"
+  2: "Février"
+  3: "Mars"
+  4: "Avril"
+  5: "Mai"
+  6: "Juin"
+  7: "Juillet"
+  8: "Août"
+  9: "Septembre"
+  10: "Octobre"
+  11: "Novembre"
+  12: "Décembre"
+
+prayer:
+  1: "Fajr"
+  2: "Chourouq"
+  3: "Dhuhr"
+  4: "Asr"
+  5: "Maghrib"
+  6: "Icha"
+
+prayer_date: "📅 Choisissez une date pour voir les horaires de prière"
+
+remind:
+  start: "⏰ Choisissez combien de minutes à l'avance vous souhaitez être rappelé"
+  success: "✅ Rappel réglé sur *%d* minutes"
+
+language:
+  start: "🌐 Choisissez votre langue préférée"
+  success: "✅ Langue changée en *%s*"
+
+subscription_success: "✅ Vous êtes maintenant abonné aux rappels de prière"
+unsubscription_success: "✅ Vous vous êtes désabonné des rappels de prière"
+
+prayer_soon: "⏳ *%s* après *%s*"
+prayer_arrived: "🕌 C’est l’heure de *%s*"
+
+help: |
+  Besoin d'aide ? 😊 Voici ce que je peux faire : 👇
+  
+  *Prières:*
+
+  ⏰ /today – Horaires d'aujourd'hui  
+  📅 /date – Horaires pour une date choisie  
+  ⏳ /next – Quand est la prochaine prière ?  
+  📨 /remind – Définir un rappel avant la prière
+  🔔 /subscribe – Recevoir des rappels quotidiens  
+  🔕 /unsubscribe – Arrêter les rappels quotidiens  
+
+  *Paramètres:*
+
+  🌐 /language – Changer de langue  
+
+  *Support:*
+
+  📖 /help – Afficher ce guide  
+  🐞 /bug – Signaler un problème  
+  💬 /feedback – Envoyer un retour
+
+feedback:
+  start: "💬 Partagez vos commentaires ! (ou tapez /cancel pour arrêter)"
+  success: "✅ Merci ! Votre commentaire a été envoyé"
+
+bug:
+  start: "🐞 Décrivez le bug rencontré (ou tapez /cancel pour arrêter)"
+  success: "✅ Merci ! Votre rapport a été reçu"
+
+help_admin: |
+  📩 /reply – Répondre aux utilisateurs
+  📊 /stats – Statistiques du bot
+  📢 /announce – Envoyer un message à tout le monde
+
+reply:
+  start: "✍️ Tapez votre réponse ci-dessous"
+  success: "✅ Réponse envoyée"
+
+announce:
+  start: "📢 Que souhaitez-vous annoncer ?"
+  success: "✅ Annonce envoyée"
+
+stats: |
+  📊 Statistiques du bot:
+  • Utilisateurs: %d  
+  • Abonnés: %d  
+  • Désabonnés: %d  
+
+  🌍 Langues utilisées:
+  %s
+
+cancel: "✖✅ Processus annulé"
+noop: "😴️ Aucune action effectuée"

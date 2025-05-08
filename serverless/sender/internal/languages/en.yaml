@@ -33,18 +33,18 @@ prayer:
 
 prayer_date: "📅 Choose a date to view prayers"
 
-notify_offset:
-  start: "⏰ Pick how early you want to be notified (in minutes)"
-  success: "✅ Notification time set to *%d* minutes"
+remind:
+  start: "⏰ Pick how early you want to be reminded (in minutes)"
+  success: "✅ Reminder time set to *%d* minutes"
 
 language:
   start: "🌐 Pick your preferred language"
   success: "✅ Language changed to *%s*"
 
-subscription_success: "✅ You’re now subscribed to prayer alerts"
-unsubscription_success: "✅ You’ve unsubscribed from prayer alerts"
+subscription_success: "✅ You’re now subscribed to prayer reminders"
+unsubscription_success: "✅ You’ve unsubscribed from prayer reminders"
 
-prayer_soon: "⏳ *%s* is in *%s*"
+prayer_soon: "⏳ *%s* after *%s*"
 prayer_arrived: "🕌 It’s time for *%s*"
 
 help: |
@@ -55,9 +55,9 @@ help: |
   ⏰ /today – Today’s times  
   📅 /date – Times for a chosen day  
   ⏳ /next – When’s the next prayer?  
-  📨 /notify – Set a reminder offset  
+  📨 /remind – Set a reminder before prayer
   🔔 /subscribe – Get daily reminders  
-  🔕 /unsubscribe – Stop reminders  
+  🔕 /unsubscribe – Stop daily reminders  
 
   *Settings:*
 
@@ -70,16 +70,14 @@ help: |
   💬 /feedback – Send feedback
 
 feedback:
-  start: "💬 Share your feedback! (Or type /cancel to stop)"
+  start: "💬 Share your feedback! (or type /cancel to stop)"
   success: "✅ Thank you! Your feedback has been sent"
 
 bug:
-  start: "🐞 Describe the bug you found (or /cancel to skip)"
+  start: "🐞 Describe the bug you found (or /cancel to stop)"
   success: "✅ Thanks! Your report has been received"
 
 help_admin: |
-  👨‍💻 *Admin Tools:*
-  
   📩 /reply – Reply to users
   📊 /stats – Bot usage stats
   📢 /announce – Send message to everyone
@@ -101,5 +99,5 @@ stats: |
   🌍 Languages used:
   %s
 
-cancel: "✖️ Cancelled."
-noop: "✖️ Nothing to cancel"
+cancel: "✖✅ Process cancelled"
+noop: "😴️ No action taken"

@@ -1,9 +1,9 @@
-module github.com/escalopa/prayer-bot/notifier
+module github.com/escalopa/prayer-bot/reminder
 
 go 1.21
 
 require (
-	github.com/escalopa/prayer-bot v0.0.0-20250508012350-021d3424d8ae
+	github.com/escalopa/prayer-bot v0.0.0-20250508181442-c0a509058509
 	golang.org/x/sync v0.10.0
 )
 

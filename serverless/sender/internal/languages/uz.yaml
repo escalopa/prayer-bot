@@ -1,0 +1,103 @@
+name: "O‘zbekcha"
+
+weekday:
+  0: "Yakshanba"
+  1: "Dushanba"
+  2: "Seshanba"
+  3: "Chorshanba"
+  4: "Payshanba"
+  5: "Juma"
+  6: "Shanba"
+
+month:
+  1: "Yanvar"
+  2: "Fevral"
+  3: "Mart"
+  4: "Aprel"
+  5: "May"
+  6: "Iyun"
+  7: "Iyul"
+  8: "Avgust"
+  9: "Sentyabr"
+  10: "Oktyabr"
+  11: "Noyabr"
+  12: "Dekabr"
+
+prayer:
+  1: "Bomdod"
+  2: "Quyosh"
+  3: "Peshin"
+  4: "Asr"
+  5: "Shom"
+  6: "Xufton"
+
+prayer_date: "📅 Namoz vaqtlarini ko‘rish uchun sana tanlang"
+
+remind:
+  start: "⏰ Necha daqiqa oldin eslatma olishni xohlaysiz?"
+  success: "✅ Eslatma vaqti *%d* daqiqa qilib belgilandi"
+
+language:
+  start: "🌐 O‘zingizga qulay tilni tanlang"
+  success: "✅ Til *%s* ga o‘zgartirildi"
+
+subscription_success: "✅ Namoz eslatmalariga obuna bo‘ldingiz"
+unsubscription_success: "✅ Namoz eslatmalaridan obuna bekor qilindi"
+
+prayer_soon: "⏳ *%s* keyin *%s*"
+prayer_arrived: "🕌 *%s* vaqti keldi"
+
+help: |
+  Yordam kerakmi? 😊 Men quyidagilarni bajara olaman: 👇
+  
+  *Namozlar:*
+
+  ⏰ /today – Bugungi vaqtlar  
+  📅 /date – Tanlangan kun uchun vaqtlar  
+  ⏳ /next – Keyingi namoz qachon?  
+  📨 /remind – Namozdan oldin eslatma o‘rnatish
+  🔔 /subscribe – Har kungi eslatmalarni olish  
+  🔕 /unsubscribe – Eslatmalarni to‘xtatish  
+
+  *Sozlamalar:*
+
+  🌐 /language – Tilni o‘zgartirish  
+
+  *Yordam:*
+
+  📖 /help – Ushbu qo‘llanmani ko‘rsatish  
+  🐞 /bug – Xatolik haqida xabar berish  
+  💬 /feedback – Fikr-mulohaza yuborish
+
+feedback:
+  start: "💬 Fikr-mulohazangizni yuboring! (/cancel yozib to‘xtatish mumkin)"
+  success: "✅ Rahmat! Fikringiz yuborildi"
+
+bug:
+  start: "🐞 Topilgan xatolikni ta’riflab bering (/cancel yozib to‘xtatish mumkin)"
+  success: "✅ Rahmat! Xatolik qabul qilindi"
+
+help_admin: |
+  📩 /reply – Foydalanuvchilarga javob berish
+  📊 /stats – Bot statistikasi
+  📢 /announce – Hamma foydalanuvchilarga xabar yuborish
+
+reply:
+  start: "✍️ Javobni quyida yozing"
+  success: "✅ Javob yuborildi"
+
+announce:
+  start: "📢 Nima haqida e’lon qilmoqchisiz?"
+  success: "✅ E’lon yuborildi"
+
+stats: |
+  📊 Bot statistikasi:
+  • Foydalanuvchilar: %d  
+  • Obuna bo‘lganlar: %d  
+  • Obunani bekor qilganlar: %d  
+
+  🌍 Foydalanilayotgan tillar:
+  %s
+
+cancel: "✖✅ Jarayon bekor qilindi"
+noop: "😴️ Hech qanday harakat amalga oshirilmadi"

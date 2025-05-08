@@ -2,7 +2,7 @@ module github.com/escalopa/prayer-bot/loader
 
 go 1.21
 
-require github.com/escalopa/prayer-bot v0.0.0-20250508181442-c0a509058509
+require github.com/escalopa/prayer-bot v0.0.0-20250508181623-a9498f6862f6
 
 require (
 	github.com/aws/aws-sdk-go v1.55.7 // indirect

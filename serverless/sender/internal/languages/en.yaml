@@ -83,21 +83,23 @@ help_admin: |
   📢 /announce – Send message to everyone
 
 reply:
-  start: "✍️ Type your reply below"
+  start: "✍️ Type your reply below (or /cancel to stop)"
   success: "✅ Reply sent"
 
 announce:
-  start: "📢 What would you like to announce?"
+  start: "📢 What would you like to announce? (or /cancel to stop)"
   success: "✅ Announcement delivered"
 
 stats: |
   📊 Bot Stats:
+  
   • Users: %d  
   • Subscribed: %d  
   • Unsubscribed: %d  
 
   🌍 Languages used:
+  
   %s
 
-cancel: "✖✅ Process cancelled"
+cancel: "✅ Process cancelled"
 noop: "😴️ No action taken"

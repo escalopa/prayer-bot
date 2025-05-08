@@ -571,6 +571,10 @@ github.com/envoyproxy/protoc-gen-validate v0.9.1/go.mod h1:OKNgG7TCp5pF4d6XftA0+
 github.com/envoyproxy/protoc-gen-validate v0.10.0/go.mod h1:DRjgyB0I43LtJapqN6NiRwroiAU2PaFuvk/vjgh61ss=
 github.com/escalopa/prayer-bot v0.0.0-20250508181442-c0a509058509 h1:Z9EAdVW2/vkPjUmpwE4SauwPJIfhQ2sSD9HztOEp+pQ=
 github.com/escalopa/prayer-bot v0.0.0-20250508181442-c0a509058509/go.mod h1:w5CaXlkQtx4XXg9vSyqfQTueyoqx6hqlfataQBsXUio=
+github.com/escalopa/prayer-bot v0.0.0-20250508181623-a9498f6862f6 h1:xaPdZKK7Wzj7590VyLK9Iq61ezVS7nbbS5PyU/EGfVQ=
+github.com/escalopa/prayer-bot v0.0.0-20250508181623-a9498f6862f6/go.mod h1:w5CaXlkQtx4XXg9vSyqfQTueyoqx6hqlfataQBsXUio=
+github.com/escalopa/prayer-bot v0.0.0-20250508191331-5ff547c62cc5 h1:QDpAOWseXxYSLx1tgyqxOhmpCLRAKfPrFJrDB+jo1TI=
+github.com/escalopa/prayer-bot v0.0.0-20250508191331-5ff547c62cc5/go.mod h1:w5CaXlkQtx4XXg9vSyqfQTueyoqx6hqlfataQBsXUio=
 github.com/fogleman/gg v1.2.1-0.20190220221249-0403632d5b90/go.mod h1:R/bRT+9gY/C5z7JzPU0zXsXHKM4/ayA+zqcVNZzPa1k=
 github.com/fogleman/gg v1.3.0/go.mod h1:R/bRT+9gY/C5z7JzPU0zXsXHKM4/ayA+zqcVNZzPa1k=
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=

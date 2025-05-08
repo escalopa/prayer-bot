@@ -60,10 +60,10 @@ func (h *Handler) Do(ctx context.Context, botID int32) error {
 	payload := &domain.Payload{
 		Type: domain.PayloadTypeReminder,
 		Data: &domain.ReminderPayload{
-			BotID:    botID,
-			ChatIDs:  chatIDs,
-			PrayerID: prayerID,
-			Offset:   left,
+			BotID:          botID,
+			ChatIDs:        chatIDs,
+			PrayerID:       prayerID,
+			ReminderOffset: left,
 		},
 	}
 
@@ -75,8 +75,8 @@ func (h *Handler) Do(ctx context.Context, botID int32) error {
 	return nil
 }
 
-func (h *Handler) getPrayer(ctx context.Context, botID int32, location *time.Location) (domain.PrayerID, int32, error) {
-	date := domain.Now(location)
+func (h *Handler) getPrayer(ctx context.Context, botID int32, loc *time.Location) (domain.PrayerID, int32, error) {
+	date := domain.Now(loc)
 	prayerDay, err := h.db.GetPrayerDay(ctx, botID, date)
 	if err != nil {
 		return 0, 0, fmt.Errorf("get prayer day [bot_id: %d, date: %s] => %v", botID, date, err)

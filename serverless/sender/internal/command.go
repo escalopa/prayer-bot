@@ -94,7 +94,7 @@ func (h *Handler) today(ctx context.Context, b *bot.Bot, update *models.Update) 
 
 	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID: chat.ChatID,
-		Text:   h.formatPrayerDay(prayerDay, chat.LanguageCode),
+		Text:   h.formatPrayerDay(chat.BotID, prayerDay, chat.LanguageCode),
 	})
 	if err != nil {
 		return fmt.Errorf("today: send message: %v", err)
@@ -153,8 +153,7 @@ func (h *Handler) next(ctx context.Context, b *bot.Bot, update *models.Update) e
 
 	// when no prayer time is found, return the first prayer of the next day
 	if prayerID == domain.PrayerIDUnknown || duration == 0 {
-		nextDate := domain.Date(date.Day()+1, date.Month(), date.Year(), date.Location())
-		prayerDay, err = h.db.GetPrayerDay(ctx, chat.BotID, nextDate)
+		prayerDay, err = h.db.GetPrayerDay(ctx, chat.BotID, date.AddDate(0, 0, 1))
 		if err != nil {
 			return fmt.Errorf("next: get prayer day: %v", err)
 		}

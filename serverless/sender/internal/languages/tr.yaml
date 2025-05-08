@@ -83,21 +83,23 @@ help_admin: |
   📢 /announce – Ähli ulanyjylara habar ugratmak
 
 reply:
-  start: "✍️ Jogabyňyzy aşakda ýazyň"
+  start: "✍️ Jogabyňyzy aşakda ýazyň (ýa-da /cancel ýazyp duruzuň)"
   success: "✅ Jogap ugradyldy"
 
 announce:
-  start: "📢 Näme habar bermek isleýärsiňiz?"
+  start: "📢 Näme habar bermek isleýärsiňiz? (ýa-da /cancel ýazyp duruzuň)"
   success: "✅ Habar ugradyldy"
 
 stats: |
   📊 Bot statistikalary:
+
   • Ulanyjylar: %d  
   • Abuna bolanlar: %d  
   • Abuna bolmadyklar: %d  
 
   🌍 Ulanylýan diller:
+
   %s
 
-cancel: "✖✅ Amal ýatyryldy"
+cancel: "✅ Amal ýatyryldy"
 noop: "😴️ Hiç hili hereket edilmedi"

@@ -23,16 +23,17 @@ func getContextBotID(ctx context.Context) int32 {
 }
 
 // formatPrayerDay formats the domain.PrayerDay into a string.
-func (h *Handler) formatPrayerDay(date *domain.PrayerDay, languageCode string) string {
+func (h *Handler) formatPrayerDay(botID int32, date *domain.PrayerDay, languageCode string) string {
+	loc := h.cfg[botID].Location.V()
 	text := h.lp.GetText(languageCode)
 	return fmt.Sprintf(prayerText,
 		text.Weekday[int(date.Date.Weekday())], date.Date.Format(prayerDayFormat),
-		text.Prayer[int(domain.PrayerIDFajr)], date.Fajr.Format(prayerTimeFormat),
-		text.Prayer[int(domain.PrayerIDShuruq)], date.Shuruq.Format(prayerTimeFormat),
-		text.Prayer[int(domain.PrayerIDDhuhr)], date.Dhuhr.Format(prayerTimeFormat),
-		text.Prayer[int(domain.PrayerIDAsr)], date.Asr.Format(prayerTimeFormat),
-		text.Prayer[int(domain.PrayerIDMaghrib)], date.Maghrib.Format(prayerTimeFormat),
-		text.Prayer[int(domain.PrayerIDIsha)], date.Isha.Format(prayerTimeFormat),
+		text.Prayer[int(domain.PrayerIDFajr)], date.Fajr.In(loc).Format(prayerTimeFormat),
+		text.Prayer[int(domain.PrayerIDShuruq)], date.Shuruq.In(loc).Format(prayerTimeFormat),
+		text.Prayer[int(domain.PrayerIDDhuhr)], date.Dhuhr.In(loc).Format(prayerTimeFormat),
+		text.Prayer[int(domain.PrayerIDAsr)], date.Asr.In(loc).Format(prayerTimeFormat),
+		text.Prayer[int(domain.PrayerIDMaghrib)], date.Maghrib.In(loc).Format(prayerTimeFormat),
+		text.Prayer[int(domain.PrayerIDIsha)], date.Isha.In(loc).Format(prayerTimeFormat),
 	)
 }
 

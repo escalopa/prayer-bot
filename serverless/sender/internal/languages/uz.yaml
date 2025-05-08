@@ -83,21 +83,23 @@ help_admin: |
   📢 /announce – Hamma foydalanuvchilarga xabar yuborish
 
 reply:
-  start: "✍️ Javobni quyida yozing"
+  start: "✍️ Javobni quyida yozing (/cancel yozib to‘xtatish mumkin)"
   success: "✅ Javob yuborildi"
 
 announce:
-  start: "📢 Nima haqida e’lon qilmoqchisiz?"
+  start: "📢 Nima haqida e’lon qilmoqchisiz? (/cancel yozib to‘xtatish mumkin)"
   success: "✅ E’lon yuborildi"
 
 stats: |
   📊 Bot statistikasi:
+
   • Foydalanuvchilar: %d  
   • Obuna bo‘lganlar: %d  
   • Obunani bekor qilganlar: %d  
 
   🌍 Foydalanilayotgan tillar:
+
   %s
 
-cancel: "✖✅ Jarayon bekor qilindi"
+cancel: "✅ Jarayon bekor qilindi"
 noop: "😴️ Hech qanday harakat amalga oshirilmadi"

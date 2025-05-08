@@ -83,21 +83,23 @@ help_admin: |
   📢 /announce – Envoyer un message à tout le monde
 
 reply:
-  start: "✍️ Tapez votre réponse ci-dessous"
+  start: "✍️ Tapez votre réponse ci-dessous (/cancel pour annuler)"
   success: "✅ Réponse envoyée"
 
 announce:
-  start: "📢 Que souhaitez-vous annoncer ?"
+  start: "📢 Que souhaitez-vous annoncer? (/cancel pour annuler)"
   success: "✅ Annonce envoyée"
 
 stats: |
   📊 Statistiques du bot:
+
   • Utilisateurs: %d  
   • Abonnés: %d  
   • Désabonnés: %d  
 
   🌍 Langues utilisées:
+
   %s
 
-cancel: "✖✅ Processus annulé"
+cancel: "✅ Processus annulé"
 noop: "😴️ Aucune action effectuée"

@@ -51,7 +51,7 @@ func (h Handler) Do(ctx context.Context, bucket string, key string) error {
 		return fmt.Errorf("extract info from filename: %q: %v", key, err)
 	}
 
-	_, ok := h.config[botID]
+	cfg, ok := h.config[botID]
 	if !ok {
 		return fmt.Errorf("bot config not found for bot_id: %d", botID)
 	}
@@ -61,7 +61,7 @@ func (h Handler) Do(ctx context.Context, bucket string, key string) error {
 		return fmt.Errorf("get file from S3: %q: %v", key, err)
 	}
 
-	rows, err := parsePrayerDays(bytes.NewReader(data))
+	rows, err := parsePrayerDays(bytes.NewReader(data), cfg.Location.V())
 	if err != nil {
 		return fmt.Errorf("load schedule: %q: %v", key, err)
 	}

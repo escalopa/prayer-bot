@@ -36,7 +36,7 @@ func (h *Handler) Do(ctx context.Context, body string, headers map[string]string
 	}
 
 	payload := &domain.Payload{
-		Type: domain.PayloadTypeHandler,
+		Type: domain.PayloadTypeDispatcher,
 		Data: &domain.DispatcherPayload{
 			BotID: botID,
 			Data:  body,

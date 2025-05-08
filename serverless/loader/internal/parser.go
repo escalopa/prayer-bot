@@ -13,8 +13,6 @@ import (
 var (
 	dayFormat   = "2/1/2006"
 	clockFormat = "15:04"
-
-	loc = time.UTC
 )
 
 const (
@@ -22,7 +20,7 @@ const (
 	columnsCount = 7 // (date, fajr, shuruq, dhuhr, asr, maghrib, isha)
 )
 
-func parsePrayerDays(file io.Reader) (prayerDays []*domain.PrayerDay, err error) {
+func parsePrayerDays(file io.Reader, loc *time.Location) (prayerDays []*domain.PrayerDay, err error) {
 	reader := csv.NewReader(file)
 	reader.FieldsPerRecord = columnsCount
 	reader.TrimLeadingSpace = true
@@ -43,7 +41,7 @@ func parsePrayerDays(file io.Reader) (prayerDays []*domain.PrayerDay, err error)
 			return nil, err
 		}
 
-		prayerDay, err := parseRecord(record)
+		prayerDay, err := parseRecord(record, loc)
 		if err != nil {
 			return nil, err
 		}
@@ -55,7 +53,7 @@ func parsePrayerDays(file io.Reader) (prayerDays []*domain.PrayerDay, err error)
 }
 
 // parseRecord parses a record from the file
-func parseRecord(record []string) (*domain.PrayerDay, error) {
+func parseRecord(record []string, loc *time.Location) (*domain.PrayerDay, error) {
 	if len(record) != columnsCount {
 		return nil, fmt.Errorf("parseRecord: invalid number of fields, expected 7, got %d", len(record))
 	}
@@ -67,7 +65,7 @@ func parseRecord(record []string) (*domain.PrayerDay, error) {
 	}
 
 	// parse prayerDay's times
-	prayers, err := parsePrayer(record[1:], date) // skip first record since it was date
+	prayers, err := parsePrayer(record[1:], date, loc) // skip first record since it was date
 	if err != nil {
 		return nil, err
 	}
@@ -94,11 +92,11 @@ func parseDate(line string) (time.Time, error) {
 	if err != nil {
 		return time.Time{}, fmt.Errorf("parseDate[%s]: %v", line, err)
 	}
-	return domain.Date(t.Day(), t.Month(), t.Year(), loc), nil
+	return domain.Date(t.Day(), t.Month(), t.Year(), time.UTC), nil
 }
 
 // parsePrayer parses prayerDay's times
-func parsePrayer(prayerTimes []string, day time.Time) ([]time.Time, error) {
+func parsePrayer(prayerTimes []string, day time.Time, loc *time.Location) ([]time.Time, error) {
 	if len(prayerTimes) != prayersCount {
 		return nil, fmt.Errorf("unexpected number of prayers: expected: %d got: %d", prayersCount, len(prayerTimes))
 	}

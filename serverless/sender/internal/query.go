@@ -83,7 +83,7 @@ func (h *Handler) dayQuery(ctx context.Context, b *bot.Bot, update *models.Updat
 	_, err = b.EditMessageText(ctx, &bot.EditMessageTextParams{
 		ChatID:    chat.ChatID,
 		MessageID: update.CallbackQuery.Message.Message.ID,
-		Text:      h.formatPrayerDay(prayerDay, chat.LanguageCode),
+		Text:      h.formatPrayerDay(chat.BotID, prayerDay, chat.LanguageCode),
 	})
 	if err != nil {
 		return fmt.Errorf("dayQuery: edit message: %v", err)

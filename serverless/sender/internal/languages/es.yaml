@@ -83,21 +83,23 @@ help_admin: |
   📢 /announce – Enviar un mensaje a todos
 
 reply:
-  start: "✍️ Escribe tu respuesta abajo"
+  start: "✍️ Escribe tu respuesta abajo (o escribe /cancel para cancelar)"
   success: "✅ Respuesta enviada"
 
 announce:
-  start: "📢 ¿Qué deseas anunciar?"
+  start: "📢 ¿Qué deseas anunciar? (o escribe /cancel para cancelar)"
   success: "✅ Anuncio enviado"
 
 stats: |
   📊 Estadísticas del bot:
+  
   • Usuarios: %d  
   • Suscritos: %d  
   • No suscritos: %d  
 
   🌍 Idiomas usados:
+  
   %s
 
-cancel: "✖✅ Proceso cancelado"
+cancel: "✅ Proceso cancelado"
 noop: "😴️ No se realizó ninguna acción"

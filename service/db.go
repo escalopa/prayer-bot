@@ -45,7 +45,7 @@ func NewDB(ctx context.Context) (*DB, error) {
 	return &DB{client: sdk.Table()}, nil
 }
 
-func (db *DB) CreateChat(ctx context.Context, botID int32, chatID int64, languageCode string, notifyOffset int32, state string) error {
+func (db *DB) CreateChat(ctx context.Context, botID int32, chatID int64, languageCode string, reminderOffset int32, state string) error {
 	query := `
 		DECLARE $bot_id AS Int32;
 		DECLARE $chat_id AS Int64;
@@ -54,7 +54,7 @@ func (db *DB) CreateChat(ctx context.Context, botID int32, chatID int64, languag
 		DECLARE $state AS Utf8;
 		DECLARE $subscribed AS Bool;
 
-		INSERT INTO chats (bot_id, chat_id, language_code, notify_offset, state, subscribed, subscribed_at)
+		INSERT INTO chats (bot_id, chat_id, language_code, reminder_offset, state, subscribed, subscribed_at)
 		VALUES ($bot_id, $chat_id, $language_code, $reminder_offset, $state, $subscribed, CurrentUtcDatetime());
 	`
 
@@ -62,7 +62,7 @@ func (db *DB) CreateChat(ctx context.Context, botID int32, chatID int64, languag
 		table.ValueParam("$bot_id", types.Int32Value(botID)),
 		table.ValueParam("$chat_id", types.Int64Value(chatID)),
 		table.ValueParam("$language_code", types.UTF8Value(languageCode)),
-		table.ValueParam("$reminder_offset", types.Int32Value(notifyOffset)),
+		table.ValueParam("$reminder_offset", types.Int32Value(reminderOffset)),
 		table.ValueParam("$state", types.UTF8Value(state)),
 		table.ValueParam("$subscribed", types.BoolValue(false)),
 	)
@@ -87,7 +87,7 @@ func (db *DB) GetChat(ctx context.Context, botID int32, chatID int64) (chat *dom
 		DECLARE $bot_id AS Int32;
 		DECLARE $chat_id AS int64;
 
-		SELECT bot_id, chat_id, state, language_code, notify_message_id
+		SELECT bot_id, chat_id, state, language_code, reminder_message_id
 		FROM chats
 		WHERE bot_id = $bot_id AND chat_id = $chat_id;
 	`
@@ -137,7 +137,7 @@ func (db *DB) GetChatsByIDs(ctx context.Context, botID int32, chatIDs []int64) (
 		DECLARE $bot_id AS Int32;
 		DECLARE $chat_ids AS List<Int64>;
 
-		SELECT bot_id, chat_id, state, language_code, notify_message_id
+		SELECT bot_id, chat_id, state, language_code, reminder_message_id
 		FROM chats
 		WHERE bot_id = $bot_id AND chat_id IN $chat_ids;
 	`
@@ -190,7 +190,7 @@ func (db *DB) GetChats(ctx context.Context, botID int32) (chats []*domain.Chat, 
 	query := `
 		DECLARE $bot_id AS Int32;
 
-		SELECT bot_id, chat_id, state, language_code, notify_message_id
+		SELECT bot_id, chat_id, state, language_code, reminder_message_id
 		FROM chats
 		WHERE bot_id = $bot_id;
 	`
@@ -275,7 +275,7 @@ func (db *DB) GetSubscribersByOffset(ctx context.Context, botID int32, offset in
 
 		SELECT chat_id
 		FROM chats
-		WHERE bot_id = $bot_id AND subscribed = true AND notify_offset = $offset;
+		WHERE bot_id = $bot_id AND subscribed = true AND reminder_offset = $offset;
 	`
 
 	params := table.NewQueryParameters(
@@ -368,7 +368,7 @@ func (db *DB) SetReminderOffset(ctx context.Context, botID int32, chatID int64, 
 		DECLARE $reminder_offset AS Int32;
 
 		UPDATE chats
-		SET notify_offset = $reminder_offset
+		SET reminder_offset = $reminder_offset
 		WHERE bot_id = $bot_id AND chat_id = $chat_id;
 	`
 
@@ -386,21 +386,21 @@ func (db *DB) SetReminderOffset(ctx context.Context, botID int32, chatID int64, 
 	return err
 }
 
-func (db *DB) SetReminderMessageID(ctx context.Context, botID int32, chatID int64, notifyMessageID int32) error {
+func (db *DB) SetReminderMessageID(ctx context.Context, botID int32, chatID int64, reminderMessageID int32) error {
 	query := `
 		DECLARE $bot_id AS Int32;
 		DECLARE $chat_id AS Int64;
 		DECLARE $reminder_message_id AS Int32;
 
 		UPDATE chats
-		SET notify_message_id = $reminder_message_id
+		SET reminder_message_id = $reminder_message_id
 		WHERE bot_id = $bot_id AND chat_id = $chat_id;
 	`
 
 	params := table.NewQueryParameters(
 		table.ValueParam("$bot_id", types.Int32Value(botID)),
 		table.ValueParam("$chat_id", types.Int64Value(chatID)),
-		table.ValueParam("$reminder_message_id", types.Int32Value(notifyMessageID)),
+		table.ValueParam("$reminder_message_id", types.Int32Value(reminderMessageID)),
 	)
 
 	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {

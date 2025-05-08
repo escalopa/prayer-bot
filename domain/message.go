@@ -24,7 +24,7 @@ type (
 		Location *location `json:"location"`
 	}
 
-	// ReminderPayload sent by `reminder-fn` to notify users about prayer times
+	// ReminderPayload sent by `reminder-fn` to remind users about prayer times
 	ReminderPayload struct {
 		BotID          int32    `json:"bot_id"`
 		ChatIDs        []int64  `json:"chat_ids"`

@@ -84,10 +84,13 @@ func (h *Handler) opts() []bot.Option {
 		bot.WithCallbackQueryDataHandler(callbackDateMonth.String(), bot.MatchTypePrefix, h.errorH(h.callbackDateMonth)),
 		bot.WithCallbackQueryDataHandler(callbackDateDay.String(), bot.MatchTypePrefix, h.errorH(h.callbackDateDay)),
 		bot.WithCallbackQueryDataHandler(callbackNotify.String(), bot.MatchTypePrefix, h.errorH(h.callbackNotify)),
-		bot.WithCallbackQueryDataHandler(callbackBug.String(), bot.MatchTypePrefix, h.errorH(h.callbackBug)),
-		bot.WithCallbackQueryDataHandler(callbackFeedback.String(), bot.MatchTypePrefix, h.errorH(h.callbackFeedback)),
 		bot.WithCallbackQueryDataHandler(callbackLanguage.String(), bot.MatchTypePrefix, h.errorH(h.callbackLanguage)),
+		bot.WithCallbackQueryDataHandler(callbackEmpty.String(), bot.MatchTypePrefix, h.errorH(h.emptyCallback)),
 	}
+}
+
+func (h *Handler) emptyCallback(_ context.Context, _ *bot.Bot, _ *models.Update) error {
+	return nil
 }
 
 func (h *Handler) errorH(fn func(ctx context.Context, b *bot.Bot, update *models.Update) error) func(ctx context.Context, b *bot.Bot, update *models.Update) {
@@ -100,7 +103,7 @@ func (h *Handler) errorH(fn func(ctx context.Context, b *bot.Bot, update *models
 
 		err := fn(ctx, b, update)
 		if err != nil {
-			fmt.Printf("error: %v", err)
+			fmt.Printf("error: %v\n", err)
 		}
 	}
 }
@@ -162,6 +165,15 @@ func (h *Handler) chatStateBug(ctx context.Context, b *bot.Bot, update *models.U
 		return fmt.Errorf("chatStateBug: forward message: %v", err)
 	}
 
+	info := newReplyInfo(replyTypeBug, chat.ChatID, update.Message.ID, update.Message.From.Username)
+	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
+		ChatID: h.cfg[chat.BotID].OwnerID,
+		Text:   info.JSON(),
+	})
+	if err != nil {
+		return fmt.Errorf("chatStateBug: send message: %v", err)
+	}
+
 	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID: chat.ChatID,
 		Text:   h.lp.GetText(chat.LanguageCode).Bug.Success,
@@ -188,6 +200,15 @@ func (h *Handler) chatStateFeedback(ctx context.Context, b *bot.Bot, update *mod
 		return fmt.Errorf("chatStateFeedback: forward message: %v", err)
 	}
 
+	info := newReplyInfo(replyTypeFeedback, chat.ChatID, update.Message.ID, update.Message.From.Username)
+	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
+		ChatID: h.cfg[chat.BotID].OwnerID,
+		Text:   info.JSON(),
+	})
+	if err != nil {
+		return fmt.Errorf("chatStateFeedback: send message: %v", err)
+	}
+
 	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID: chat.ChatID,
 		Text:   h.lp.GetText(chat.LanguageCode).Feedback.Success,
@@ -208,15 +229,21 @@ func (h *Handler) chatStateReply(ctx context.Context, b *bot.Bot, update *models
 	if update.Message.ReplyToMessage == nil {
 		return fmt.Errorf("chatStateReply: reply to message is nil")
 	}
-	if update.Message.ReplyToMessage.ForwardOrigin == nil {
-		return fmt.Errorf("chatStateReply: forward origin is nil")
+
+	info := &replyInfo{}
+	err = json.Unmarshal([]byte(update.Message.ReplyToMessage.Text), info)
+	if err != nil {
+		return fmt.Errorf("chatStateReply: unmarshal reply info: %v", err)
 	}
 
-	chatID := update.Message.ReplyToMessage.ForwardOrigin.MessageOriginChat.SenderChat.ID
-
 	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID: chatID,
+		ChatID: info.ChatID,
 		Text:   update.Message.Text,
+		ReplyParameters: &models.ReplyParameters{
+			MessageID:                info.MessageID,
+			AllowSendingWithoutReply: true,
+		},
+		Entities: update.Message.Entities,
 	})
 	if err != nil {
 		return fmt.Errorf("chatStateReply: send message: %v", err)
@@ -306,7 +333,7 @@ func (h *Handler) Do(ctx context.Context, body string) error {
 	case domain.PayloadTypeNotifier:
 		return h.processNotify(ctx, payload.Data)
 	default:
-		fmt.Printf("unknown payload type: %s", payload.Type) // skip message
+		fmt.Printf("unknown payload type: %s", payload.Type) // ignore message
 		return nil
 	}
 }
@@ -344,8 +371,9 @@ func (h *Handler) help(ctx context.Context, b *bot.Bot, update *models.Update) e
 	}
 
 	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID: chat.ChatID,
-		Text:   h.lp.GetText(chat.LanguageCode).Help,
+		ChatID:    chat.ChatID,
+		Text:      h.lp.GetText(chat.LanguageCode).Help,
+		ParseMode: models.ParseModeMarkdown,
 	})
 	if err != nil {
 		return fmt.Errorf("help: send message: %v", err)
@@ -410,20 +438,20 @@ func (h *Handler) next(ctx context.Context, b *bot.Bot, update *models.Update) e
 		return fmt.Errorf("next: get prayer day: %v", err)
 	}
 
-	prayerID, duration := domain.PrayerIDUnknown, int32(0)
+	prayerID, duration := domain.PrayerIDUnknown, time.Duration(0)
 	switch {
 	case prayerDay.Fajr.After(date):
-		prayerID, duration = domain.PrayerIDFajr, int32(prayerDay.Fajr.Sub(date).Minutes())
+		prayerID, duration = domain.PrayerIDFajr, prayerDay.Fajr.Sub(date)
 	case prayerDay.Shuruq.After(date):
-		prayerID, duration = domain.PrayerIDShuruq, int32(prayerDay.Shuruq.Sub(date).Minutes())
+		prayerID, duration = domain.PrayerIDShuruq, prayerDay.Shuruq.Sub(date)
 	case prayerDay.Dhuhr.After(date):
-		prayerID, duration = domain.PrayerIDDhuhr, int32(prayerDay.Dhuhr.Sub(date).Minutes())
+		prayerID, duration = domain.PrayerIDDhuhr, prayerDay.Dhuhr.Sub(date)
 	case prayerDay.Asr.After(date):
-		prayerID, duration = domain.PrayerIDAsr, int32(prayerDay.Asr.Sub(date).Minutes())
+		prayerID, duration = domain.PrayerIDAsr, prayerDay.Asr.Sub(date)
 	case prayerDay.Maghrib.After(date):
-		prayerID, duration = domain.PrayerIDMaghrib, int32(prayerDay.Maghrib.Sub(date).Minutes())
+		prayerID, duration = domain.PrayerIDMaghrib, prayerDay.Maghrib.Sub(date)
 	case prayerDay.Isha.After(date):
-		prayerID, duration = domain.PrayerIDIsha, int32(prayerDay.Isha.Sub(date).Minutes())
+		prayerID, duration = domain.PrayerIDIsha, prayerDay.Isha.Sub(date)
 	}
 
 	// when no prayer time is found, return the first prayer of the next day
@@ -433,13 +461,14 @@ func (h *Handler) next(ctx context.Context, b *bot.Bot, update *models.Update) e
 		if err != nil {
 			return fmt.Errorf("next: get prayer day: %v", err)
 		}
-		prayerID, duration = domain.PrayerIDFajr, int32(prayerDay.Fajr.Sub(date))
+		prayerID, duration = domain.PrayerIDFajr, prayerDay.Fajr.Sub(date)
 	}
 
 	text := h.lp.GetText(chat.LanguageCode)
 	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID: chat.ChatID,
-		Text:   fmt.Sprintf(text.PrayerSoon, text.Prayer[int(prayerID)], duration),
+		ChatID:    chat.ChatID,
+		Text:      fmt.Sprintf(text.PrayerSoon, text.Prayer[int(prayerID)], formatDuration(duration)),
+		ParseMode: models.ParseModeMarkdown,
 	})
 	if err != nil {
 		return fmt.Errorf("next: send message: %v", err)
@@ -467,6 +496,7 @@ func (h *Handler) notify(ctx context.Context, b *bot.Bot, update *models.Update)
 	h.resetState(ctx, chat)
 	return nil
 }
+
 func (h *Handler) bug(ctx context.Context, b *bot.Bot, update *models.Update) error {
 	chat, err := h.getChat(ctx, update)
 	if err != nil {
@@ -583,8 +613,9 @@ func (h *Handler) admin(ctx context.Context, b *bot.Bot, update *models.Update) 
 	}
 
 	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID: chat.ChatID,
-		Text:   h.lp.GetText(chat.LanguageCode).HelpAdmin,
+		ChatID:    chat.ChatID,
+		Text:      h.lp.GetText(chat.LanguageCode).HelpAdmin,
+		ParseMode: models.ParseModeMarkdown,
 	})
 	if err != nil {
 		return fmt.Errorf("admin: send message: %v", err)
@@ -689,6 +720,7 @@ func (h *Handler) cancel(ctx context.Context, b *bot.Bot, update *models.Update)
 		if err != nil {
 			return fmt.Errorf("cancel: send message: %v", err)
 		}
+		return nil
 	}
 
 	err = h.db.SetState(ctx, chat.BotID, chat.ChatID, string(chatStateDefault))
@@ -733,6 +765,7 @@ func (h *Handler) getChat(ctx context.Context, update *models.Update) (*domain.C
 
 	chat, err := h.db.GetChat(ctx, botID, chatID)
 	if err != nil && !errors.Is(err, service.ErrNotFound) {
+		fmt.Printf("get chat: bot_id: %d chat_id: %d err: %v", botID, chatID, err)
 		return nil, err
 	}
 
@@ -749,6 +782,7 @@ func (h *Handler) getChat(ctx context.Context, update *models.Update) (*domain.C
 
 	err = h.db.CreateChat(ctx, botID, chatID, languageCode, int32(domain.NotifyOffset0m), string(chatStateDefault))
 	if err != nil {
+		fmt.Printf("create chat: bot_id: %d chat_id: %d err: %v", botID, chatID, err)
 		return nil, fmt.Errorf("create chat: %v", err)
 	}
 
@@ -802,14 +836,17 @@ func (h *Handler) notifyBotUser(
 	prayerID domain.PrayerID,
 	notifyOffset domain.NotifyOffset,
 ) error {
-	text := h.lp.GetText(chat.LanguageCode)
-	prayer, message := text.Prayer[int(prayerID)], ""
+	var (
+		text            = h.lp.GetText(chat.LanguageCode)
+		duration        = time.Duration(notifyOffset) * time.Minute
+		prayer, message = text.Prayer[int(prayerID)], ""
+	)
 
 	switch {
-	case notifyOffset == domain.NotifyOffset0m:
+	case duration == 0:
 		message = fmt.Sprintf(text.PrayerArrived, prayer)
 	default:
-		message = fmt.Sprintf(text.PrayerArrived, prayer, notifyOffset)
+		message = fmt.Sprintf(text.PrayerSoon, prayer, formatDuration(duration))
 	}
 
 	res, err := b.SendMessage(ctx, &bot.SendMessageParams{
@@ -851,6 +888,7 @@ func (h *Handler) callbackDateMonth(ctx context.Context, b *bot.Bot, update *mod
 
 	_, err = b.EditMessageText(ctx, &bot.EditMessageTextParams{
 		ChatID:      chat.ChatID,
+		MessageID:   update.CallbackQuery.Message.Message.ID,
 		Text:        h.lp.GetText(chat.LanguageCode).PrayerDate,
 		ReplyMarkup: h.daysKeyboard(h.now(chat.BotID), month),
 	})
@@ -877,7 +915,7 @@ func (h *Handler) callbackDateDay(ctx context.Context, b *bot.Bot, update *model
 	day, _ := strconv.Atoi(parts[2])
 
 	date := h.now(chat.BotID)
-	date = domain.Date(day, time.Month(month), date.Year(), date.Location())
+	date = domain.Date(day, time.Month(month), date.Year(), time.UTC)
 
 	prayerDay, err := h.db.GetPrayerDay(ctx, chat.BotID, date)
 	if err != nil {
@@ -885,8 +923,9 @@ func (h *Handler) callbackDateDay(ctx context.Context, b *bot.Bot, update *model
 	}
 
 	_, err = b.EditMessageText(ctx, &bot.EditMessageTextParams{
-		ChatID: chat.ChatID,
-		Text:   h.formatPrayerDay(prayerDay, chat.LanguageCode),
+		ChatID:    chat.ChatID,
+		MessageID: update.CallbackQuery.Message.Message.ID,
+		Text:      h.formatPrayerDay(prayerDay, chat.LanguageCode),
 	})
 	if err != nil {
 		return fmt.Errorf("callbackDateDay: edit message: %v", err)
@@ -916,8 +955,10 @@ func (h *Handler) callbackNotify(ctx context.Context, b *bot.Bot, update *models
 
 	message := fmt.Sprintf(h.lp.GetText(chat.LanguageCode).NotifyOffset.Success, notifyOffset)
 	_, err = b.EditMessageText(ctx, &bot.EditMessageTextParams{
-		ChatID: chat.ChatID,
-		Text:   message,
+		ChatID:    chat.ChatID,
+		MessageID: update.CallbackQuery.Message.Message.ID,
+		Text:      message,
+		ParseMode: models.ParseModeMarkdown,
 	})
 	if err != nil {
 		return fmt.Errorf("callbackNotify: edit message: %v", err)
@@ -926,56 +967,6 @@ func (h *Handler) callbackNotify(ctx context.Context, b *bot.Bot, update *models
 	_, err = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: update.CallbackQuery.ID})
 	if err != nil {
 		return fmt.Errorf("callbackNotify: answer callback query: %v", err)
-	}
-
-	h.resetState(ctx, chat)
-	return nil
-}
-
-func (h *Handler) callbackBug(ctx context.Context, b *bot.Bot, update *models.Update) error {
-	chat, err := h.getChat(ctx, update)
-	if err != nil {
-		return fmt.Errorf("callbackBug: get chat: %v", err)
-	}
-
-	// TODO: send bug to admin
-
-	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID: chat.ChatID,
-		Text:   h.lp.GetText(chat.LanguageCode).Bug.Success,
-	})
-	if err != nil {
-		return fmt.Errorf("callbackBug: send message: %v", err)
-	}
-
-	_, err = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: update.CallbackQuery.ID})
-	if err != nil {
-		return fmt.Errorf("callbackBug: answer callback query: %v", err)
-	}
-
-	h.resetState(ctx, chat)
-	return nil
-}
-
-func (h *Handler) callbackFeedback(ctx context.Context, b *bot.Bot, update *models.Update) error {
-	chat, err := h.getChat(ctx, update)
-	if err != nil {
-		return fmt.Errorf("callbackFeedback: get chat: %v", err)
-	}
-
-	// TODO: send feedback to admin
-
-	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID: chat.ChatID,
-		Text:   h.lp.GetText(chat.LanguageCode).Feedback.Success,
-	})
-	if err != nil {
-		return fmt.Errorf("callbackFeedback: send message: %v", err)
-	}
-
-	_, err = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: update.CallbackQuery.ID})
-	if err != nil {
-		return fmt.Errorf("callbackFeedback: answer callback query: %v", err)
 	}
 
 	h.resetState(ctx, chat)
@@ -998,9 +989,11 @@ func (h *Handler) callbackLanguage(ctx context.Context, b *bot.Bot, update *mode
 		return fmt.Errorf("callbackLanguage: set language code: %v", err)
 	}
 
-	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID: chat.ChatID,
-		Text:   h.lp.GetText(chat.LanguageCode).Language.Success,
+	_, err = b.EditMessageText(ctx, &bot.EditMessageTextParams{
+		ChatID:    chat.ChatID,
+		MessageID: update.CallbackQuery.Message.Message.ID,
+		Text:      fmt.Sprintf(h.lp.GetText(languageCode).Language.Success, languageCode),
+		ParseMode: models.ParseModeMarkdown,
 	})
 	if err != nil {
 		return fmt.Errorf("callbackLanguage: send message: %v", err)

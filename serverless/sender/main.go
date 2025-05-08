@@ -44,21 +44,20 @@ func Handler(ctx context.Context, event *Event) error {
 	if err != nil {
 		return fmt.Errorf("create storage: %v", err)
 	}
+	fmt.Println("storage created")
 
 	db, err := service.NewDB(ctx)
 	if err != nil {
 		return fmt.Errorf("create db: %v", err)
 	}
-	defer func() {
-		if err := db.Close(); err != nil {
-			fmt.Printf("close db: %v", err)
-		}
-	}()
+
+	fmt.Println("db created")
 
 	botConfig, err := storage.LoadBotConfig(ctx)
 	if err != nil {
 		return fmt.Errorf("load botConfig: %v", err)
 	}
+	fmt.Println("botConfig loaded")
 
 	handler, err := internal.NewHandler(botConfig, db)
 	if err != nil {

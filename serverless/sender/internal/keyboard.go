@@ -13,7 +13,7 @@ const (
 	daysPerRow   = 5
 	monthsPerRow = 3
 
-	notifyPerRow = 5
+	notifyPerRow = 4
 
 	languagesPerRow = 2
 )
@@ -26,7 +26,7 @@ func (h *Handler) languagesKeyboard() *models.InlineKeyboardMarkup {
 
 	row := 0
 	for i, lang := range languages {
-		if i%2 == 0 && i != 0 {
+		if i%languagesPerRow == 0 && i != 0 {
 			row++
 		}
 		kb.InlineKeyboard[row] = append(kb.InlineKeyboard[row], models.InlineKeyboardButton{
@@ -36,10 +36,7 @@ func (h *Handler) languagesKeyboard() *models.InlineKeyboardMarkup {
 	}
 
 	for i := 0; i < emptyButtons; i++ {
-		kb.InlineKeyboard[row] = append(kb.InlineKeyboard[row], models.InlineKeyboardButton{
-			Text:         "",
-			CallbackData: "",
-		})
+		kb.InlineKeyboard[row] = append(kb.InlineKeyboard[row], emptyButton())
 	}
 
 	return kb
@@ -47,13 +44,13 @@ func (h *Handler) languagesKeyboard() *models.InlineKeyboardMarkup {
 
 func (h *Handler) monthsKeyboard(languageCode string) *models.InlineKeyboardMarkup {
 	months := h.lp.GetText(languageCode).GetMonths()
-	rows, _ := rowsCount(len(months), languagesPerRow)
+	rows, _ := rowsCount(len(months), monthsPerRow)
 
 	kb := &models.InlineKeyboardMarkup{InlineKeyboard: make([][]models.InlineKeyboardButton, rows)}
 
 	row := 0
 	for i, month := range months {
-		if i%2 == 0 && i != 0 {
+		if i%monthsPerRow == 0 && i != 0 {
 			row++
 		}
 		kb.InlineKeyboard[row] = append(kb.InlineKeyboard[row], models.InlineKeyboardButton{
@@ -81,15 +78,11 @@ func (h *Handler) daysKeyboard(now time.Time, month int) *models.InlineKeyboardM
 		kb.InlineKeyboard[row] = append(kb.InlineKeyboard[row], models.InlineKeyboardButton{
 			Text:         strconv.Itoa(day),
 			CallbackData: fmt.Sprintf("%s%d%s%d", callbackDateDay, month, callbackDataSplitter, day),
-			// CallbackData value example: date:day|12|20 => 20th December
 		})
 	}
 
 	for i := 0; i < emptyButtons; i++ {
-		kb.InlineKeyboard[row] = append(kb.InlineKeyboard[row], models.InlineKeyboardButton{
-			Text:         "",
-			CallbackData: "",
-		})
+		kb.InlineKeyboard[row] = append(kb.InlineKeyboard[row], emptyButton())
 	}
 
 	return kb
@@ -107,17 +100,21 @@ func (h *Handler) notifyKeyboard() *models.InlineKeyboardMarkup {
 			row++
 		}
 		kb.InlineKeyboard[row] = append(kb.InlineKeyboard[row], models.InlineKeyboardButton{
-			Text:         fmt.Sprintf("%dmin", offset),
+			Text:         strconv.Itoa(int(offset)),
 			CallbackData: fmt.Sprintf("%s%d", callbackNotify, offset),
 		})
 	}
 
 	for i := 0; i < emptyButtons; i++ {
-		kb.InlineKeyboard[row] = append(kb.InlineKeyboard[row], models.InlineKeyboardButton{
-			Text:         "",
-			CallbackData: "",
-		})
+		kb.InlineKeyboard[row] = append(kb.InlineKeyboard[row], emptyButton())
 	}
 
 	return kb
+}
+
+func emptyButton() models.InlineKeyboardButton {
+	return models.InlineKeyboardButton{
+		Text:         " ",
+		CallbackData: " ",
+	}
 }

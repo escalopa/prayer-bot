@@ -44,7 +44,7 @@ language:
 subscription_success: "✅ Namaz bildirişlerine abuna boldyňyz."
 unsubscription_success: "✅ Namaz bildirişlerinden abunaňyz ýatyryldy."
 
-prayer_soon: "⏳ <b>%s</b> <b>%s</b> soň."
+prayer_soon: "⏳ <b>%s</b> <b>%d</b> soň."
 prayer_arrived: "🕌 <b>%s</b> wagty geldi."
 
 help: |
@@ -70,7 +70,7 @@ feedback:
   start: "💬 Teswiriňizi iberiň! (ýa-da /cancel ýazyp bes ediň)"
   success: "✅ Sag boluň! Teswiriňiz iberildi."
 
-bug_report:
+bug:
   start: "🐞 Düşündiriň, näsazlyk nämede? (/cancel bilen bes ediň)"
   success: "✅ Sag boluň! Hasabatyňyz kabul edildi."
 

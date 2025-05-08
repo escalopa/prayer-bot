@@ -80,7 +80,7 @@ func (t *Text) GetMonths() []Month {
 }
 
 func newLanguageProvider() (*languagesProvider, error) {
-	const pattern = "languages/*.yaml"
+	const pattern = "internal/languages/*.yaml" // relative to the `main.go` directory (source root)
 
 	files, err := filepath.Glob(pattern)
 	if err != nil {

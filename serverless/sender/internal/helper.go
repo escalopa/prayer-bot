@@ -3,8 +3,9 @@ package internal
 import (
 	"context"
 	"fmt"
-	"github.com/escalopa/prayer-bot/domain"
 	"time"
+
+	"github.com/escalopa/prayer-bot/domain"
 )
 
 type (
@@ -40,18 +41,26 @@ func (h *Handler) formatPrayerDay(date *domain.PrayerDay, languageCode string) s
 }
 
 // daysInMonth returns the number of days in a month.
-// month is incremented by 1 because to get the last day of the previous month.
-// day is 0 because we want the last day of the month.
 func daysInMonth(m int, t time.Time) int {
+	// month is incremented by 1 and day is 0 because we want the last day of the month.
 	return time.Date(t.Year(), time.Month(m+1), 0, 0, 0, 0, 0, t.Location()).Day()
 }
 
-// rowsCount calculates the number of rows needed to display the input count
-// and the number of empty cells in the last row.
+// rowsCount calculates number of rows needed to display input count and number of empty cells in the last row.
 func rowsCount(inputCount, inputPerRow int) (int, int) {
 	if inputCount%inputPerRow == 0 {
 		return inputCount / inputPerRow, 0
 	}
 	reminder := inputPerRow - (inputCount % inputPerRow)
 	return (inputCount / inputPerRow) + 1, reminder
+}
+
+// formatDuration formats the duration into a string with hours and minutes only.
+func formatDuration(d time.Duration) string {
+	h := int(d.Hours())
+	m := int(d.Minutes()) % 60
+	if h == 0 {
+		return fmt.Sprintf("%dm", m)
+	}
+	return fmt.Sprintf("%dh%dm", h, m)
 }

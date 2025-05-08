@@ -1,25 +1,58 @@
 package internal
 
+import "encoding/json"
+
 const (
 	defaultLanguageCode = "en"
 
 	prayerDayFormat  = "02.01.2006"
 	prayerTimeFormat = "15:04"
 	prayerText       = `
-🗓 %s, %s
+🗓 %s,  %s
+
 🕊 %s — %s  
 🌤 %s — %s  
 ☀️ %s — %s  
 🌇 %s — %s  
 🌅 %s — %s  
 🌙 %s — %s
-	`
+`
 )
+
+type replyType string
+
+const (
+	replyTypeBug      replyType = "bug"
+	replyTypeFeedback replyType = "feedback"
+)
+
+type replyInfo struct {
+	Type      replyType `json:"type"`
+	ChatID    int64     `json:"chat_id"`
+	MessageID int       `json:"message_id"`
+	Username  string    `json:"username"`
+}
+
+func newReplyInfo(replyType replyType, chatID int64, messageID int, username string) *replyInfo {
+	return &replyInfo{
+		Type:      replyType,
+		ChatID:    chatID,
+		MessageID: messageID,
+		Username:  username,
+	}
+}
+
+func (r *replyInfo) JSON() string {
+	bytes, _ := json.MarshalIndent(r, "", "\t")
+	return string(bytes)
+}
 
 type callback string
 
 const (
 	callbackDataSplitter = "|"
+
+	callbackEmpty callback = "empty|"
 
 	callbackDateMonth callback = "date:month|"
 	callbackDateDay   callback = "date:day|"

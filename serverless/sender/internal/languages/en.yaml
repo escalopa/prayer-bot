@@ -31,63 +31,66 @@ prayer:
   5: "Maghrib"
   6: "Isha"
 
-prayer_date: "📅 Choose a date to view prayers."
+prayer_date: "📅 Choose a date to view prayers"
 
 notify_offset:
-  start: "⏰ Pick how early you want to be notified."
-  success: "✅ Notification time saved."
+  start: "⏰ Pick how early you want to be notified (in minutes)"
+  success: "✅ Notification time set to *%d* minutes"
 
 language:
-  start: "🌐 Pick your preferred language."
-  success: "✅ Language changed to <b>%s</b>."
+  start: "🌐 Pick your preferred language"
+  success: "✅ Language changed to *%s*"
 
-subscription_success: "✅ You’re now subscribed to prayer alerts."
-unsubscription_success: "✅ You’ve unsubscribed from prayer alerts."
+subscription_success: "✅ You’re now subscribed to prayer alerts"
+unsubscription_success: "✅ You’ve unsubscribed from prayer alerts"
 
-prayer_soon: "⏳ <b>%s</b> is in <b>%s</b>."
-prayer_arrived: "🕌 It’s time for <b>%s</b>."
+prayer_soon: "⏳ *%s* is in *%s*"
+prayer_arrived: "🕌 It’s time for *%s*"
 
 help: |
   Need help? 😊 Here’s what I can do: 👇
   
-  <b>Prayer Times</b>
+  *Prayers:*
+
   ⏰ /today – Today’s times  
   📅 /date – Times for a chosen day  
   ⏳ /next – When’s the next prayer?  
   📨 /notify – Set a reminder offset  
-  🔔 /subscribe – Get daily alerts  
-  🔕 /unsubscribe – Stop alerts  
+  🔔 /subscribe – Get daily reminders  
+  🔕 /unsubscribe – Stop reminders  
 
-  <b>Settings:</b>
+  *Settings:*
+
   🌐 /language – Change language  
 
-  <b>Support:</b>
+  *Support:*
+
   📖 /help – Show this guide  
   🐞 /bug – Report a problem  
   💬 /feedback – Send feedback
 
 feedback:
   start: "💬 Share your feedback! (Or type /cancel to stop)"
-  success: "✅ Thank you! Your feedback has been sent."
+  success: "✅ Thank you! Your feedback has been sent"
 
-bug_report:
-  start: "🐞 Describe the bug you found (or /cancel to skip)."
-  success: "✅ Thanks! Your report has been received."
+bug:
+  start: "🐞 Describe the bug you found (or /cancel to skip)"
+  success: "✅ Thanks! Your report has been received"
 
 help_admin: |
-  👨‍💻 <b>Admin Tools:</b>
+  👨‍💻 *Admin Tools:*
   
   📩 /reply – Reply to users
   📊 /stats – Bot usage stats
   📢 /announce – Send message to everyone
 
 reply:
-  start: "✍️ Type your reply below."
-  success: "✅ Reply sent."
+  start: "✍️ Type your reply below"
+  success: "✅ Reply sent"
 
 announce:
   start: "📢 What would you like to announce?"
-  success: "✅ Announcement delivered."
+  success: "✅ Announcement delivered"
 
 stats: |
   📊 Bot Stats:
@@ -99,5 +102,4 @@ stats: |
   %s
 
 cancel: "✖️ Cancelled."
-cancel_noop: "✖️ Nothing to cancel."
-error: "⚠️ Something went wrong. Please try again."
+noop: "✖️ Nothing to cancel"

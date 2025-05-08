@@ -44,7 +44,7 @@ language:
 subscription_success: "✅ Namoz eslatmalariga obuna bo‘ldingiz."
 unsubscription_success: "✅ Namoz eslatmalaridan obuna bekor qilindi."
 
-prayer_soon: "⏳ <b>%s</b> <b>%s</b> dan keyin."
+prayer_soon: "⏳ <b>%s</b> <b>%d</b> dan keyin."
 prayer_arrived: "🕌 <b>%s</b> vaqti keldi."
 
 help: |
@@ -70,7 +70,7 @@ feedback:
   start: "💬 Fikringizni yuboring! (yoki /cancel yozib bekor qiling)"
   success: "✅ Rahmat! Fikringiz yuborildi."
 
-bug_report:
+bug:
   start: "🐞 Muammoni tasvirlang (yoki /cancel yozib bekor qiling)."
   success: "✅ Rahmat! Hisobotingiz qabul qilindi."
 

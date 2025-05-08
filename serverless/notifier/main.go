@@ -20,11 +20,6 @@ func Handler(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("create db: %v", err)
 	}
-	defer func() {
-		if err := db.Close(); err != nil {
-			fmt.Printf("close db: %v", err)
-		}
-	}()
 
 	queue, err := service.NewQueue()
 	if err != nil {

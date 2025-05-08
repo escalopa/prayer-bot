@@ -48,7 +48,7 @@ func (h Handler) Do(ctx context.Context, bucket string, key string) error {
 
 	botID, err := extractBotID(key)
 	if err != nil {
-		return fmt.Errorf("extract info from filename: %s: %v", key, err)
+		return fmt.Errorf("extract info from filename: %q: %v", key, err)
 	}
 
 	_, ok := h.config[botID]
@@ -58,12 +58,12 @@ func (h Handler) Do(ctx context.Context, bucket string, key string) error {
 
 	data, err := h.storage.Get(ctx, bucket, key)
 	if err != nil {
-		return fmt.Errorf("get file from S3: %s: %v", key, err)
+		return fmt.Errorf("get file from S3: %q: %v", key, err)
 	}
 
 	rows, err := parsePrayerDays(bytes.NewReader(data))
 	if err != nil {
-		return fmt.Errorf("load schedule: %s: %v", key, err)
+		return fmt.Errorf("load schedule: %q: %v", key, err)
 	}
 
 	err = h.db.SetPrayerDays(ctx, botID, rows)
@@ -71,14 +71,14 @@ func (h Handler) Do(ctx context.Context, bucket string, key string) error {
 		return fmt.Errorf("store prayers: %s: %v", key, err)
 	}
 
-	fmt.Printf("processed file: %s bot_id: %d\n", key, botID)
+	fmt.Printf("processed file: %q bot_id: %d\n", key, botID)
 	return nil
 }
 
 func extractBotID(filename string) (int32, error) {
 	parts := strings.Split(path.Base(filename), filenameSplitter)
 	if len(parts) != filenameParts {
-		return 0, fmt.Errorf("unexpected filename format: %s", filename)
+		return 0, fmt.Errorf("unexpected filename format: %q", filename)
 	}
 
 	botID, err := strconv.ParseUint(parts[0], 10, 8)

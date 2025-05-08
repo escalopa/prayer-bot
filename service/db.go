@@ -488,7 +488,7 @@ func (db *DB) GetPrayerDay(ctx context.Context, botID int64, date time.Time) (pr
 func (db *DB) SetPrayerDays(ctx context.Context, botID int64, rows []*domain.PrayerDay) error {
 	query := `
 		DECLARE $items AS List<Struct<
-			bot_id: Int32,
+			bot_id: Int64,
 			prayer_date: Date,
 			fajr: Datetime,
 			shuruq: Datetime,

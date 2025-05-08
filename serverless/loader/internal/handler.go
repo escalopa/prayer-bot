@@ -81,7 +81,7 @@ func extractBotID(filename string) (int64, error) {
 		return 0, fmt.Errorf("unexpected filename format: %q", filename)
 	}
 
-	botID, err := strconv.ParseInt(parts[0], 10, 8)
+	botID, err := strconv.ParseInt(parts[0], 10, 64)
 	if err != nil {
 		return 0, fmt.Errorf("parse bot_id: %s: %v", parts[0], err)
 	}

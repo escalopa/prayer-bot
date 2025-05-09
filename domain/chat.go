@@ -1,5 +1,14 @@
 package domain
 
+import (
+	"errors"
+)
+
+var (
+	ErrNotFound      = errors.New("not found")
+	ErrAlreadyExists = errors.New("already exists")
+)
+
 type reminderOffset int32
 
 const (
@@ -33,12 +42,5 @@ type (
 		State             string
 		LanguageCode      string
 		ReminderMessageID int32
-	}
-
-	Stats struct {
-		Users            uint64            // count of users using the bot
-		Subscribed       uint64            // count of subscribed users
-		Unsubscribed     uint64            // count of unsubscribed users
-		LanguagesGrouped map[string]uint64 // count of users using a language
 	}
 )

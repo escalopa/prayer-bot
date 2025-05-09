@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/escalopa/prayer-bot/log"
+
 	"github.com/escalopa/prayer-bot/loader/internal"
 	"github.com/escalopa/prayer-bot/service"
 )
@@ -35,17 +37,20 @@ type (
 func Handler(ctx context.Context, event *Event) error {
 	storage, err := service.NewStorage()
 	if err != nil {
-		return fmt.Errorf("create storage: %v", err)
+		log.Error("create storage", log.Err(err))
+		return fmt.Errorf("create storage")
 	}
 
 	db, err := service.NewDB(ctx)
 	if err != nil {
-		return fmt.Errorf("create db: %v", err)
+		log.Error("create db", log.Err(err))
+		return fmt.Errorf("create db")
 	}
 
 	botConfig, err := storage.LoadBotConfig(ctx)
 	if err != nil {
-		return fmt.Errorf("load botConfig: %v", err)
+		log.Error("load botConfig", log.Err(err))
+		return fmt.Errorf("load botConfig")
 	}
 
 	handler := internal.NewHandler(botConfig, storage, db)
@@ -56,6 +61,11 @@ func Handler(ctx context.Context, event *Event) error {
 
 		err = handler.Do(ctx, bucket, key)
 		if err != nil {
+			log.Error("loader cannot process request",
+				log.Err(err),
+				log.String("bucket", bucket),
+				log.String("key", key),
+			)
 			return err
 		}
 	}

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/escalopa/prayer-bot/log"
+
 	"github.com/escalopa/prayer-bot/sender/internal"
 	"github.com/escalopa/prayer-bot/service"
 )
@@ -42,32 +44,36 @@ type Event struct {
 func Handler(ctx context.Context, event *Event) error {
 	storage, err := service.NewStorage()
 	if err != nil {
-		return fmt.Errorf("create storage: %v", err)
+		log.Error("create storage", log.Err(err))
+		return fmt.Errorf("create storage")
 	}
-	fmt.Println("storage created")
 
 	db, err := service.NewDB(ctx)
 	if err != nil {
-		return fmt.Errorf("create db: %v", err)
+		log.Error("create db", log.Err(err))
+		return fmt.Errorf("create db")
 	}
-
-	fmt.Println("db created")
 
 	botConfig, err := storage.LoadBotConfig(ctx)
 	if err != nil {
-		return fmt.Errorf("load botConfig: %v", err)
+		log.Error("load botConfig", log.Err(err))
+		return fmt.Errorf("load botConfig")
 	}
-	fmt.Println("botConfig loaded")
 
 	handler, err := internal.NewHandler(botConfig, db)
 	if err != nil {
-		return fmt.Errorf("create handler: %v", err)
+		log.Error("create handler", log.Err(err))
+		return fmt.Errorf("create handler")
 	}
 
 	for _, msg := range event.Messages {
 		body := msg.Details.Message.Body
 		err = handler.Do(ctx, body)
 		if err != nil {
+			log.Error("sender cannot process request",
+				log.Err(err),
+				log.String("body", msg.Details.Message.Body),
+			)
 			return err
 		}
 	}

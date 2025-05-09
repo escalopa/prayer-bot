@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/escalopa/prayer-bot/log"
+
 	"github.com/escalopa/prayer-bot/domain"
 )
 
@@ -48,42 +50,42 @@ func (h Handler) Do(ctx context.Context, bucket string, key string) error {
 
 	botID, err := extractBotID(key)
 	if err != nil {
-		return fmt.Errorf("extract info from filename: %q: %v", key, err)
+		return fmt.Errorf("extract info from filename: %v", err)
 	}
 
 	cfg, ok := h.config[botID]
 	if !ok {
-		return fmt.Errorf("bot config not found for bot_id: %d", botID)
+		return fmt.Errorf("bot config not found")
 	}
 
 	data, err := h.storage.Get(ctx, bucket, key)
 	if err != nil {
-		return fmt.Errorf("get file from S3: %q: %v", key, err)
+		return fmt.Errorf("get file from storage: %v", err)
 	}
 
 	rows, err := parsePrayerDays(bytes.NewReader(data), cfg.Location.V())
 	if err != nil {
-		return fmt.Errorf("load schedule: %q: %v", key, err)
+		return fmt.Errorf("load schedule: %v", err)
 	}
 
 	err = h.db.SetPrayerDays(ctx, botID, rows)
 	if err != nil {
-		return fmt.Errorf("store prayers: %s: %v", key, err)
+		return fmt.Errorf("store prayers: %v", err)
 	}
 
-	fmt.Printf("set prayers done file: %q bot_id: %d\n", key, botID)
+	log.Info("set prayers done", log.BotID(botID), log.String("key", key))
 	return nil
 }
 
 func extractBotID(filename string) (int64, error) {
 	parts := strings.Split(path.Base(filename), filenameSplitter)
 	if len(parts) != filenameParts {
-		return 0, fmt.Errorf("unexpected filename format: %q", filename)
+		return 0, fmt.Errorf("unexpected filename format")
 	}
 
 	botID, err := strconv.ParseInt(parts[0], 10, 64)
 	if err != nil {
-		return 0, fmt.Errorf("parse bot_id: %s: %v", parts[0], err)
+		return 0, fmt.Errorf("parse bot_id: %v", err)
 	}
 
 	return botID, nil

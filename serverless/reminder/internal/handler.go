@@ -6,6 +6,8 @@ import (
 	"slices"
 	"time"
 
+	"github.com/escalopa/prayer-bot/log"
+
 	"github.com/escalopa/prayer-bot/domain"
 )
 
@@ -79,29 +81,40 @@ func (h *Handler) getPrayer(ctx context.Context, botID int64, loc *time.Location
 	date := domain.Now(loc)
 	prayerDay, err := h.db.GetPrayerDay(ctx, botID, date)
 	if err != nil {
-		return 0, 0, fmt.Errorf("get prayer day [bot_id: %d, date: %s] => %v", botID, date, err)
+		log.Error("get prayer day",
+			log.Err(err),
+			log.BotID(botID),
+			log.String("date", date.String()),
+			log.String("location", loc.String()),
+		)
+		return 0, 0, fmt.Errorf("get prayer day: %v", err)
 	}
 
 	switch {
-	case prayerDay.Fajr.After(date):
+	case prayerDay.Fajr.After(date) || prayerDay.Fajr.Equal(date):
 		return domain.PrayerIDFajr, int32(prayerDay.Fajr.Sub(date).Minutes()), nil
-	case prayerDay.Shuruq.After(date):
+	case prayerDay.Shuruq.After(date) || prayerDay.Shuruq.Equal(date):
 		return domain.PrayerIDShuruq, int32(prayerDay.Shuruq.Sub(date).Minutes()), nil
-	case prayerDay.Dhuhr.After(date):
+	case prayerDay.Dhuhr.After(date) || prayerDay.Dhuhr.Equal(date):
 		return domain.PrayerIDDhuhr, int32(prayerDay.Dhuhr.Sub(date).Minutes()), nil
-	case prayerDay.Asr.After(date):
+	case prayerDay.Asr.After(date) || prayerDay.Asr.Equal(date):
 		return domain.PrayerIDAsr, int32(prayerDay.Asr.Sub(date).Minutes()), nil
-	case prayerDay.Maghrib.After(date):
+	case prayerDay.Maghrib.After(date) || prayerDay.Maghrib.Equal(date):
 		return domain.PrayerIDMaghrib, int32(prayerDay.Maghrib.Sub(date).Minutes()), nil
-	case prayerDay.Isha.After(date):
+	case prayerDay.Isha.After(date) || prayerDay.Isha.Equal(date):
 		return domain.PrayerIDIsha, int32(prayerDay.Isha.Sub(date).Minutes()), nil
 	}
 
 	// if no prayer time is found, return the first prayer of the next day
-	nextDate := domain.Date(date.Day()+1, date.Month(), date.Year(), date.Location())
-	prayerDay, err = h.db.GetPrayerDay(ctx, botID, nextDate)
+	prayerDay, err = h.db.GetPrayerDay(ctx, botID, date.AddDate(0, 0, 1))
 	if err != nil {
-		return 0, 0, fmt.Errorf("get prayer next day [bot_id: %d, date: %s] => %v", botID, nextDate, err)
+		log.Error("get next prayer day",
+			log.Err(err),
+			log.BotID(botID),
+			log.String("date", date.String()),
+			log.String("location", loc.String()),
+		)
+		return 0, 0, fmt.Errorf("get next prayer day: %v", err)
 	}
 
 	return domain.PrayerIDFajr, int32(prayerDay.Fajr.Sub(date).Minutes()), nil

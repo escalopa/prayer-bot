@@ -5,10 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"runtime/debug"
+	"strconv"
 	"sync"
 	"time"
 
 	"github.com/escalopa/prayer-bot/domain"
+	"github.com/escalopa/prayer-bot/log"
 	"github.com/escalopa/prayer-bot/service"
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
@@ -91,13 +94,16 @@ func (h *Handler) errorH(fn func(ctx context.Context, b *bot.Bot, update *models
 	return func(ctx context.Context, b *bot.Bot, update *models.Update) {
 		defer func() {
 			if r := recover(); r != nil {
-				fmt.Printf("panic recovered: %v", r)
+				log.Error("recovered from panic",
+					log.String("stack", string(debug.Stack())),
+					log.String("err", fmt.Sprintf("%v", r)),
+				)
 			}
 		}()
 
 		err := fn(ctx, b, update)
 		if err != nil {
-			fmt.Printf("error: %v\n", err)
+			log.Error("handler error", log.Err(err))
 		}
 	}
 }
@@ -106,6 +112,7 @@ func (h *Handler) authorize(fn func(ctx context.Context, b *bot.Bot, update *mod
 	return func(ctx context.Context, b *bot.Bot, update *models.Update) error {
 		chat, err := h.getChat(ctx, update)
 		if err != nil {
+			log.Error("authorize: get chat", log.Err(err))
 			return fmt.Errorf("authorize: get chat: %v", err)
 		}
 
@@ -120,6 +127,7 @@ func (h *Handler) authorize(fn func(ctx context.Context, b *bot.Bot, update *mod
 func (h *Handler) defaultHandler(ctx context.Context, b *bot.Bot, update *models.Update) error {
 	chat, err := h.getChat(ctx, update)
 	if err != nil {
+		log.Error("defaultHandler: get chat", log.Err(err))
 		return fmt.Errorf("defaultHandler: get chat: %v", err)
 	}
 
@@ -137,6 +145,12 @@ func (h *Handler) defaultHandler(ctx context.Context, b *bot.Bot, update *models
 	}
 
 	if err != nil {
+		log.Error("defaultHandler: get chat",
+			log.Err(err),
+			log.BotID(chat.BotID),
+			log.ChatID(chat.ChatID),
+			log.String("state", chat.State),
+		)
 		return fmt.Errorf("defaultHandler: %v", err)
 	}
 
@@ -147,7 +161,11 @@ func (h *Handler) defaultHandler(ctx context.Context, b *bot.Bot, update *models
 func (h *Handler) Do(ctx context.Context, body string) error {
 	payload := &domain.Payload{}
 	if err := payload.Unmarshal([]byte(body)); err != nil {
-		return fmt.Errorf("unmarshal payload: %v", err)
+		log.Error("handler.Do: unmarshal payload",
+			log.Err(err),
+			log.String("payload", body),
+		)
+		return nil
 	}
 
 	switch payload.Type {
@@ -156,7 +174,7 @@ func (h *Handler) Do(ctx context.Context, body string) error {
 	case domain.PayloadTypeReminder:
 		return h.processReminder(ctx, payload.Data)
 	default:
-		fmt.Printf("unknown payload type: %s", payload.Type) // ignore message
+		log.Warn("unknown payload type", log.String("type", string(payload.Type))) // ignore message
 		return nil
 	}
 }
@@ -187,7 +205,11 @@ func (h *Handler) getBot(botID int64) (*bot.Bot, error) {
 func (h *Handler) processDispatcher(ctx context.Context, data interface{}) error {
 	payload, err := unmarshalPayload[domain.DispatcherPayload](data)
 	if err != nil {
-		return err
+		log.Error("processDispatcher unmarshal payload",
+			log.Err(err),
+			log.String("payload", fmt.Sprintf("%#v", payload)),
+		)
+		return nil
 	}
 
 	b, err := h.getBot(payload.BotID)
@@ -198,7 +220,11 @@ func (h *Handler) processDispatcher(ctx context.Context, data interface{}) error
 	var update models.Update
 	err = json.Unmarshal([]byte(payload.Data), &update)
 	if err != nil {
-		return fmt.Errorf("unmarshal update: %v", err)
+		log.Error("processDispatcher unmarshal update",
+			log.Err(err),
+			log.String("payload", fmt.Sprintf("%#v", payload)),
+		)
+		return nil
 	}
 
 	ctx = setContextBotID(ctx, payload.BotID)
@@ -209,7 +235,11 @@ func (h *Handler) processDispatcher(ctx context.Context, data interface{}) error
 func (h *Handler) processReminder(ctx context.Context, data interface{}) error {
 	payload, err := unmarshalPayload[domain.ReminderPayload](data)
 	if err != nil {
-		return err
+		log.Error("processReminder unmarshal payload",
+			log.Err(err),
+			log.String("payload", fmt.Sprintf("%#v", payload)),
+		)
+		return nil
 	}
 
 	b, err := h.getBot(payload.BotID)
@@ -219,6 +249,7 @@ func (h *Handler) processReminder(ctx context.Context, data interface{}) error {
 
 	chats, err := h.db.GetChatsByIDs(ctx, payload.BotID, payload.ChatIDs)
 	if err != nil {
+		log.Error("get chats", log.Err(err), log.BotID(payload.BotID))
 		return fmt.Errorf("get chats: %v", err)
 	}
 
@@ -228,7 +259,13 @@ func (h *Handler) processReminder(ctx context.Context, data interface{}) error {
 		errG.Go(func() error {
 			err := h.remindUser(ctx, b, chat, payload.PrayerID, payload.ReminderOffset)
 			if err != nil {
-				fmt.Printf("processReminder: send message: %v", err)
+				log.Error("processReminder remindUser",
+					log.Err(err),
+					log.BotID(chat.BotID),
+					log.ChatID(chat.ChatID),
+					log.String("prayer_id", strconv.Itoa(int(payload.PrayerID))),
+					log.String("reminder_offset", strconv.Itoa(int(payload.ReminderOffset))),
+				)
 			}
 			return nil
 		})
@@ -248,13 +285,15 @@ func (h *Handler) getChat(ctx context.Context, update *models.Update) (*domain.C
 	case update.CallbackQuery != nil:
 		chatID = update.CallbackQuery.Message.Message.Chat.ID
 	default:
-		return nil, fmt.Errorf("cannot extract chat_id: bot_id: %d update: %+v", botID, update)
+		bytes, _ := json.Marshal(update)
+		log.Error("cannot extract chat_id", log.BotID(botID), log.String("update", string(bytes)))
+		return nil, fmt.Errorf("cannot extract chat_id")
 	}
 
 	chat, err := h.db.GetChat(ctx, botID, chatID)
 	if err != nil && !errors.Is(err, service.ErrNotFound) {
-		fmt.Printf("get chat: bot_id: %d chat_id: %d err: %v", botID, chatID, err)
-		return nil, err
+		log.Error("get chat", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+		return nil, fmt.Errorf("get chat: %v", err)
 	}
 
 	if chat != nil { // chat found
@@ -270,7 +309,7 @@ func (h *Handler) getChat(ctx context.Context, update *models.Update) (*domain.C
 
 	err = h.db.CreateChat(ctx, botID, chatID, languageCode, int32(0), string(defaultState))
 	if err != nil {
-		fmt.Printf("create chat: bot_id: %d chat_id: %d err: %v", botID, chatID, err)
+		log.Error("create chat", log.Err(err), log.BotID(botID), log.ChatID(chatID))
 		return nil, fmt.Errorf("create chat: %v", err)
 	}
 

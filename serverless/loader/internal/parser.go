@@ -5,7 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"time"
+
+	"github.com/escalopa/prayer-bot/log"
 
 	"github.com/escalopa/prayer-bot/domain"
 )
@@ -38,11 +41,13 @@ func parsePrayerDays(file io.Reader, loc *time.Location) (prayerDays []*domain.P
 			if errors.Is(err, io.EOF) {
 				break
 			}
+			log.Error("reading csv record", log.Err(err))
 			return nil, err
 		}
 
 		prayerDay, err := parseRecord(record, loc)
 		if err != nil {
+			log.Error("parse prayer day", log.Err(err), log.String("record", strings.Join(record, ",")))
 			return nil, err
 		}
 
@@ -55,7 +60,7 @@ func parsePrayerDays(file io.Reader, loc *time.Location) (prayerDays []*domain.P
 // parseRecord parses a record from the file
 func parseRecord(record []string, loc *time.Location) (*domain.PrayerDay, error) {
 	if len(record) != columnsCount {
-		return nil, fmt.Errorf("parseRecord: invalid number of fields, expected 7, got %d", len(record))
+		return nil, fmt.Errorf("parseRecord: unexpected number of fields")
 	}
 
 	// parse prayerDay's date
@@ -90,7 +95,7 @@ func parseRecord(record []string, loc *time.Location) (*domain.PrayerDay, error)
 func parseDate(line string) (time.Time, error) {
 	t, err := time.Parse(dayFormat, line)
 	if err != nil {
-		return time.Time{}, fmt.Errorf("parseDate[%s]: %v", line, err)
+		return time.Time{}, fmt.Errorf("parseDate: %v", err)
 	}
 	return domain.Date(t.Day(), t.Month(), t.Year(), time.UTC), nil
 }
@@ -98,7 +103,7 @@ func parseDate(line string) (time.Time, error) {
 // parsePrayer parses prayerDay's times
 func parsePrayer(prayerTimes []string, day time.Time, loc *time.Location) ([]time.Time, error) {
 	if len(prayerTimes) != prayersCount {
-		return nil, fmt.Errorf("unexpected number of prayers: expected: %d got: %d", prayersCount, len(prayerTimes))
+		return nil, fmt.Errorf("parsePrayer: unexpected number of prayers")
 	}
 
 	// convert prayers array to []time.Time
@@ -118,7 +123,7 @@ func parsePrayer(prayerTimes []string, day time.Time, loc *time.Location) ([]tim
 func convertToTime(str string, day time.Time, loc *time.Location) (time.Time, error) {
 	clock, err := time.Parse(clockFormat, str)
 	if err != nil {
-		return time.Time{}, fmt.Errorf("convertToTime[%s]: %v", str, err)
+		return time.Time{}, fmt.Errorf("convertToTime: %v", err)
 	}
 	return domain.DateTime(day, clock, loc), nil
 }

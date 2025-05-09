@@ -2,7 +2,7 @@ module github.com/escalopa/prayer-bot/dispatcher
 
 go 1.21
 
-require github.com/escalopa/prayer-bot v0.0.0-20250508213728-df545573931b
+require github.com/escalopa/prayer-bot v0.0.0-20250509092311-ae294d140e95
 
 require (
 	github.com/aws/aws-sdk-go v1.55.7 // indirect

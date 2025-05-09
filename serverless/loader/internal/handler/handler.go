@@ -1,4 +1,4 @@
-package internal
+package handler
 
 import (
 	"bytes"
@@ -14,9 +14,7 @@ import (
 )
 
 const (
-	filenameSuffix   = ".csv"
-	filenameParts    = 2
-	filenameSplitter = "-"
+	filenameSuffix = ".csv"
 )
 
 type (
@@ -35,7 +33,7 @@ type (
 	}
 )
 
-func NewHandler(config map[int64]*domain.BotConfig, storage Storage, db DB) *Handler {
+func New(config map[int64]*domain.BotConfig, storage Storage, db DB) *Handler {
 	return &Handler{
 		config:  config,
 		storage: storage,
@@ -43,7 +41,7 @@ func NewHandler(config map[int64]*domain.BotConfig, storage Storage, db DB) *Han
 	}
 }
 
-func (h Handler) Do(ctx context.Context, bucket string, key string) error {
+func (h Handler) Handel(ctx context.Context, bucket string, key string) error {
 	if !strings.HasSuffix(key, filenameSuffix) { // ignore non csv files
 		return nil
 	}
@@ -77,16 +75,11 @@ func (h Handler) Do(ctx context.Context, bucket string, key string) error {
 	return nil
 }
 
-func extractBotID(filename string) (int64, error) {
-	parts := strings.Split(path.Base(filename), filenameSplitter)
-	if len(parts) != filenameParts {
-		return 0, fmt.Errorf("unexpected filename format")
-	}
-
-	botID, err := strconv.ParseInt(parts[0], 10, 64)
+func extractBotID(key string) (int64, error) {
+	botIDStr := strings.TrimSuffix(path.Base(key), filenameSuffix)
+	botID, err := strconv.ParseInt(botIDStr, 10, 64)
 	if err != nil {
 		return 0, fmt.Errorf("parse bot_id: %v", err)
 	}
-
 	return botID, nil
 }

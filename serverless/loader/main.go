@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/escalopa/prayer-bot/config"
+	"github.com/escalopa/prayer-bot/loader/internal/handler"
+	"github.com/escalopa/prayer-bot/loader/internal/service"
 	"github.com/escalopa/prayer-bot/log"
-
-	"github.com/escalopa/prayer-bot/loader/internal"
-	"github.com/escalopa/prayer-bot/service"
 )
 
 type (
@@ -35,6 +35,12 @@ type (
 )
 
 func Handler(ctx context.Context, event *Event) error {
+	botConfig, err := config.Load()
+	if err != nil {
+		log.Error("load config", log.Err(err))
+		return fmt.Errorf("load config")
+	}
+
 	storage, err := service.NewStorage()
 	if err != nil {
 		log.Error("create storage", log.Err(err))
@@ -47,19 +53,13 @@ func Handler(ctx context.Context, event *Event) error {
 		return fmt.Errorf("create db")
 	}
 
-	botConfig, err := storage.LoadBotConfig(ctx)
-	if err != nil {
-		log.Error("load botConfig", log.Err(err))
-		return fmt.Errorf("load botConfig")
-	}
-
-	handler := internal.NewHandler(botConfig, storage, db)
+	h := handler.New(botConfig, storage, db)
 
 	for _, msg := range event.Messages {
 		bucket := msg.Details.BucketID
 		key := msg.Details.ObjectID
 
-		err = handler.Do(ctx, bucket, key)
+		err = h.Handel(ctx, bucket, key)
 		if err != nil {
 			log.Error("loader cannot process request",
 				log.Err(err),

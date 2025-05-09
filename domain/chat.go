@@ -36,6 +36,13 @@ func ReminderOffsets() []int32 {
 }
 
 type (
+	Stats struct {
+		Users            uint64            // count of users using the bot
+		Subscribed       uint64            // count of subscribed users
+		Unsubscribed     uint64            // count of unsubscribed users
+		LanguagesGrouped map[string]uint64 // count of users using a language
+	}
+
 	Chat struct {
 		BotID             int64
 		ChatID            int64

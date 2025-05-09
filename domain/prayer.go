@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -57,4 +58,14 @@ func DateTime(day time.Time, clock time.Time, loc *time.Location) time.Time {
 func Now(loc *time.Location) time.Time {
 	now := time.Now().In(loc)
 	return time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(), 0, 0, loc)
+}
+
+// FormatDuration formats the duration into a string with hours and minutes only.
+func FormatDuration(d time.Duration) string {
+	h := int(d.Hours())
+	m := int(d.Minutes()) % 60
+	if h == 0 {
+		return fmt.Sprintf("%dm", m)
+	}
+	return fmt.Sprintf("%dh%dm", h, m)
 }

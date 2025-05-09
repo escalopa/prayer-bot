@@ -1,4 +1,4 @@
-package internal
+package handler
 
 import (
 	"os"
@@ -40,8 +40,7 @@ type (
 		SubscriptionSuccess   string `yaml:"subscription_success"`
 		UnsubscriptionSuccess string `yaml:"unsubscription_success"`
 
-		PrayerSoon    string `yaml:"prayer_soon"`
-		PrayerArrived string `yaml:"prayer_arrived"`
+		PrayerSoon string `yaml:"prayer_soon"`
 
 		Help string `yaml:"help"`
 
@@ -80,7 +79,7 @@ func (t *Text) GetMonths() []Month {
 }
 
 func newLanguageProvider() (*languagesProvider, error) {
-	const pattern = "internal/languages/*.yaml" // relative to the `main.go` directory (source root)
+	const pattern = "internal/handler/languages/*.yaml" // relative to the `main.go` directory (source root)
 
 	files, err := filepath.Glob(pattern)
 	if err != nil {

@@ -1,11 +1,12 @@
-package internal
+package handler
 
 import (
 	"context"
 	"fmt"
-	"github.com/escalopa/prayer-bot/log"
 	"strings"
 	"time"
+
+	"github.com/escalopa/prayer-bot/log"
 
 	"github.com/escalopa/prayer-bot/domain"
 	"github.com/go-telegram/bot"
@@ -175,7 +176,7 @@ func (h *Handler) next(ctx context.Context, b *bot.Bot, update *models.Update) e
 	text := h.lp.GetText(chat.LanguageCode)
 	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID:    chat.ChatID,
-		Text:      fmt.Sprintf(text.PrayerSoon, text.Prayer[int(prayerID)], formatDuration(duration)),
+		Text:      fmt.Sprintf(text.PrayerSoon, text.Prayer[int(prayerID)], domain.FormatDuration(duration)),
 		ParseMode: models.ParseModeMarkdown,
 	})
 	if err != nil {
@@ -479,65 +480,46 @@ func (h *Handler) cancel(ctx context.Context, b *bot.Bot, update *models.Update)
 	return nil
 }
 
+func (h *Handler) defaultHandler(ctx context.Context, b *bot.Bot, update *models.Update) error {
+	chat, err := h.getChat(ctx, update)
+	if err != nil {
+		log.Error("defaultHandler: get chat", log.Err(err))
+		return fmt.Errorf("defaultHandler: get chat: %v", err)
+	}
+
+	switch chat.State {
+	case string(bugState):
+		err = h.bugState(ctx, b, update)
+	case string(feedbackState):
+		err = h.feedbackState(ctx, b, update)
+	case string(replyState):
+		err = h.replyState(ctx, b, update)
+	case string(announceState):
+		err = h.announceState(ctx, b, update)
+	default:
+		return h.help(ctx, b, update)
+	}
+
+	if err != nil {
+		log.Error("defaultHandler: get chat",
+			log.Err(err),
+			log.BotID(chat.BotID),
+			log.ChatID(chat.ChatID),
+			log.String("state", chat.State),
+		)
+		return fmt.Errorf("defaultHandler: %v", err)
+	}
+
+	h.resetState(ctx, chat)
+	return nil
+}
+
 func (h *Handler) resetState(ctx context.Context, chat *domain.Chat) {
 	if chat.State == string(defaultState) {
 		return
 	}
-
 	err := h.db.SetState(ctx, chat.BotID, chat.ChatID, string(defaultState))
 	if err != nil {
 		fmt.Printf("reset state: %v", err)
 	}
-}
-
-func (h *Handler) remindUser(
-	ctx context.Context,
-	b *bot.Bot,
-	chat *domain.Chat,
-	prayerID domain.PrayerID,
-	reminderOffset int32,
-) error {
-	var (
-		text            = h.lp.GetText(chat.LanguageCode)
-		duration        = time.Duration(reminderOffset) * time.Minute
-		prayer, message = text.Prayer[int(prayerID)], ""
-	)
-
-	switch {
-	case duration == 0:
-		message = fmt.Sprintf(text.PrayerArrived, prayer)
-	default:
-		message = fmt.Sprintf(text.PrayerSoon, prayer, formatDuration(duration))
-	}
-
-	res, err := b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID:    chat.ChatID,
-		Text:      message,
-		ParseMode: models.ParseModeMarkdown,
-	})
-	if err != nil {
-		log.Error("remindUser: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
-		return fmt.Errorf("remindUser: send message: %v", err)
-	}
-
-	err = h.db.SetReminderMessageID(ctx, chat.BotID, chat.ChatID, int32(res.ID))
-	if err != nil {
-		log.Error("remindUser: set remind_message_id", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
-		return fmt.Errorf("remindUser: set remind_message_id: %v", err)
-	}
-
-	if chat.ReminderMessageID == 0 { // no message to delete
-		return nil
-	}
-
-	_, err = b.DeleteMessage(ctx, &bot.DeleteMessageParams{
-		ChatID:    chat.ChatID,
-		MessageID: int(chat.ReminderMessageID),
-	})
-	if err != nil {
-		log.Error("remindUser: delete message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
-		return fmt.Errorf("remindUser: delete message: %v", err)
-	}
-
-	return nil
 }

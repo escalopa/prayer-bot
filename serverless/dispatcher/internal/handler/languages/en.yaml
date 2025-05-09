@@ -32,6 +32,7 @@ prayer:
   6: "Isha"
 
 prayer_date: "📅 Choose a date to view prayers"
+prayer_soon: "⏳ *%s* after *%s*"
 
 remind:
   start: "⏰ Pick how early you want to be reminded (in minutes)"
@@ -43,9 +44,6 @@ language:
 
 subscription_success: "✅ You’re now subscribed to prayer reminders"
 unsubscription_success: "✅ You’ve unsubscribed from prayer reminders"
-
-prayer_soon: "⏳ *%s* after *%s*"
-prayer_arrived: "🕌 It’s time for *%s*"
 
 help: |
   Need help? 😊 Here’s what I can do: 👇

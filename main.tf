@@ -25,6 +25,11 @@ variable "region" {
   default = "ru-central1-d"
 }
 
+variable "environment" {
+  type    = string
+  default = "stg"
+}
+
 provider "yandex" {
   token     = var.access_token
   cloud_id  = var.cloud_id
@@ -148,34 +153,6 @@ resource "yandex_ydb_table" "ydb_table_prayers" {
 }
 
 ###########################
-### ymq
-###########################
-
-resource "yandex_iam_service_account" "ymq_sa" {
-  name      = "ymq-sa"
-  folder_id = var.folder_id
-}
-
-resource "yandex_resourcemanager_folder_iam_member" "ymq_sa_editor" {
-  folder_id = var.folder_id
-  role      = "editor"
-  member    = "serviceAccount:${yandex_iam_service_account.ymq_sa.id}"
-}
-
-resource "yandex_iam_service_account_static_access_key" "ymq_sa_keys" {
-  service_account_id = yandex_iam_service_account.ymq_sa.id
-}
-
-resource "yandex_message_queue" "standard_queue" {
-  name                       = "prayer-bot-queue"
-  visibility_timeout_seconds = 600
-  receive_wait_time_seconds  = 20
-  message_retention_seconds  = 1209600 # 14 days
-  access_key                 = yandex_iam_service_account_static_access_key.ymq_sa_keys.access_key
-  secret_key                 = yandex_iam_service_account_static_access_key.ymq_sa_keys.secret_key
-}
-
-###########################
 ### trigger
 ###########################
 
@@ -231,10 +208,12 @@ resource "yandex_function" "loader_fn" {
   execution_timeout  = 5
   service_account_id = yandex_iam_service_account.loader_sa.id
   folder_id          = var.folder_id
-  user_hash          = "v3"
+  user_hash          = "v1"
 
   environment = {
-    S3_BUCKET    = yandex_storage_bucket.bucket.bucket
+    APP_CONFIG = file("${path.module}/_config/${var.environment}/config.json")
+
+    S3_ENDPOINT = "https://storage.yandexcloud.net"
     YDB_ENDPOINT = yandex_ydb_database_serverless.ydb.ydb_full_endpoint
 
     REGION     = var.region
@@ -278,15 +257,9 @@ resource "yandex_resourcemanager_folder_iam_member" "dispatcher_sa_invoker" {
   member    = "system:allUsers" // allow public access
 }
 
-resource "yandex_resourcemanager_folder_iam_member" "dispatcher_sa_queue" {
+resource "yandex_resourcemanager_folder_iam_member" "dispatcher_sa_ydb" {
   folder_id = var.folder_id
-  role      = "ymq.writer"
-  member    = "serviceAccount:${yandex_iam_service_account.dispatcher_sa.id}"
-}
-
-resource "yandex_resourcemanager_folder_iam_member" "dispatcher_sa_storage" {
-  folder_id = var.folder_id
-  role      = "storage.viewer"
+  role      = "ydb.editor"
   member    = "serviceAccount:${yandex_iam_service_account.dispatcher_sa.id}"
 }
 
@@ -312,12 +285,12 @@ resource "yandex_function" "dispatcher_fn" {
   execution_timeout  = 5
   service_account_id = yandex_iam_service_account.dispatcher_sa.id
   folder_id          = var.folder_id
-  user_hash          = "v3"
+  user_hash          = "v1"
 
   environment = {
-    S3_BUCKET  = yandex_storage_bucket.bucket.bucket
-    SQS_URL    = yandex_message_queue.standard_queue.id
-    SQS_REGION = yandex_message_queue.standard_queue.region_id
+    APP_CONFIG = file("${path.module}/_config/${var.environment}/config.json")
+
+    YDB_ENDPOINT = yandex_ydb_database_serverless.ydb.ydb_full_endpoint
 
     REGION     = var.region
     ACCESS_KEY = yandex_iam_service_account_static_access_key.dispatcher_sa_keys.access_key
@@ -334,85 +307,6 @@ output "dispatcher_fn_id" {
 }
 
 ###########################
-### sender-sa
-###########################
-
-resource "yandex_iam_service_account" "sender_sa" {
-  name = "sender-sa"
-}
-
-resource "yandex_resourcemanager_folder_iam_member" "sender_sa_queue" {
-  folder_id = var.folder_id
-  role      = "ymq.reader"
-  member    = "serviceAccount:${yandex_iam_service_account.sender_sa.id}"
-}
-
-resource "yandex_resourcemanager_folder_iam_member" "sender_sa_storage" {
-  folder_id = var.folder_id
-  role      = "storage.viewer"
-  member    = "serviceAccount:${yandex_iam_service_account.sender_sa.id}"
-}
-
-resource "yandex_resourcemanager_folder_iam_member" "sender_sa_ydb" {
-  folder_id = var.folder_id
-  role      = "ydb.editor"
-  member    = "serviceAccount:${yandex_iam_service_account.sender_sa.id}"
-}
-
-resource "yandex_iam_service_account_static_access_key" "sender_sa_keys" {
-  service_account_id = yandex_iam_service_account.sender_sa.id
-}
-
-###########################
-### sender-fn
-###########################
-
-data "archive_file" "sender_zip" {
-  type        = "zip"
-  source_dir  = "${path.module}/serverless/sender"
-  output_path = "${path.module}/serverless/sender.zip"
-}
-
-resource "yandex_function" "sender_fn" {
-  name               = "sender-fn"
-  runtime            = "golang121"
-  entrypoint         = "main.Handler"
-  memory             = 512
-  execution_timeout  = 10
-  service_account_id = yandex_iam_service_account.sender_sa.id
-  folder_id          = var.folder_id
-  user_hash          = "v3"
-
-  environment = {
-    S3_BUCKET    = yandex_storage_bucket.bucket.bucket
-    YDB_ENDPOINT = yandex_ydb_database_serverless.ydb.ydb_full_endpoint
-
-    REGION     = var.region
-    ACCESS_KEY = yandex_iam_service_account_static_access_key.sender_sa_keys.access_key
-    SECRET_KEY = yandex_iam_service_account_static_access_key.sender_sa_keys.secret_key
-  }
-
-  content {
-    zip_filename = data.archive_file.sender_zip.output_path
-  }
-}
-
-resource "yandex_function_trigger" "sender_trigger" {
-  name = "sender"
-  function {
-    id                 = yandex_function.sender_fn.id
-    service_account_id = yandex_iam_service_account.trigger_sa.id
-  }
-
-  message_queue {
-    batch_cutoff       = "1"
-    batch_size         = "1"
-    service_account_id = yandex_iam_service_account.sender_sa.id
-    queue_id           = yandex_message_queue.standard_queue.arn
-  }
-}
-
-###########################
 ### reminder-sa
 ###########################
 
@@ -420,21 +314,9 @@ resource "yandex_iam_service_account" "reminder_sa" {
   name = "reminder-sa"
 }
 
-resource "yandex_resourcemanager_folder_iam_member" "reminder_sa_queue" {
-  folder_id = var.folder_id
-  role      = "ymq.writer"
-  member    = "serviceAccount:${yandex_iam_service_account.reminder_sa.id}"
-}
-
 resource "yandex_resourcemanager_folder_iam_member" "reminder_sa_ydb" {
   folder_id = var.folder_id
-  role      = "ydb.viewer"
-  member    = "serviceAccount:${yandex_iam_service_account.reminder_sa.id}"
-}
-
-resource "yandex_resourcemanager_folder_iam_member" "reminder_sa_storage" {
-  folder_id = var.folder_id
-  role      = "storage.viewer"
+  role      = "ydb.editor"
   member    = "serviceAccount:${yandex_iam_service_account.reminder_sa.id}"
 }
 
@@ -460,12 +342,11 @@ resource "yandex_function" "reminder_fn" {
   execution_timeout  = 5
   service_account_id = yandex_iam_service_account.reminder_sa.id
   folder_id          = var.folder_id
-  user_hash          = "v3"
+  user_hash          = "v1"
 
   environment = {
-    S3_BUCKET    = yandex_storage_bucket.bucket.bucket
-    SQS_URL      = yandex_message_queue.standard_queue.id
-    SQS_REGION   = yandex_message_queue.standard_queue.region_id
+    APP_CONFIG = file("${path.module}/_config/${var.environment}/config.json")
+
     YDB_ENDPOINT = yandex_ydb_database_serverless.ydb.ydb_full_endpoint
 
     REGION     = var.region

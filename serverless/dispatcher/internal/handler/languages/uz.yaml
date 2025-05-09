@@ -32,6 +32,7 @@ prayer:
   6: "Xufton"
 
 prayer_date: "📅 Namoz vaqtlarini ko‘rish uchun sana tanlang"
+prayer_soon: "⏳ *%s* keyin *%s*"
 
 remind:
   start: "⏰ Necha daqiqa oldin eslatma olishni xohlaysiz?"
@@ -43,9 +44,6 @@ language:
 
 subscription_success: "✅ Namoz eslatmalariga obuna bo‘ldingiz"
 unsubscription_success: "✅ Namoz eslatmalaridan obuna bekor qilindi"
-
-prayer_soon: "⏳ *%s* keyin *%s*"
-prayer_arrived: "🕌 *%s* vaqti keldi"
 
 help: |
   Yordam kerakmi? 😊 Men quyidagilarni bajara olaman: 👇

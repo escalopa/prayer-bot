@@ -1,4 +1,4 @@
-package internal
+package handler
 
 import (
 	"context"
@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/escalopa/prayer-bot/log"
-
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
 	"golang.org/x/sync/errgroup"

@@ -1,8 +1,7 @@
-package internal
+package handler
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -54,28 +53,4 @@ func layoutRowsInfo(totalItems, itemsPerRow int) (int, int) {
 	}
 	empty := itemsPerRow - (totalItems % itemsPerRow)
 	return (totalItems / itemsPerRow) + 1, empty
-}
-
-// formatDuration formats the duration into a string with hours and minutes only.
-func formatDuration(d time.Duration) string {
-	h := int(d.Hours())
-	m := int(d.Minutes()) % 60
-	if h == 0 {
-		return fmt.Sprintf("%dm", m)
-	}
-	return fmt.Sprintf("%dh%dm", h, m)
-}
-
-func unmarshalPayload[T any](data interface{}) (*T, error) {
-	b, err := json.Marshal(data)
-	if err != nil {
-		return nil, err
-	}
-
-	var t T
-	if err := json.Unmarshal(b, &t); err != nil {
-		return nil, fmt.Errorf("unmarshal: %T got: %T: %v", t, data, err)
-	}
-
-	return &t, nil
 }

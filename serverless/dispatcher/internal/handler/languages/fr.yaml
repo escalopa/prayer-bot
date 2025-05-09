@@ -32,6 +32,7 @@ prayer:
   6: "Icha"
 
 prayer_date: "📅 Choisissez une date pour voir les horaires de prière"
+prayer_soon: "⏳ *%s* après *%s*"
 
 remind:
   start: "⏰ Choisissez combien de minutes à l'avance vous souhaitez être rappelé"
@@ -43,9 +44,6 @@ language:
 
 subscription_success: "✅ Vous êtes maintenant abonné aux rappels de prière"
 unsubscription_success: "✅ Vous vous êtes désabonné des rappels de prière"
-
-prayer_soon: "⏳ *%s* après *%s*"
-prayer_arrived: "🕌 C’est l’heure de *%s*"
 
 help: |
   Besoin d'aide ? 😊 Voici ce que je peux faire : 👇

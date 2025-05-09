@@ -4,18 +4,18 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/escalopa/prayer-bot/config"
 	"github.com/escalopa/prayer-bot/log"
-
-	"github.com/escalopa/prayer-bot/reminder/internal"
-	"github.com/escalopa/prayer-bot/service"
+	"github.com/escalopa/prayer-bot/reminder/internal/handler"
+	"github.com/escalopa/prayer-bot/reminder/internal/service"
 	"golang.org/x/sync/errgroup"
 )
 
 func Handler(ctx context.Context) error {
-	storage, err := service.NewStorage()
+	botConfig, err := config.Load()
 	if err != nil {
-		log.Error("create storage", log.Err(err))
-		return fmt.Errorf("create storage")
+		log.Error("load config", log.Err(err))
+		return fmt.Errorf("load config")
 	}
 
 	db, err := service.NewDB(ctx)
@@ -24,25 +24,17 @@ func Handler(ctx context.Context) error {
 		return fmt.Errorf("create db")
 	}
 
-	queue, err := service.NewQueue()
+	h, err := handler.New(botConfig, db)
 	if err != nil {
-		log.Error("create queue", log.Err(err))
-		return fmt.Errorf("create queue")
+		log.Error("create handler", log.Err(err))
+		return fmt.Errorf("create handler")
 	}
-
-	botConfig, err := storage.LoadBotConfig(ctx)
-	if err != nil {
-		log.Error("load botConfig", log.Err(err))
-		return fmt.Errorf("load botConfig")
-	}
-
-	handler := internal.NewHandler(botConfig, db, queue)
 
 	errG := &errgroup.Group{}
 	for botID := range botConfig {
 		botID := botID
 		errG.Go(func() error {
-			err := handler.Do(ctx, botID)
+			err := h.Handel(ctx, botID)
 			if err != nil {
 				log.Error("reminder cannot process request", log.BotID(botID), log.Err(err))
 			}

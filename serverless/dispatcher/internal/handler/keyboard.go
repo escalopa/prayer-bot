@@ -1,4 +1,4 @@
-package internal
+package handler
 
 import (
 	"fmt"
@@ -42,7 +42,7 @@ func (h *Handler) languagesKeyboard() *models.InlineKeyboardMarkup {
 
 func (h *Handler) monthsKeyboard(languageCode string) *models.InlineKeyboardMarkup {
 	months := h.lp.GetText(languageCode).GetMonths()
-	rows, _ := layoutRowsInfo(len(months), monthsPerRow)
+	rows, empty := layoutRowsInfo(len(months), monthsPerRow)
 
 	kb := &models.InlineKeyboardMarkup{InlineKeyboard: make([][]models.InlineKeyboardButton, rows)}
 
@@ -55,6 +55,10 @@ func (h *Handler) monthsKeyboard(languageCode string) *models.InlineKeyboardMark
 			Text:         month.Name,
 			CallbackData: fmt.Sprintf("%s%d", monthQuery, month.ID),
 		})
+	}
+
+	for i := 0; i < empty; i++ {
+		kb.InlineKeyboard[row] = append(kb.InlineKeyboard[row], emptyButton())
 	}
 
 	return kb

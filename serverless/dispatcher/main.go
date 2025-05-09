@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/escalopa/prayer-bot/config"
 	"net/http"
 
+	"github.com/escalopa/prayer-bot/dispatcher/internal/handler"
+	"github.com/escalopa/prayer-bot/dispatcher/internal/service"
 	"github.com/escalopa/prayer-bot/log"
-
-	"github.com/escalopa/prayer-bot/dispatcher/internal"
-	"github.com/escalopa/prayer-bot/service"
 )
 
 type (
@@ -38,27 +38,31 @@ func Handler(ctx context.Context, requestBytes []byte) (*Response, error) {
 		return newResponse(http.StatusBadRequest, "unmarshal request body")
 	}
 
-	storage, err := service.NewStorage()
+	botConfig, err := config.Load()
 	if err != nil {
-		log.Error("create storage", log.Err(err))
-		return newResponse(http.StatusInternalServerError, "create storage")
+		log.Error("load config", log.Err(err))
+		return newResponse(http.StatusInternalServerError, "load config")
 	}
 
-	queue, err := service.NewQueue()
+	db, err := service.NewDB(ctx)
 	if err != nil {
-		log.Error("create queue", log.Err(err))
-		return newResponse(http.StatusInternalServerError, "create queue")
+		log.Error("create db", log.Err(err))
+		return newResponse(http.StatusInternalServerError, "create db")
 	}
 
-	botConfig, err := storage.LoadBotConfig(ctx)
+	h, err := handler.New(botConfig, db)
 	if err != nil {
-		log.Error("load botConfig", log.Err(err))
-		return newResponse(http.StatusInternalServerError, "load botConfig")
+		log.Error("create handler", log.Err(err))
+		return newResponse(http.StatusInternalServerError, "create handler")
 	}
 
-	handler := internal.NewHandler(botConfig, queue)
+	botID, err := h.Authenticate(request.Headers)
+	if err != nil {
+		log.Error("authenticate", log.Err(err))
+		return newResponse(http.StatusUnauthorized, "authenticate")
+	}
 
-	err = handler.Do(ctx, request.Body, request.Headers)
+	err = h.Handel(ctx, botID, request.Body)
 	if err != nil {
 		log.Error("dispatcher cannot process request", log.Err(err))
 		return newResponse(http.StatusInternalServerError, "dispatcher cannot process request")

@@ -32,6 +32,7 @@ prayer:
   6: "Isha"
 
 prayer_date: "📅 Elige una fecha para ver los horarios de oración"
+prayer_soon: "⏳ *%s* después de *%s*"
 
 remind:
   start: "⏰ Elige cuántos minutos antes quieres ser recordado"
@@ -43,9 +44,6 @@ language:
 
 subscription_success: "✅ Te has suscrito a los recordatorios de oración"
 unsubscription_success: "✅ Te has dado de baja de los recordatorios de oración"
-
-prayer_soon: "⏳ *%s* después de *%s*"
-prayer_arrived: "🕌 Es hora de *%s*"
 
 help: |
   ¿Necesitas ayuda? 😊 Aquí está lo que puedo hacer: 👇

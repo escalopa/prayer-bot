@@ -1,4 +1,4 @@
-package internal
+package handler
 
 import (
 	"context"
@@ -6,34 +6,28 @@ import (
 	"errors"
 	"fmt"
 	"runtime/debug"
-	"strconv"
 	"sync"
 	"time"
 
 	"github.com/escalopa/prayer-bot/domain"
 	"github.com/escalopa/prayer-bot/log"
-	"github.com/escalopa/prayer-bot/service"
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
-	"golang.org/x/sync/errgroup"
 )
 
 type (
 	DB interface {
 		CreateChat(ctx context.Context, botID int64, chatID int64, languageCode string, reminderOffset int32, state string) error
 		GetChat(ctx context.Context, botID int64, chatID int64) (chat *domain.Chat, _ error)
-		GetChatsByIDs(ctx context.Context, botID int64, chatIDs []int64) (chats []*domain.Chat, _ error)
 		GetChats(ctx context.Context, botID int64) (chats []*domain.Chat, _ error)
-
 		SetState(ctx context.Context, botID int64, chatID int64, state string) error
+
+		GetStats(ctx context.Context, botID int64) (*domain.Stats, error)
+		GetPrayerDay(ctx context.Context, botID int64, date time.Time) (*domain.PrayerDay, error)
+
 		SetSubscribed(ctx context.Context, botID int64, chatID int64, subscribed bool) error
 		SetLanguageCode(ctx context.Context, botID int64, chatID int64, languageCode string) error
 		SetReminderOffset(ctx context.Context, botID int64, chatID int64, reminderOffset int32) error
-		SetReminderMessageID(ctx context.Context, botID int64, chatID int64, reminderMessageID int32) error
-
-		GetPrayerDay(ctx context.Context, botID int64, date time.Time) (*domain.PrayerDay, error)
-
-		GetStats(ctx context.Context, botID int64) (*domain.Stats, error)
 	}
 
 	Handler struct {
@@ -46,7 +40,7 @@ type (
 	}
 )
 
-func NewHandler(cfg map[int64]*domain.BotConfig, db DB) (*Handler, error) {
+func New(cfg map[int64]*domain.BotConfig, db DB) (*Handler, error) {
 	lp, err := newLanguageProvider()
 	if err != nil {
 		return nil, fmt.Errorf("create language provider: %v", err)
@@ -124,59 +118,39 @@ func (h *Handler) authorize(fn func(ctx context.Context, b *bot.Bot, update *mod
 	}
 }
 
-func (h *Handler) defaultHandler(ctx context.Context, b *bot.Bot, update *models.Update) error {
-	chat, err := h.getChat(ctx, update)
-	if err != nil {
-		log.Error("defaultHandler: get chat", log.Err(err))
-		return fmt.Errorf("defaultHandler: get chat: %v", err)
+func (h *Handler) Authenticate(headers map[string]string) (int64, error) {
+	const telegramBotAPISecretTokenHeader = "X-Telegram-Bot-Api-Secret-Token"
+
+	secretToken := headers[telegramBotAPISecretTokenHeader]
+	if secretToken == "" {
+		return 0, fmt.Errorf("empty secret token header")
 	}
 
-	switch chat.State {
-	case string(bugState):
-		err = h.bugState(ctx, b, update)
-	case string(feedbackState):
-		err = h.feedbackState(ctx, b, update)
-	case string(replyState):
-		err = h.replyState(ctx, b, update)
-	case string(announceState):
-		err = h.announceState(ctx, b, update)
-	default:
-		return h.help(ctx, b, update)
+	for _, botConfig := range h.cfg {
+		if botConfig.Secret == secretToken {
+			return botConfig.BotID, nil
+		}
 	}
 
-	if err != nil {
-		log.Error("defaultHandler: get chat",
-			log.Err(err),
-			log.BotID(chat.BotID),
-			log.ChatID(chat.ChatID),
-			log.String("state", chat.State),
-		)
-		return fmt.Errorf("defaultHandler: %v", err)
-	}
-
-	h.resetState(ctx, chat)
-	return nil
+	return 0, fmt.Errorf("secret token mismatch")
 }
 
-func (h *Handler) Do(ctx context.Context, body string) error {
-	payload := &domain.Payload{}
-	if err := payload.Unmarshal([]byte(body)); err != nil {
-		log.Error("handler.Do: unmarshal payload",
-			log.Err(err),
-			log.String("payload", body),
-		)
+func (h *Handler) Handel(ctx context.Context, botID int64, data string) error {
+	b, err := h.getBot(botID)
+	if err != nil {
+		return fmt.Errorf("get bot: %v", err)
+	}
+
+	var update models.Update
+	err = json.Unmarshal([]byte(data), &update)
+	if err != nil {
+		log.Error("unmarshal update", log.Err(err), log.String("payload", data))
 		return nil
 	}
 
-	switch payload.Type {
-	case domain.PayloadTypeDispatcher:
-		return h.processDispatcher(ctx, payload.Data)
-	case domain.PayloadTypeReminder:
-		return h.processReminder(ctx, payload.Data)
-	default:
-		log.Warn("unknown payload type", log.String("type", string(payload.Type))) // ignore message
-		return nil
-	}
+	ctx = setContextBotID(ctx, botID)
+	b.ProcessUpdate(ctx, &update)
+	return nil
 }
 
 func (h *Handler) getBot(botID int64) (*bot.Bot, error) {
@@ -202,79 +176,6 @@ func (h *Handler) getBot(botID int64) (*bot.Bot, error) {
 	return b, nil
 }
 
-func (h *Handler) processDispatcher(ctx context.Context, data interface{}) error {
-	payload, err := unmarshalPayload[domain.DispatcherPayload](data)
-	if err != nil {
-		log.Error("processDispatcher unmarshal payload",
-			log.Err(err),
-			log.String("payload", fmt.Sprintf("%#v", payload)),
-		)
-		return nil
-	}
-
-	b, err := h.getBot(payload.BotID)
-	if err != nil {
-		return fmt.Errorf("get bot: %v", err)
-	}
-
-	var update models.Update
-	err = json.Unmarshal([]byte(payload.Data), &update)
-	if err != nil {
-		log.Error("processDispatcher unmarshal update",
-			log.Err(err),
-			log.String("payload", fmt.Sprintf("%#v", payload)),
-		)
-		return nil
-	}
-
-	ctx = setContextBotID(ctx, payload.BotID)
-	b.ProcessUpdate(ctx, &update)
-	return nil
-}
-
-func (h *Handler) processReminder(ctx context.Context, data interface{}) error {
-	payload, err := unmarshalPayload[domain.ReminderPayload](data)
-	if err != nil {
-		log.Error("processReminder unmarshal payload",
-			log.Err(err),
-			log.String("payload", fmt.Sprintf("%#v", payload)),
-		)
-		return nil
-	}
-
-	b, err := h.getBot(payload.BotID)
-	if err != nil {
-		return fmt.Errorf("get bot: %v", err)
-	}
-
-	chats, err := h.db.GetChatsByIDs(ctx, payload.BotID, payload.ChatIDs)
-	if err != nil {
-		log.Error("get chats", log.Err(err), log.BotID(payload.BotID))
-		return fmt.Errorf("get chats: %v", err)
-	}
-
-	errG := &errgroup.Group{}
-	for _, chat := range chats {
-		chat := chat
-		errG.Go(func() error {
-			err := h.remindUser(ctx, b, chat, payload.PrayerID, payload.ReminderOffset)
-			if err != nil {
-				log.Error("processReminder remindUser",
-					log.Err(err),
-					log.BotID(chat.BotID),
-					log.ChatID(chat.ChatID),
-					log.String("prayer_id", strconv.Itoa(int(payload.PrayerID))),
-					log.String("reminder_offset", strconv.Itoa(int(payload.ReminderOffset))),
-				)
-			}
-			return nil
-		})
-	}
-
-	_ = errG.Wait()
-	return nil
-}
-
 func (h *Handler) getChat(ctx context.Context, update *models.Update) (*domain.Chat, error) {
 	botID := getContextBotID(ctx)
 	chatID := int64(0)
@@ -291,7 +192,7 @@ func (h *Handler) getChat(ctx context.Context, update *models.Update) (*domain.C
 	}
 
 	chat, err := h.db.GetChat(ctx, botID, chatID)
-	if err != nil && !errors.Is(err, service.ErrNotFound) {
+	if err != nil && !errors.Is(err, domain.ErrNotFound) {
 		log.Error("get chat", log.Err(err), log.BotID(botID), log.ChatID(chatID))
 		return nil, fmt.Errorf("get chat: %v", err)
 	}

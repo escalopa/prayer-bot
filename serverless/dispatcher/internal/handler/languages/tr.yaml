@@ -32,6 +32,7 @@ prayer:
   6: "Gije"
 
 prayer_date: "📅 Namaz wagtyny görmek üçin senäni saýlaň"
+prayer_soon: "⏳ *%s* soň *%s*"
 
 remind:
   start: "⏰ Näçe minut öň duýduryş isleýärsiňiz?"
@@ -43,9 +44,6 @@ language:
 
 subscription_success: "✅ Namaz duýduryşlaryna abuna boldyňyz"
 unsubscription_success: "✅ Namaz duýduryşlaryna abuna bolmagyňyz bes edildi"
-
-prayer_soon: "⏳ *%s* soň *%s*"
-prayer_arrived: "🕌 *%s* wagty geldi"
 
 help: |
   Kömek gerekmi? 😊 Men şulary edip bilýärin: 👇

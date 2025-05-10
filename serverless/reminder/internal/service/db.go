@@ -253,3 +253,25 @@ func (db *DB) SetReminderMessageID(ctx context.Context, botID int64, chatID int6
 
 	return err
 }
+
+func (db *DB) DeleteChat(ctx context.Context, botID int64, chatID int64) error {
+	query := `
+		DECLARE $bot_id AS Int64;
+		DECLARE $chat_id AS Int64;
+
+		DELETE FROM chats
+		WHERE bot_id = $bot_id AND chat_id = $chat_id;
+	`
+
+	params := table.NewQueryParameters(
+		table.ValueParam("$bot_id", types.Int64Value(botID)),
+		table.ValueParam("$chat_id", types.Int64Value(chatID)),
+	)
+
+	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
+		_, _, err := s.Execute(ctx, writeTx, query, params)
+		return err
+	})
+
+	return err
+}

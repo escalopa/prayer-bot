@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"slices"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -22,6 +23,7 @@ type (
 		GetSubscribersByOffset(ctx context.Context, botID int64, offset int32) (chatIDs []int64, _ error)
 		GetPrayerDay(ctx context.Context, botID int64, date time.Time) (prayerDay *domain.PrayerDay, _ error)
 		SetReminderMessageID(ctx context.Context, botID int64, chatID int64, reminderMessageID int32) error
+		DeleteChat(ctx context.Context, botID int64, chatID int64) error
 	}
 
 	Handler struct {
@@ -215,6 +217,17 @@ func (h *Handler) remindUser(
 		ParseMode: models.ParseModeMarkdown,
 	})
 	if err != nil {
+		if strings.HasPrefix(err.Error(), bot.ErrorForbidden.Error()) {
+			// bot was blocked or user is deactivated so delete chat
+			err = h.db.DeleteChat(ctx, chat.BotID, chat.ChatID)
+			if err != nil {
+				log.Error("remindUser: delete chat", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+				return fmt.Errorf("remindUser: delete chat: %v", err)
+			}
+			log.Warn("remindUser: delete chat", log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+			return nil
+		}
+
 		log.Error("remindUser: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return fmt.Errorf("remindUser: send message: %v", err)
 	}

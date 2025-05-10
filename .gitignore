@@ -1,5 +1,16 @@
+# ide
 .idea
+.vscode
 *.env
-data
+
+# app
 coverage.txt
-config.json
+_config
+
+# terraform
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.zip

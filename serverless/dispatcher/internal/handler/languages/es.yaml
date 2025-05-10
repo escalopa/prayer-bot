@@ -1,0 +1,103 @@
+name: "Español"
+
+weekday:
+  0: "Domingo"
+  1: "Lunes"
+  2: "Martes"
+  3: "Miércoles"
+  4: "Jueves"
+  5: "Viernes"
+  6: "Sábado"
+
+month:
+  1: "Enero"
+  2: "Febrero"
+  3: "Marzo"
+  4: "Abril"
+  5: "Mayo"
+  6: "Junio"
+  7: "Julio"
+  8: "Agosto"
+  9: "Septiembre"
+  10: "Octubre"
+  11: "Noviembre"
+  12: "Diciembre"
+
+prayer:
+  1: "Fajr"
+  2: "Shuruq"
+  3: "Dhuhr"
+  4: "Asr"
+  5: "Maghrib"
+  6: "Isha"
+
+prayer_date: "📅 Elige una fecha para ver los horarios de oración"
+prayer_soon: "⏳ *%s* después de *%s*"
+
+remind:
+  start: "⏰ Elige cuántos minutos antes quieres ser recordado"
+  success: "✅ El recordatorio se ha establecido en *%d* minutos"
+
+language:
+  start: "🌐 Elige tu idioma preferido"
+  success: "✅ Idioma cambiado a *%s*"
+
+subscription_success: "✅ Te has suscrito a los recordatorios de oración"
+unsubscription_success: "✅ Te has dado de baja de los recordatorios de oración"
+
+help: |
+  ¿Necesitas ayuda? 😊 Aquí está lo que puedo hacer: 👇
+  
+  *Oraciones:*
+
+  ⏰ /today – Horarios de hoy  
+  📅 /date – Horarios de un día específico  
+  ⏳ /next – ¿Cuándo es la próxima oración?  
+  📨 /remind – Configura un recordatorio antes de la oración
+  🔔 /subscribe – Recibir recordatorios diarios  
+  🔕 /unsubscribe – Detener recordatorios diarios  
+
+  *Configuraciones:*
+
+  🌐 /language – Cambiar idioma  
+
+  *Soporte:*
+
+  📖 /help – Mostrar esta guía  
+  🐞 /bug – Reportar un problema  
+  💬 /feedback – Enviar retroalimentación
+
+feedback:
+  start: "💬 ¡Comparte tu opinión! (o escribe /cancel para cancelar)"
+  success: "✅ ¡Gracias! Tu opinión ha sido enviada"
+
+bug:
+  start: "🐞 Describe el error encontrado (o escribe /cancel para cancelar)"
+  success: "✅ ¡Gracias! Tu reporte ha sido recibido"
+
+help_admin: |
+  📩 /reply – Responder a los usuarios
+  📊 /stats – Estadísticas del bot
+  📢 /announce – Enviar un mensaje a todos
+
+reply:
+  start: "✍️ Escribe tu respuesta abajo (o escribe /cancel para cancelar)"
+  success: "✅ Respuesta enviada"
+
+announce:
+  start: "📢 ¿Qué deseas anunciar? (o escribe /cancel para cancelar)"
+  success: "✅ Anuncio enviado"
+
+stats: |
+  📊 Estadísticas del bot:
+  
+  • Usuarios: %d  
+  • Suscritos: %d  
+  • No suscritos: %d  
+
+  🌍 Idiomas usados:
+  
+  %s
+
+cancel: "✅ Proceso cancelado"
+noop: "😴️ No se realizó ninguna acción"

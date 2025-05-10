@@ -106,7 +106,7 @@ func (h *Handler) Handel(ctx context.Context, botID int64) error {
 }
 
 func (h *Handler) getPrayer(ctx context.Context, botID int64, loc *time.Location) (domain.PrayerID, int32, error) {
-	date := domain.Now(loc)
+	date := h.now(loc)
 	prayerDay, err := h.db.GetPrayerDay(ctx, botID, date)
 	if err != nil {
 		log.Error("get prayer day",
@@ -239,4 +239,9 @@ func (h *Handler) remindUser(
 	}
 
 	return nil
+}
+
+func (h *Handler) now(loc *time.Location) time.Time {
+	now := time.Now().In(loc)
+	return time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(), 0, 0, loc)
 }

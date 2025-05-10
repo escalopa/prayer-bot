@@ -36,14 +36,23 @@ func (h *Handler) formatPrayerDay(botID int64, date *domain.PrayerDay, languageC
 	)
 }
 
+// now returns the current time with seconds and nanoseconds set to 0
 func (h *Handler) now(botID int64) time.Time {
-	return domain.Now(h.cfg[botID].Location.V())
+	t := time.Now().In(h.cfg[botID].Location.V())
+	return time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), 0, 0, t.Location())
+}
+
+// nowUTC returns the current time in UTC with seconds and nanoseconds set to 0
+// Use this function to get prayerDay or current year for a specific botID timezone.
+func (h *Handler) nowUTC(botID int64) time.Time {
+	t := time.Now().In(h.cfg[botID].Location.V())
+	return time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), 0, 0, time.UTC)
 }
 
 // daysInMonth returns the number of days in a month.
-func daysInMonth(month time.Month, t time.Time) int {
+func daysInMonth(month time.Month, year int) int {
 	// month is incremented by 1 and day is 0 because we want the last day of the month.
-	return time.Date(t.Year(), month+1, 0, 0, 0, 0, 0, t.Location()).Day()
+	return time.Date(year, month+1, 0, 0, 0, 0, 0, time.UTC).Day()
 }
 
 // layoutRowsInfo calculates number of rows needed to display input count and number of empty cells in the last row.

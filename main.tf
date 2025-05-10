@@ -25,9 +25,8 @@ variable "region" {
   default = "ru-central1-d"
 }
 
-variable "environment" {
-  type    = string
-  default = "stg"
+output "region" {
+  value = var.region
 }
 
 provider "yandex" {
@@ -42,7 +41,7 @@ provider "yandex" {
 ###########################
 
 resource "yandex_storage_bucket" "bucket" {
-  bucket    = "prayer-bot-bucket"
+  bucket    = "prayer-bot-bucket-${terraform.workspace}"
   folder_id = var.folder_id
   max_size  = 1073741824 # 1 GB in bytes
 }
@@ -52,7 +51,7 @@ resource "yandex_storage_bucket" "bucket" {
 ###########################
 
 resource "yandex_ydb_database_serverless" "ydb" {
-  name                = "prayer-bot-ydb"
+  name                = "prayer-bot-ydb-${terraform.workspace}"
   location_id         = "ru-central1"
   folder_id           = var.folder_id
   deletion_protection = true
@@ -106,6 +105,11 @@ resource "yandex_ydb_table" "ydb_table_chats" {
 
   column {
     name = "subscribed_at"
+    type = "Datetime"
+  }
+
+  column {
+    name = "created_at"
     type = "Datetime"
   }
 }
@@ -211,9 +215,9 @@ resource "yandex_function" "loader_fn" {
   user_hash          = "v1"
 
   environment = {
-    APP_CONFIG = file("${path.module}/_config/${var.environment}/config.json")
+    APP_CONFIG = file("${path.module}/_config/${terraform.workspace}/config.json")
 
-    S3_ENDPOINT = "https://storage.yandexcloud.net"
+    S3_ENDPOINT  = "https://storage.yandexcloud.net"
     YDB_ENDPOINT = yandex_ydb_database_serverless.ydb.ydb_full_endpoint
 
     REGION     = var.region
@@ -288,7 +292,7 @@ resource "yandex_function" "dispatcher_fn" {
   user_hash          = "v1"
 
   environment = {
-    APP_CONFIG = file("${path.module}/_config/${var.environment}/config.json")
+    APP_CONFIG = file("${path.module}/_config/${terraform.workspace}/config.json")
 
     YDB_ENDPOINT = yandex_ydb_database_serverless.ydb.ydb_full_endpoint
 
@@ -345,7 +349,7 @@ resource "yandex_function" "reminder_fn" {
   user_hash          = "v1"
 
   environment = {
-    APP_CONFIG = file("${path.module}/_config/${var.environment}/config.json")
+    APP_CONFIG = file("${path.module}/_config/${terraform.workspace}/config.json")
 
     YDB_ENDPOINT = yandex_ydb_database_serverless.ydb.ydb_full_endpoint
 

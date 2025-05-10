@@ -97,7 +97,7 @@ func parseDate(line string) (time.Time, error) {
 	if err != nil {
 		return time.Time{}, fmt.Errorf("parseDate: %v", err)
 	}
-	return domain.Date(t.Day(), t.Month(), t.Year(), time.UTC), nil
+	return domain.Date(t.Day(), t.Month(), t.Year()), nil
 }
 
 // parsePrayer parses prayerDay's times
@@ -125,5 +125,6 @@ func convertToTime(str string, day time.Time, loc *time.Location) (time.Time, er
 	if err != nil {
 		return time.Time{}, fmt.Errorf("convertToTime: %v", err)
 	}
-	return domain.DateTime(day, clock, loc), nil
+	t := time.Date(day.Year(), day.Month(), day.Day(), clock.Hour(), clock.Minute(), 0, 0, loc)
+	return t, nil
 }

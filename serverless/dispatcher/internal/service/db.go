@@ -52,10 +52,9 @@ func (db *DB) CreateChat(ctx context.Context, botID int64, chatID int64, languag
 		DECLARE $language_code AS Utf8;
 		DECLARE $reminder_offset AS Int32;
 		DECLARE $state AS Utf8;
-		DECLARE $subscribed AS Bool;
 
-		INSERT INTO chats (bot_id, chat_id, language_code, reminder_offset, state, subscribed, subscribed_at)
-		VALUES ($bot_id, $chat_id, $language_code, $reminder_offset, $state, $subscribed, CurrentUtcDatetime());
+		INSERT INTO chats (bot_id, chat_id, language_code, reminder_offset, state, created_at)
+		VALUES ($bot_id, $chat_id, $language_code, $reminder_offset, $state, CurrentUtcDatetime());
 	`
 
 	params := table.NewQueryParameters(
@@ -64,7 +63,6 @@ func (db *DB) CreateChat(ctx context.Context, botID int64, chatID int64, languag
 		table.ValueParam("$language_code", types.UTF8Value(languageCode)),
 		table.ValueParam("$reminder_offset", types.Int32Value(reminderOffset)),
 		table.ValueParam("$state", types.UTF8Value(state)),
-		table.ValueParam("$subscribed", types.BoolValue(false)),
 	)
 
 	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {

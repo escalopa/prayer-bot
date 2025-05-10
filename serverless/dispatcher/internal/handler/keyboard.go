@@ -65,7 +65,7 @@ func (h *Handler) monthsKeyboard(languageCode string) *models.InlineKeyboardMark
 }
 
 func (h *Handler) daysKeyboard(now time.Time, month int) *models.InlineKeyboardMarkup {
-	days := daysInMonth(time.Month(month), now)
+	days := daysInMonth(time.Month(month), now.Year())
 	rows, empty := layoutRowsInfo(days, daysPerRow)
 
 	kb := &models.InlineKeyboardMarkup{InlineKeyboard: make([][]models.InlineKeyboardButton, rows)}

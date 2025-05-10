@@ -93,7 +93,7 @@ func (h *Handler) today(ctx context.Context, b *bot.Bot, update *models.Update) 
 		return fmt.Errorf("today: get chat: %v", err)
 	}
 
-	prayerDay, err := h.db.GetPrayerDay(ctx, chat.BotID, h.now(chat.BotID))
+	prayerDay, err := h.db.GetPrayerDay(ctx, chat.BotID, h.nowUTC(chat.BotID))
 	if err != nil {
 		log.Error("today: get prayer day", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return fmt.Errorf("today: get prayer day: %v", err)
@@ -140,7 +140,11 @@ func (h *Handler) next(ctx context.Context, b *bot.Bot, update *models.Update) e
 		return fmt.Errorf("next: get chat: %v", err)
 	}
 
-	date := h.now(chat.BotID)
+	var (
+		now  = h.now(chat.BotID)
+		date = h.nowUTC(chat.BotID)
+	)
+
 	prayerDay, err := h.db.GetPrayerDay(ctx, chat.BotID, date)
 	if err != nil {
 		log.Error("next: get prayer day", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
@@ -149,18 +153,18 @@ func (h *Handler) next(ctx context.Context, b *bot.Bot, update *models.Update) e
 
 	prayerID, duration := domain.PrayerIDUnknown, time.Duration(0)
 	switch {
-	case prayerDay.Fajr.After(date):
-		prayerID, duration = domain.PrayerIDFajr, prayerDay.Fajr.Sub(date)
-	case prayerDay.Shuruq.After(date):
-		prayerID, duration = domain.PrayerIDShuruq, prayerDay.Shuruq.Sub(date)
-	case prayerDay.Dhuhr.After(date):
-		prayerID, duration = domain.PrayerIDDhuhr, prayerDay.Dhuhr.Sub(date)
-	case prayerDay.Asr.After(date):
-		prayerID, duration = domain.PrayerIDAsr, prayerDay.Asr.Sub(date)
-	case prayerDay.Maghrib.After(date):
-		prayerID, duration = domain.PrayerIDMaghrib, prayerDay.Maghrib.Sub(date)
-	case prayerDay.Isha.After(date):
-		prayerID, duration = domain.PrayerIDIsha, prayerDay.Isha.Sub(date)
+	case prayerDay.Fajr.After(now):
+		prayerID, duration = domain.PrayerIDFajr, prayerDay.Fajr.Sub(now)
+	case prayerDay.Shuruq.After(now):
+		prayerID, duration = domain.PrayerIDShuruq, prayerDay.Shuruq.Sub(now)
+	case prayerDay.Dhuhr.After(now):
+		prayerID, duration = domain.PrayerIDDhuhr, prayerDay.Dhuhr.Sub(now)
+	case prayerDay.Asr.After(now):
+		prayerID, duration = domain.PrayerIDAsr, prayerDay.Asr.Sub(now)
+	case prayerDay.Maghrib.After(now):
+		prayerID, duration = domain.PrayerIDMaghrib, prayerDay.Maghrib.Sub(now)
+	case prayerDay.Isha.After(now):
+		prayerID, duration = domain.PrayerIDIsha, prayerDay.Isha.Sub(now)
 	}
 
 	// when no prayer time is found, return the first prayer of the next day
@@ -170,7 +174,7 @@ func (h *Handler) next(ctx context.Context, b *bot.Bot, update *models.Update) e
 			log.Error("next: get prayer day", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 			return fmt.Errorf("next: get prayer day: %v", err)
 		}
-		prayerID, duration = domain.PrayerIDFajr, prayerDay.Fajr.Sub(date)
+		prayerID, duration = domain.PrayerIDFajr, prayerDay.Fajr.Sub(now)
 	}
 
 	text := h.lp.GetText(chat.LanguageCode)
@@ -180,7 +184,13 @@ func (h *Handler) next(ctx context.Context, b *bot.Bot, update *models.Update) e
 		ParseMode: models.ParseModeMarkdown,
 	})
 	if err != nil {
-		log.Error("next: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		log.Error("next: send message",
+			log.Err(err),
+			log.BotID(chat.BotID),
+			log.ChatID(chat.ChatID),
+			log.String("date", date.String()),
+			log.String("prayer_day", fmt.Sprintf("%+v", prayerDay)),
+		)
 		return fmt.Errorf("next: send message: %v", err)
 	}
 

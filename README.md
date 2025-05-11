@@ -1,107 +1,181 @@
-# gopray 🙏
+# prayer-bot 🙏
 
-A Telegram Bot to get muslim prayers time, And subscribe to get notified on the prayers time
+A serverless Telegram bot that provides Muslim prayer times and sends notifications when prayers are approaching.
 
-![Build status](https://github.com/escalopa/gopray/workflows/Deploy/badge.svg)
-[![wakatime](https://wakatime.com/badge/user/965e81db-2a88-4564-b236-537c4a901130/project/5b8bc34a-26b1-4a61-be8d-f9b854b1e43a.svg)](https://wakatime.com/badge/user/965e81db-2a88-4564-b236-537c4a901130/project/5b8bc34a-26b1-4a61-be8d-f9b854b1e43a)
+[![wakatime](https://wakatime.com/badge/user/965e81db-2a88-4564-b236-537c4a901130/project/635dffc4-6a06-4e43-9a87-5bb977437cdb.svg)](https://wakatime.com/badge/user/965e81db-2a88-4564-b236-537c4a901130/project/635dffc4-6a06-4e43-9a87-5bb977437cdb)
 [![Report card](https://goreportcard.com/badge/github.com/escalopa/gopray)](https://goreportcard.com/report/github.com/escalopa/gopray)
-[![codecov](https://codecov.io/gh/escalopa/gopray/branch/v3/graph/badge.svg?token=xpSEiuk0s8)](https://codecov.io/gh/escalopa/gopray)<img src="./cover.jpg">
 
-## Contributing 🤼
+## Currently Available Cities
 
-Before we start talking about the bot, I would really appreciate if you can contribute to this project by adding more features or fixing bugs. It is totally open source and free to use. 😁
+| City      | Bot                                                        |
+|-----------|------------------------------------------------------------|
+| Kazan     | [@kazan_prayer_bot](https://t.me/kazan_prayer_bot)         |
+| Innopolis | [@innopolis_prayer_bot](https://t.me/innopolis_prayer_bot) |
 
-## Usecase 🛠️
+---
 
-```mermaid
-graph LR
-A[User] --> |Get Prayers Time| B((Bot))
-A[User] --> |Subscribe To Bot| B((Bot))
-A[User] --> |Change Bot Language| B((Bot))
-B((Bot)) --> |Notify Users about prayers| B((Bot))
-A[User] --> |Send Feedback Messages\nOr Bug Reports| B((Bot))
-B((Bot)) --> |Store Prayers Time| D[[Run Time Memory]]
-B((Bot)) --> |Store User ID For Subscriptions| C[[Database]]
+## Architecture 🏗️
+
+This bot is completely serverless, utilizing Yandex Cloud Functions for operation and YDB for data storage.
+
+![architecture](./_img/architecture.png)
+
+![terraform](./_img/terraform.png)
+
+For infrastructure configuration details, check the [terraform file](./main.tf).
+
+---
+
+## Configuration 🛠️
+
+Bot configuration is managed through environment variables.
+
+Below is an example of an `APP_CONFIG` value containing all bot information:
+
+```json
+{
+  "648252": {
+    "bot_id": 648252,          // Bot ID
+    "owner_id": 1385434843,    // Bot owner ID
+    "location": "Europe/Moscow", // Timezone of the city
+    "token": "oa7GmLW3fncbOE0MTfV0mKxH/F37cShhxgZ1mjl614w", // Telegram token
+    "secret": "Noe&uPcwjaAxjqJU_JP4C^g2V7ZDQX" // Secret key to verify requests
+  },
+  ...
+}
 ```
 
-## Subscription Feature 📢
+- To find your owner ID, use [ID bot](https://t.me/myidbot)
+- Bot ID is the first number before `:` in the bot token
+    - TOKEN: `123456789:ABC-DEF1234ghIkl-zyx57W2v1u123ew11`
+    - Bot ID: `123456789`
 
-This feature allows the bot to notify users `20 min` before the prayers time. (Time is set by the `UPCOMING_REMINDER` env variable)
+---
 
-Users can subscribe to the bot by sending `/subscribe` command to the bot. And unsubscribe by sending `/unsubscribe` command to the bot.
+## Bot Features 🤖
 
-Also on friday the bot will remind the user to pray Gomaa prayer. at `7:00 PM` (Time is set by the `GOMOAA_REMINDER_HOUR` env variable), This is value to when to remind them, The prayer time is calculated based on the prayers time of the day and sent to the user.
+### User Commands 📝
 
-### How it works 🤔
-
-In order to implement this feature, We have to make to bot wait until `20 min` are left before the prayer's time. And then send a notification to the subscribed users.
-
-Also, when the time of the prayer's arrive we should also notify them.
-
-So for that I use simple `channels` to sleep the goroutine until the time is right to send the notification.
-
-The first sleep is until the `20 min` before the prayer's time. And the second is until the prayer's time.
-
-for more details check the [notifier code](./telegram/internal/adapters/notifier/notifier.go).
-
-## Bot Options 🤖
-
-### Default Commands 📝
-
-| Command      | Description                                         |
-|--------------|-----------------------------------------------------|
-| /help        | Get help message showing all possible commands      |
-| /prayers     | Get prayers time                                    |
-| /date        | Get prayers time by date                            |
-| /subscribe   | Subscribe to get notified on the prayers time       |
-| /unsubscribe | Unsubscribe to not get notified on the prayers time |
-| /lang        | Change the bot language (Default English)           |
-| /feedback    | Send feedback to the bot owner                      |
-| /bug         | Report a bug to the bot owner                       |
+| Command     | Description                             |
+|-------------|-----------------------------------------|
+| today       | Get today's prayer times                |
+| date        | Get prayer times for a specific date    |
+| next        | Find out the next prayer time           |
+| subscribe   | Subscribe to daily reminders            |
+| unsubscribe | Unsubscribe from daily reminders        |
+| remind      | Set reminder offset for the next prayer |
+| language    | Change the bot language                 |
+| help        | Show help message                       |
+| bug         | Report a problem to bot owner           |
+| feedback    | Send feedback to bot owner              |
 
 ### Admin Commands 📝
 
-| Command  | Description                        |
-|----------|------------------------------------|
-| /subs    | Get subscribers count              |
-| /sall    | Send message to all subscribers    |
-| /respond | Respond to feedback or bug message |
+| Command  | Description                           |
+|----------|---------------------------------------|
+| admin    | Show admin help message               |
+| stats    | View bot usage statistics             |
+| announce | Send message to all users             |
+| reply    | Reply to user's bug/feedback message  |
+
+---
 
 ## References 📚
 
-- [Telegram API (Telego)](https://github.com/SakoDroid/telego)
-- [Prayer Times Site](http://dumrt.ru/ru/help-info/prayertime/)
+- [go-telegram](https://github.com/go-telegram)
+- [telegram-api](https://core.telegram.org/bots/api)
 
+---
 
-## Upcoming Features 🚀
+## How to Contribute 🤝
 
-### Version 1 Milestones 🏁
-- [x] Support date format for `/prayersdate` command with leading zeros and with delimiters (. / -)
+### [1] Add a City
+
+You do:
+1. Get prayer times for a city in CSV format
+2. Make a pull request (or open an issue) with the new file
+
+I do:
+1. Create a new Telegram bot
+2. Upload the city file to storage bucket
+
+### [2] Add a Language
+
+You do:
+1. Create translation text for the following files:
+    - [./serverless/reminder/internal/handler/languages/text.yaml](./serverless/reminder/internal/handler/languages/text.yaml)
+    - [./serverless/dispatcher/internal/handler/languages/en.yaml](./serverless/dispatcher/internal/handler/languages/en.yaml) (replace `en` with the new language code)
+
+I do:
+1. Deploy a new version of the code
+
+### [3] Code Contributions
+
+Found a bug? Want to add a new feature? Just open an issue or submit a pull request.
+
+---
+
+## Development Roadmap 🚀
+
+### V1 ✅
+- [x] Support date format for `/prayersdate` command with leading zeros and delimiters (. / -)
 - [x] Implement subscriptions & notifications
 - [x] Update text messages to be more user-friendly
 
-### Version 2 Milestones 🏁
-- [x] store prayers time in memory to reduce the number of requests to the database since the prayers time is not changing
-- [x] make response endpoint for admin to respond to feedback & bug messages
-- [x] remind about gomaa prayer on friday
+### V2 ✅
+- [x] Store prayer times in memory to reduce database requests
+- [x] Add response endpoint for admin to address feedback & bug messages
+- [x] Add Jumu'ah prayer reminders on Fridays
 
-### Version 3 Milestones 🏁
+### V3 ✅
 - [x] Add time keyboard to `/date` command
-- [x] Remove selection message for `/date` & `/lang` after the use interacts with the message or timeout
-- [x] On new user commands terminate other going channels that are listening to the chat
-- [x] Add feature to delete old prayer time message when new one is sent
-- [x] Add feature to send all subscribers a message from admin
-- [x] Add feature to get count of subscribers for admin
+- [x] Remove selection message for `/date` & `/lang` after user interaction or timeout
+- [x] Terminate other active channels when user sends new commands
+- [x] Add feature to delete old prayer time message when a new one is sent
+- [x] Enable admins to broadcast messages to all subscribers
+- [x] Add feature to get subscriber count for admins
 - [x] Write more robust tests for core features
 
-### Version 4 Milestones 🏁
-- [x] Add different languages support (AR, RU, TT, TR, UZ)
-- [x] Use script messages in the bot
-- [x] Set user script before command if nor set
-- [x] USe script commands in notifications
-- [x] Fix prayers timetable for other languages
+### V4 ✅
+- [x] Add multi-language support (AR, RU, TT, TR, UZ)
+- [x] Implement script messages in the bot
+- [x] Set user script before command if not set
+- [x] Use script commands in notifications
+- [x] Fix prayer timetables for other languages
 
-### Version 5 Milestones 🏁
-- [x] Refactor the code to be more readable and maintainable
-- [x] Enhance logging to be more informative and useful
-- [x] Enable using many bot in the same code
+### V5 ✅
+- [x] Refactor code for better readability and maintainability
+- [x] Enhance logging to be more informative
+- [x] Enable using multiple bots with the same codebase
+
+### V6 ✅
+- [x] Migrate to serverless architecture
+- [x] Automate deployment using Terraform
+- [x] Add support for multiple cities
+- [x] Add Spanish & French language support
+- [x] Add `/stats` command for bot usage statistics
+
+### V7 🔄
+- [ ] Add support for all major world cities
+
+---
+
+## Development Setup 🖥️
+
+Deploy bot on Yandex Cloud:
+
+```bash
+export ENV=dev # or prod
+./_scripts/init.sh $ENV prayer-bot
+terraform workspace select -or-create=true $ENV
+terraform apply # -auto-approve
+./_scripts/hook.sh
+```
+
+Generate Terraform dependencies visualization:
+
+```bash
+terraform plan -out plan.out
+terraform show -json plan.out > plan.json
+docker run --rm -it -p 9000:9000 -v $(pwd)/plan.json:/src/plan.json im2nguyen/rover:latest -planJSONPath=plan.json
+```

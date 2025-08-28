@@ -122,6 +122,12 @@ func (h *Handler) remindQuery(ctx context.Context, b *bot.Bot, update *models.Up
 		return fmt.Errorf("remindQuery: set remind offset: %v", err)
 	}
 
+	err = h.db.SetSubscribed(ctx, chat.BotID, chat.ChatID, true)
+	if err != nil {
+		log.Error("remindQuery: set subscribed", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		return fmt.Errorf("remindQuery: set subscribed: %v", err)
+	}
+
 	message := fmt.Sprintf(h.lp.GetText(chat.LanguageCode).Remind.Success, reminderOffset)
 	_, err = b.EditMessageText(ctx, &bot.EditMessageTextParams{
 		ChatID:    chat.ChatID,

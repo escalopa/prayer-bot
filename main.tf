@@ -289,7 +289,7 @@ resource "yandex_function" "dispatcher_fn" {
   execution_timeout  = 5
   service_account_id = yandex_iam_service_account.dispatcher_sa.id
   folder_id          = var.folder_id
-  user_hash          = "v2"
+  user_hash          = "v3"
 
   environment = {
     APP_CONFIG = file("${path.module}/_config/${terraform.workspace}/config.json")

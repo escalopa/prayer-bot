@@ -110,7 +110,12 @@ func (h *Handler) authorize(fn func(ctx context.Context, b *bot.Bot, update *mod
 			return fmt.Errorf("authorize: get chat: %v", err)
 		}
 
-		if h.cfg[chat.BotID].OwnerID == update.Message.From.ID { // isAdmin
+		var (
+			isAdminUser = h.cfg[chat.BotID].OwnerID == update.Message.From.ID
+			isAdminChat = h.cfg[chat.BotID].OwnerID == update.Message.Chat.ID
+		)
+
+		if isAdminUser && isAdminChat {
 			return fn(ctx, b, update)
 		}
 

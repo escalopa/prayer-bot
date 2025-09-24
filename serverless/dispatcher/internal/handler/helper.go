@@ -75,10 +75,6 @@ func layoutRowsInfo(totalItems, itemsPerRow int) (int, int) {
 	return (totalItems / itemsPerRow) + 1, empty
 }
 
-func timeToDate(day int, month time.Month, year int) time.Time {
-	return time.Date(year, month, day, 0, 0, 0, 0, time.UTC)
-}
-
 func isJamaat(chat models.Chat) bool {
 	return chat.Type == models.ChatTypeGroup || chat.Type == models.ChatTypeSupergroup
 }

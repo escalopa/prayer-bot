@@ -214,7 +214,7 @@ func (h *Handler) getChat(ctx context.Context, update *models.Update) (*domain.C
 
 	chat, err := h.db.GetChat(ctx, botID, chatID)
 	if err != nil && !errors.Is(err, domain.ErrNotFound) {
-		log.Error("get chat", log.BotID(botID), log.Err(err), log.ChatID(chatID))
+		log.Error("get chat", log.Err(err), log.BotID(botID), log.ChatID(chatID), "update", update)
 		return nil, domain.ErrInternal
 	}
 
@@ -231,7 +231,7 @@ func (h *Handler) getChat(ctx context.Context, update *models.Update) (*domain.C
 
 	err = h.db.CreateChat(ctx, botID, chatID, languageCode, int32(0), string(defaultState), jamaat)
 	if err != nil {
-		log.Error("create chat", log.BotID(botID), log.Err(err), log.ChatID(chatID))
+		log.Error("create chat", log.Err(err), log.BotID(botID), log.ChatID(chatID), "update", update)
 		return nil, domain.ErrInternal
 	}
 

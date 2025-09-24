@@ -121,8 +121,7 @@ resource "yandex_ydb_table" "ydb_table_chats" {
   column {
     name = "created_at"
     type = "Datetime"
-  }
-
+  } 
 }
 
 resource "yandex_ydb_table" "ydb_table_prayers" {

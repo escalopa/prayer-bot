@@ -67,7 +67,7 @@ func (h *Handler) dayQuery(ctx context.Context, b *bot.Bot, update *models.Updat
 	parts := strings.Split(update.CallbackQuery.Data, dataSplitterQuery)
 	month, _ := strconv.Atoi(parts[1])
 	day, _ := strconv.Atoi(parts[2])
-	date := timeToDate(day, time.Month(month), h.nowUTC(chat.BotID).Year())
+	date := domain.DateUTC(day, time.Month(month), h.nowUTC(chat.BotID).Year())
 
 	prayerDay, err := h.db.GetPrayerDay(ctx, chat.BotID, date)
 	if err != nil {

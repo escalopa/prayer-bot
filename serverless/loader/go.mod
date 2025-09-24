@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/aws/aws-sdk-go v1.55.7
-	github.com/escalopa/prayer-bot v0.0.0-20250924175856-db4513cf2007
+	github.com/escalopa/prayer-bot v0.0.0-20250924182821-90acd5bcfc24
 	github.com/ydb-platform/ydb-go-sdk/v3 v3.108.0
 	github.com/ydb-platform/ydb-go-yc v0.12.3
 )

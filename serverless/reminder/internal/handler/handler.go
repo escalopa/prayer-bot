@@ -233,7 +233,7 @@ func (h *Handler) remindUser(
 				log.Error("remindUser: delete chat", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 				return domain.ErrInternal
 			}
-			log.Warn("remindUser: delete chat", log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+			log.Warn("remindUser: deleted chat", log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 			return nil
 		}
 
@@ -329,7 +329,7 @@ func (h *Handler) remindUserJamaat(
 				log.Error("remindUserJamaat: delete chat", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 				return domain.ErrInternal
 			}
-			log.Warn("remindUserJamaat: delete chat", log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+			log.Warn("remindUserJamaat: deleted chat", log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 			return nil
 		}
 
@@ -356,7 +356,7 @@ func (h *Handler) remindUserJamaat(
 	}
 
 	if !hasArrived {
-		// make sure not 0 id is sent
+		// make sure no 0 id is sent
 		messageIDs := make([]int, 0, 2)
 		if chat.ReminderMessageID != 0 {
 			messageIDs = append(messageIDs, int(chat.ReminderMessageID))

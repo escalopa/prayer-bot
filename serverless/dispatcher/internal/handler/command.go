@@ -452,7 +452,7 @@ func (h *Handler) defaultHandler(ctx context.Context, b *bot.Bot, update *models
 			b.ProcessUpdate(ctx, update)
 			return nil
 		}
-		log.Info("defaultHandler: got unexpected update", "update", update, log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		log.Info("defaultHandler: got unexpected update", log.BotID(chat.BotID), log.ChatID(chat.ChatID), "update", update)
 		return nil // do nothing
 	}
 

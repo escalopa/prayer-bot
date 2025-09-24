@@ -7,9 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/escalopa/prayer-bot/log"
-
 	"github.com/escalopa/prayer-bot/domain"
+	"github.com/escalopa/prayer-bot/log"
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
 )
@@ -488,7 +487,10 @@ func (h *Handler) isDirectoBotCommand(ctx context.Context, chat *domain.Chat, b 
 		return false
 	}
 
+	// mutate the message and try to process it again
 	update.Message.Text = strings.TrimSuffix(update.Message.Text, fmt.Sprintf("@%s", user.Username))
+	update.Message.Entities[0].Length = len(update.Message.Text)
+	// update.Message.Entities[0].Type = models.MessageEntityTypeBotCommand
 	return true
 }
 

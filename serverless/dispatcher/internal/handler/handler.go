@@ -91,13 +91,15 @@ func (h *Handler) errorH(fn func(ctx context.Context, b *bot.Bot, update *models
 				log.Error("recovered from panic",
 					log.String("stack", string(debug.Stack())),
 					log.String("err", fmt.Sprintf("%+v", r)),
+					"update", update,
 				)
 			}
 		}()
 
+		log.Info("got update", "update", update)
 		err := fn(ctx, b, update)
 		if err != nil {
-			log.Error("handler error", log.Err(err))
+			log.Error("handler error", log.Err(err), "update", update)
 		}
 	}
 }
@@ -110,6 +112,7 @@ func (h *Handler) chatH(fn func(ctx context.Context, b *bot.Bot, update *models.
 				return nil
 			}
 			log.Error("chatH: get chat", log.Err(err))
+			return err
 		}
 		ctx = setContextChat(ctx, chat)
 		return fn(ctx, b, update)
@@ -203,7 +206,7 @@ func (h *Handler) getChat(ctx context.Context, update *models.Update) (*domain.C
 	case update.Message != nil:
 		chatID = update.Message.Chat.ID
 		jamaat = isJamaat(update.Message.Chat)
-	case update.CallbackQuery != nil:
+	case update.CallbackQuery != nil && update.CallbackQuery.Message.Message != nil:
 		chatID = update.CallbackQuery.Message.Message.Chat.ID
 		jamaat = isJamaat(update.CallbackQuery.Message.Message.Chat)
 	default:

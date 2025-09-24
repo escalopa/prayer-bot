@@ -23,6 +23,7 @@ type (
 		GetSubscribersByOffset(ctx context.Context, botID int64, offset int32) (chatIDs []int64, _ error)
 		GetPrayerDay(ctx context.Context, botID int64, date time.Time) (prayerDay *domain.PrayerDay, _ error)
 		SetReminderMessageID(ctx context.Context, botID int64, chatID int64, reminderMessageID int32) error
+		SetJamaatMessageID(ctx context.Context, botID int64, chatID int64, jamaatMessageID int32) error
 		DeleteChat(ctx context.Context, botID int64, chatID int64) error
 	}
 
@@ -80,7 +81,7 @@ func (h *Handler) Handel(ctx context.Context, botID int64) error {
 	prayerID, reminderOffset, err := h.getPrayer(ctx, botID, cfg.Location.V())
 	if err != nil {
 		log.Error("get prayer", log.Err(err), log.BotID(botID))
-		return fmt.Errorf("get prayer: %v", err)
+		return domain.ErrInternal
 	}
 
 	var chatIDs []int64
@@ -93,7 +94,7 @@ func (h *Handler) Handel(ctx context.Context, botID int64) error {
 
 	if err != nil {
 		log.Error("get subscribers", log.Err(err), log.BotID(botID))
-		return fmt.Errorf("get subscribers: %v", err)
+		return domain.ErrInternal
 	}
 	if len(chatIDs) == 0 {
 		return nil
@@ -101,7 +102,8 @@ func (h *Handler) Handel(ctx context.Context, botID int64) error {
 
 	err = h.remindUsers(ctx, botID, chatIDs, prayerID, reminderOffset)
 	if err != nil {
-		return fmt.Errorf("remindUsers: %v", err)
+		log.Error("remindUsers", log.Err(err))
+		return domain.ErrInternal
 	}
 
 	return nil
@@ -117,7 +119,7 @@ func (h *Handler) getPrayer(ctx context.Context, botID int64, loc *time.Location
 			log.String("date", date.String()),
 			log.String("location", loc.String()),
 		)
-		return 0, 0, fmt.Errorf("get prayer day: %v", err)
+		return 0, 0, domain.ErrInternal
 	}
 
 	switch {
@@ -144,7 +146,7 @@ func (h *Handler) getPrayer(ctx context.Context, botID int64, loc *time.Location
 			log.String("date", date.String()),
 			log.String("location", loc.String()),
 		)
-		return 0, 0, fmt.Errorf("get next prayer day: %v", err)
+		return 0, 0, domain.ErrInternal
 	}
 
 	return domain.PrayerIDFajr, int32(prayerDay.Fajr.Sub(date).Minutes()), nil
@@ -160,20 +162,24 @@ func (h *Handler) remindUsers(
 	chats, err := h.db.GetChatsByIDs(ctx, botID, chatIDs)
 	if err != nil {
 		log.Error("get chats", log.Err(err), log.BotID(botID))
-		return fmt.Errorf("get chats: %v", err)
+		return domain.ErrInternal
 	}
 
 	b, err := h.getBot(botID)
 	if err != nil {
 		log.Error("get bot", log.Err(err), log.BotID(botID))
-		return fmt.Errorf("get bot: %v", err)
+		return domain.ErrInternal
 	}
 
 	errG := &errgroup.Group{}
 	for _, chat := range chats {
 		chat := chat
 		errG.Go(func() error {
-			err := h.remindUser(ctx, b, chat, prayerID, reminderOffset)
+			fn := h.remindUser
+			if chat.Jamaat && prayerID != domain.PrayerIDShuruq /* shuruq isn't prayed in Jamaat */ {
+				fn = h.remindUserJamaat
+			}
+			err := fn(ctx, b, chat, prayerID, reminderOffset)
 			if err != nil {
 				log.Error("remindUsers",
 					log.Err(err),
@@ -204,38 +210,41 @@ func (h *Handler) remindUser(
 		prayer, message = text.Prayer[int(prayerID)], ""
 	)
 
-	switch {
-	case duration == 0:
+	switch duration {
+	case 0:
 		message = fmt.Sprintf(text.PrayerArrived, prayer)
 	default:
 		message = fmt.Sprintf(text.PrayerSoon, prayer, domain.FormatDuration(duration))
 	}
 
-	res, err := b.SendMessage(ctx, &bot.SendMessageParams{
+	params := &bot.SendMessageParams{
 		ChatID:    chat.ChatID,
 		Text:      message,
 		ParseMode: models.ParseModeMarkdown,
-	})
+	}
+
+	res, err := b.SendMessage(ctx, params)
+
 	if err != nil {
 		if strings.HasPrefix(err.Error(), bot.ErrorForbidden.Error()) {
 			// bot was blocked or user is deactivated so delete chat
 			err = h.db.DeleteChat(ctx, chat.BotID, chat.ChatID)
 			if err != nil {
 				log.Error("remindUser: delete chat", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
-				return fmt.Errorf("remindUser: delete chat: %v", err)
+				return domain.ErrInternal
 			}
 			log.Warn("remindUser: delete chat", log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 			return nil
 		}
 
 		log.Error("remindUser: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
-		return fmt.Errorf("remindUser: send message: %v", err)
+		return domain.ErrInternal
 	}
 
 	err = h.db.SetReminderMessageID(ctx, chat.BotID, chat.ChatID, int32(res.ID))
 	if err != nil {
 		log.Error("remindUser: set remind_message_id", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
-		return fmt.Errorf("remindUser: set remind_message_id: %v", err)
+		return domain.ErrInternal
 	}
 
 	if chat.ReminderMessageID == 0 { // no message to delete
@@ -248,7 +257,124 @@ func (h *Handler) remindUser(
 	})
 	if err != nil {
 		log.Error("remindUser: delete message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
-		return fmt.Errorf("remindUser: delete message: %v", err)
+		return domain.ErrInternal
+	}
+
+	return nil
+}
+
+func (h *Handler) remindUserJamaat(
+	ctx context.Context,
+	b *bot.Bot,
+	chat *domain.Chat,
+	prayerID domain.PrayerID,
+	reminderOffset int32,
+) error {
+	var (
+		text            = h.lp.GetText(chat.LanguageCode)
+		duration        = time.Duration(reminderOffset) * time.Minute
+		prayer, message = text.Prayer[int(prayerID)], ""
+		hasArrived      = false
+	)
+
+	switch duration {
+	case 0:
+		hasArrived = true
+		message = fmt.Sprintf(text.PrayerArrived, prayer)
+	default:
+		message = fmt.Sprintf(text.PrayerSoon, prayer, domain.FormatDuration(duration))
+	}
+
+	var (
+		res *models.Message
+		err error
+	)
+
+	if hasArrived {
+		res, err = b.SendMessage(ctx, &bot.SendMessageParams{
+			ChatID:    chat.ChatID,
+			Text:      message,
+			ParseMode: models.ParseModeMarkdown,
+			ReplyParameters: &models.ReplyParameters{
+				MessageID:                int(chat.JamaatMessageID),
+				ChatID:                   chat.ChatID,
+				AllowSendingWithoutReply: true,
+			},
+		})
+	} else {
+		isAnonymous := false
+		message = strings.ReplaceAll(message, "*", "") // remove markdown syntax cuz doesn't work on poll
+		res, err = b.SendPoll(ctx, &bot.SendPollParams{
+			ChatID:   chat.ChatID,
+			Question: message,
+			Options: []models.InputPollOption{
+				{
+					Text:          text.PrayerJoin,
+					TextParseMode: models.ParseModeMarkdown,
+				},
+				{
+					Text:          text.PrayerJoinDelay,
+					TextParseMode: models.ParseModeMarkdown,
+				},
+			},
+			IsAnonymous: &isAnonymous,
+		})
+	}
+
+	if err != nil {
+		if strings.HasPrefix(err.Error(), bot.ErrorForbidden.Error()) {
+			// bot was blocked or user is deactivated so delete chat
+			err = h.db.DeleteChat(ctx, chat.BotID, chat.ChatID)
+			if err != nil {
+				log.Error("remindUserJamaat: delete chat", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+				return domain.ErrInternal
+			}
+			log.Warn("remindUserJamaat: delete chat", log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+			return nil
+		}
+
+		log.Error("remindUserJamaat: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		return domain.ErrInternal
+	}
+
+	if hasArrived {
+		err = h.db.SetReminderMessageID(ctx, chat.BotID, chat.ChatID, int32(res.ID))
+		if err != nil {
+			log.Error("remindUserJamaat: set remind_message_id", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+			return domain.ErrInternal
+		}
+	} else {
+		err = h.db.SetJamaatMessageID(ctx, chat.BotID, chat.ChatID, int32(res.ID))
+		if err != nil {
+			log.Error("remindUserJamaat: set jamaat_message_id", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+			return domain.ErrInternal
+		}
+	}
+
+	if chat.ReminderMessageID == 0 && chat.JamaatMessageID == 0 { // no message to delete
+		return nil
+	}
+
+	if !hasArrived {
+		// make sure not 0 id is sent
+		messageIDs := make([]int, 0, 2)
+		if chat.ReminderMessageID != 0 {
+			messageIDs = append(messageIDs, int(chat.ReminderMessageID))
+		}
+		if chat.JamaatMessageID != 0 {
+			messageIDs = append(messageIDs, int(chat.JamaatMessageID))
+		}
+		if len(messageIDs) == 0 {
+			return nil
+		}
+		_, err = b.DeleteMessages(ctx, &bot.DeleteMessagesParams{
+			ChatID:     chat.ChatID,
+			MessageIDs: messageIDs,
+		})
+		if err != nil {
+			log.Error("remindUserJamaat: delete messages", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+			return domain.ErrInternal
+		}
 	}
 
 	return nil

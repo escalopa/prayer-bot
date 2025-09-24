@@ -50,7 +50,7 @@ func (db *DB) GetChatsByIDs(ctx context.Context, botID int64, chatIDs []int64) (
 		DECLARE $bot_id AS Int64;
 		DECLARE $chat_ids AS List<Int64>;
 
-		SELECT bot_id, chat_id, state, language_code, reminder_message_id
+		SELECT bot_id, chat_id, state, language_code, reminder_message_id, jamaat, jamaat_message_id
 		FROM chats
 		WHERE bot_id = $bot_id AND chat_id IN $chat_ids;
 	`
@@ -81,6 +81,8 @@ func (db *DB) GetChatsByIDs(ctx context.Context, botID int64, chatIDs []int64) (
 					&chat.State,
 					&chat.LanguageCode,
 					&chat.ReminderMessageID,
+					&chat.Jamaat,
+					&chat.JamaatMessageID,
 				)
 				if err != nil {
 					return err
@@ -244,6 +246,31 @@ func (db *DB) SetReminderMessageID(ctx context.Context, botID int64, chatID int6
 		table.ValueParam("$bot_id", types.Int64Value(botID)),
 		table.ValueParam("$chat_id", types.Int64Value(chatID)),
 		table.ValueParam("$reminder_message_id", types.Int32Value(reminderMessageID)),
+	)
+
+	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
+		_, _, err := s.Execute(ctx, writeTx, query, params)
+		return err
+	})
+
+	return err
+}
+
+func (db *DB) SetJamaatMessageID(ctx context.Context, botID int64, chatID int64, jamaatMessageID int32) error {
+	query := `
+		DECLARE $bot_id AS Int64;
+		DECLARE $chat_id AS Int64;
+		DECLARE $jamaat_message_id AS Int32;
+
+		UPDATE chats
+		SET jamaat_message_id = $jamaat_message_id
+		WHERE bot_id = $bot_id AND chat_id = $chat_id;
+	`
+
+	params := table.NewQueryParameters(
+		table.ValueParam("$bot_id", types.Int64Value(botID)),
+		table.ValueParam("$chat_id", types.Int64Value(chatID)),
+		table.ValueParam("$jamaat_message_id", types.Int32Value(jamaatMessageID)),
 	)
 
 	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {

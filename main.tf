@@ -99,6 +99,16 @@ resource "yandex_ydb_table" "ydb_table_chats" {
   }
 
   column {
+    name = "jamaat"
+    type = "Bool"
+  }
+  
+  column {
+    name = "jamaat_message_id"
+    type = "Int32"
+  }
+
+  column {
     name = "subscribed"
     type = "Bool"
   }
@@ -111,7 +121,7 @@ resource "yandex_ydb_table" "ydb_table_chats" {
   column {
     name = "created_at"
     type = "Datetime"
-  }
+  } 
 }
 
 resource "yandex_ydb_table" "ydb_table_prayers" {

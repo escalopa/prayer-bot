@@ -8,10 +8,13 @@ import (
 
 type (
 	Text struct {
-		Prayer        map[int]string `yaml:"prayer"` // domain.PrayerID to prayer name
-		PrayerSoon    string         `yaml:"prayer_soon"`
-		PrayerArrived string         `yaml:"prayer_arrived"`
+		Prayer          map[int]string `yaml:"prayer"` // domain.PrayerID to prayer name
+		PrayerSoon      string         `yaml:"prayer_soon"`
+		PrayerArrived   string         `yaml:"prayer_arrived"`
+		PrayerJoin      string         `yaml:"prayer_join"`
+		PrayerJoinDelay string         `yaml:"prayer_join_delay"`
 	}
+
 	languagesProvider struct {
 		storage map[string]*Text
 	}

@@ -45,16 +45,25 @@ func NewDB(ctx context.Context) (*DB, error) {
 	return &DB{client: sdk.Table()}, nil
 }
 
-func (db *DB) CreateChat(ctx context.Context, botID int64, chatID int64, languageCode string, reminderOffset int32, state string) error {
+func (db *DB) CreateChat(
+	ctx context.Context,
+	botID int64,
+	chatID int64,
+	languageCode string,
+	reminderOffset int32,
+	state string,
+	jamaat bool,
+) error {
 	query := `
 		DECLARE $bot_id AS Int64;
 		DECLARE $chat_id AS Int64;
 		DECLARE $language_code AS Utf8;
 		DECLARE $reminder_offset AS Int32;
 		DECLARE $state AS Utf8;
+		DECLARE $jamaat AS Bool;
 
-		INSERT INTO chats (bot_id, chat_id, language_code, reminder_offset, state, created_at)
-		VALUES ($bot_id, $chat_id, $language_code, $reminder_offset, $state, CurrentUtcDatetime());
+		INSERT INTO chats (bot_id, chat_id, language_code, reminder_offset, state, jamaat, created_at)
+		VALUES ($bot_id, $chat_id, $language_code, $reminder_offset, $state, $jamaat, CurrentUtcDatetime());
 	`
 
 	params := table.NewQueryParameters(
@@ -63,6 +72,7 @@ func (db *DB) CreateChat(ctx context.Context, botID int64, chatID int64, languag
 		table.ValueParam("$language_code", types.UTF8Value(languageCode)),
 		table.ValueParam("$reminder_offset", types.Int32Value(reminderOffset)),
 		table.ValueParam("$state", types.UTF8Value(state)),
+		table.ValueParam("$jamaat", types.BoolValue(jamaat)),
 	)
 
 	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
@@ -85,7 +95,7 @@ func (db *DB) GetChat(ctx context.Context, botID int64, chatID int64) (chat *dom
 		DECLARE $bot_id AS Int64;
 		DECLARE $chat_id AS int64;
 
-		SELECT bot_id, chat_id, state, language_code, reminder_message_id
+		SELECT bot_id, chat_id, state, language_code, reminder_message_id, jamaat, jamaat_message_id
 		FROM chats
 		WHERE bot_id = $bot_id AND chat_id = $chat_id;
 	`
@@ -110,6 +120,8 @@ func (db *DB) GetChat(ctx context.Context, botID int64, chatID int64) (chat *dom
 				&chat.State,
 				&chat.LanguageCode,
 				&chat.ReminderMessageID,
+				&chat.Jamaat,
+				&chat.JamaatMessageID,
 			)
 			if err != nil {
 				return err
@@ -134,7 +146,7 @@ func (db *DB) GetChats(ctx context.Context, botID int64) (chats []*domain.Chat, 
 	query := `
 		DECLARE $bot_id AS Int64;
 
-		SELECT bot_id, chat_id, state, language_code, reminder_message_id
+		SELECT bot_id, chat_id, state, language_code, reminder_message_id, jamaat, jamaat_message_id
 		FROM chats
 		WHERE bot_id = $bot_id;
 	`
@@ -156,6 +168,8 @@ func (db *DB) GetChats(ctx context.Context, botID int64) (chats []*domain.Chat, 
 					&chat.State,
 					&chat.LanguageCode,
 					&chat.ReminderMessageID,
+					&chat.Jamaat,
+					&chat.JamaatMessageID,
 				)
 				if err != nil {
 					return err

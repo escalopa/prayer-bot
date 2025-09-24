@@ -6,10 +6,12 @@ import (
 	"time"
 
 	"github.com/escalopa/prayer-bot/domain"
+	"github.com/go-telegram/bot/models"
 )
 
 type (
 	contextBotIDKey struct{}
+	contextChatKey  struct{}
 )
 
 func setContextBotID(ctx context.Context, botID int64) context.Context {
@@ -19,6 +21,15 @@ func setContextBotID(ctx context.Context, botID int64) context.Context {
 func getContextBotID(ctx context.Context) int64 {
 	botID, _ := ctx.Value(contextBotIDKey{}).(int64)
 	return botID
+}
+
+func setContextChat(ctx context.Context, chat *domain.Chat) context.Context {
+	return context.WithValue(ctx, contextChatKey{}, chat)
+}
+
+func getContextChat(ctx context.Context) *domain.Chat {
+	chat, _ := ctx.Value(contextChatKey{}).(*domain.Chat)
+	return chat
 }
 
 // formatPrayerDay formats the domain.PrayerDay into a string.
@@ -62,4 +73,8 @@ func layoutRowsInfo(totalItems, itemsPerRow int) (int, int) {
 	}
 	empty := itemsPerRow - (totalItems % itemsPerRow)
 	return (totalItems / itemsPerRow) + 1, empty
+}
+
+func isJamaat(chat models.Chat) bool {
+	return chat.Type == models.ChatTypeGroup || chat.Type == models.ChatTypeSupergroup
 }

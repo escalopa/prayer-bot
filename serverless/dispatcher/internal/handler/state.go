@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/escalopa/prayer-bot/domain"
 	"github.com/escalopa/prayer-bot/log"
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
@@ -60,20 +61,16 @@ func (c state) String() string {
 }
 
 func (h *Handler) bugState(ctx context.Context, b *bot.Bot, update *models.Update) error {
-	chat, err := h.getChat(ctx, update)
-	if err != nil {
-		log.Error("bugState: get chat", log.Err(err))
-		return fmt.Errorf("bugState: get chat: %v", err)
-	}
+	chat := getContextChat(ctx)
 
-	_, err = b.ForwardMessage(ctx, &bot.ForwardMessageParams{
+	_, err := b.ForwardMessage(ctx, &bot.ForwardMessageParams{
 		ChatID:     h.cfg[chat.BotID].OwnerID,
 		FromChatID: chat.ChatID,
 		MessageID:  update.Message.ID,
 	})
 	if err != nil {
 		log.Error("bugState: forward message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
-		return fmt.Errorf("bugState: forward message: %v", err)
+		return domain.ErrInternal
 	}
 
 	info := newReplyInfo(replyTypeBug, chat.ChatID, update.Message.ID, update.Message.From.Username)
@@ -83,7 +80,7 @@ func (h *Handler) bugState(ctx context.Context, b *bot.Bot, update *models.Updat
 	})
 	if err != nil {
 		log.Error("bugState: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
-		return fmt.Errorf("bugState: send message: %v", err)
+		return domain.ErrInternal
 	}
 
 	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
@@ -92,27 +89,23 @@ func (h *Handler) bugState(ctx context.Context, b *bot.Bot, update *models.Updat
 	})
 	if err != nil {
 		log.Error("bugState: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
-		return fmt.Errorf("bugState: send message: %v", err)
+		return domain.ErrInternal
 	}
 
 	return nil
 }
 
 func (h *Handler) feedbackState(ctx context.Context, b *bot.Bot, update *models.Update) error {
-	chat, err := h.getChat(ctx, update)
-	if err != nil {
-		log.Error("feedbackState: get chat", log.Err(err))
-		return fmt.Errorf("feedbackState: get chat: %v", err)
-	}
+	chat := getContextChat(ctx)
 
-	_, err = b.ForwardMessage(ctx, &bot.ForwardMessageParams{
+	_, err := b.ForwardMessage(ctx, &bot.ForwardMessageParams{
 		ChatID:     h.cfg[chat.BotID].OwnerID,
 		FromChatID: chat.ChatID,
 		MessageID:  update.Message.ID,
 	})
 	if err != nil {
 		log.Error("feedbackState: forward message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
-		return fmt.Errorf("feedbackState: forward message: %v", err)
+		return domain.ErrInternal
 	}
 
 	info := newReplyInfo(replyTypeFeedback, chat.ChatID, update.Message.ID, update.Message.From.Username)
@@ -122,7 +115,7 @@ func (h *Handler) feedbackState(ctx context.Context, b *bot.Bot, update *models.
 	})
 	if err != nil {
 		log.Error("feedbackState: send message to owner", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
-		return fmt.Errorf("feedbackState: send message: %v", err)
+		return domain.ErrInternal
 	}
 
 	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
@@ -131,28 +124,24 @@ func (h *Handler) feedbackState(ctx context.Context, b *bot.Bot, update *models.
 	})
 	if err != nil {
 		log.Error("feedbackState: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
-		return fmt.Errorf("feedbackState: send message: %v", err)
+		return domain.ErrInternal
 	}
 
 	return nil
 }
 
 func (h *Handler) replyState(ctx context.Context, b *bot.Bot, update *models.Update) error {
-	chat, err := h.getChat(ctx, update)
-	if err != nil {
-		log.Error("replyState: get chat", log.Err(err))
-		return fmt.Errorf("replyState: get chat: %v", err)
-	}
+	chat := getContextChat(ctx)
 
 	if update.Message.ReplyToMessage == nil {
 		return fmt.Errorf("replyState: reply to message is nil")
 	}
 
 	info := &replyInfo{}
-	err = json.Unmarshal([]byte(update.Message.ReplyToMessage.Text), info)
+	err := json.Unmarshal([]byte(update.Message.ReplyToMessage.Text), info)
 	if err != nil {
 		log.Error("replyState: unmarshal reply info", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
-		return fmt.Errorf("replyState: unmarshal reply info: %v", err)
+		return domain.ErrInternal
 	}
 
 	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
@@ -166,7 +155,7 @@ func (h *Handler) replyState(ctx context.Context, b *bot.Bot, update *models.Upd
 	})
 	if err != nil {
 		log.Error("replyState: reply message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
-		return fmt.Errorf("replyState: send message: %v", err)
+		return domain.ErrInternal
 	}
 
 	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
@@ -175,23 +164,19 @@ func (h *Handler) replyState(ctx context.Context, b *bot.Bot, update *models.Upd
 	})
 	if err != nil {
 		log.Error("replyState: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
-		return fmt.Errorf("replyState: send message: %v", err)
+		return domain.ErrInternal
 	}
 
 	return nil
 }
 
 func (h *Handler) announceState(ctx context.Context, b *bot.Bot, update *models.Update) error {
-	chat, err := h.getChat(ctx, update)
-	if err != nil {
-		log.Error("announceState: get chat", log.Err(err))
-		return fmt.Errorf("announceState: get chat: %v", err)
-	}
+	chat := getContextChat(ctx)
 
 	chats, err := h.db.GetChats(ctx, chat.BotID)
 	if err != nil {
 		log.Error("announceState: get all chats", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
-		return fmt.Errorf("announceState: get all chats: %v", err)
+		return domain.ErrInternal
 	}
 
 	g := &errgroup.Group{}
@@ -221,7 +206,7 @@ func (h *Handler) announceState(ctx context.Context, b *bot.Bot, update *models.
 	})
 	if err != nil {
 		log.Error("announceState: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
-		return fmt.Errorf("announceState: send message: %v", err)
+		return domain.ErrInternal
 	}
 
 	return nil

@@ -155,7 +155,10 @@ Found a bug? Want to add a new feature? Just open an issue or submit a pull requ
 - [x] Add Spanish & French language support
 - [x] Add `/stats` command for bot usage statistics
 
-### V7 🔄
+### V7 ✅
+- [x] Add jamaat gathering feature for group chats
+
+### V8 🔄
 - [ ] Add support for all major world cities
 
 ---

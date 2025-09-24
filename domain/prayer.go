@@ -55,3 +55,7 @@ func FormatDuration(d time.Duration) string {
 	}
 	return fmt.Sprintf("%dh%dm", h, m)
 }
+
+func DateUTC(day int, month time.Month, year int) time.Time {
+	return time.Date(year, month, day, 0, 0, 0, 0, time.UTC)
+}

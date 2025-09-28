@@ -226,17 +226,10 @@ func (h *Handler) remindUser(
 	res, err := b.SendMessage(ctx, params)
 
 	if err != nil {
-		if strings.HasPrefix(err.Error(), bot.ErrorForbidden.Error()) {
-			// bot was blocked or user is deactivated so delete chat
-			err = h.db.DeleteChat(ctx, chat.BotID, chat.ChatID)
-			if err != nil {
-				log.Error("remindUser: delete chat", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
-				return domain.ErrInternal
-			}
-			log.Warn("remindUser: deleted chat", log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		if h.isBlockedErr(err) {
+			h.deleteChat(ctx, chat)
 			return nil
 		}
-
 		log.Error("remindUser: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
@@ -247,19 +240,7 @@ func (h *Handler) remindUser(
 		return domain.ErrInternal
 	}
 
-	if chat.ReminderMessageID == 0 { // no message to delete
-		return nil
-	}
-
-	_, err = b.DeleteMessage(ctx, &bot.DeleteMessageParams{
-		ChatID:    chat.ChatID,
-		MessageID: int(chat.ReminderMessageID),
-	})
-	if err != nil {
-		log.Error("remindUser: delete message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
-		return domain.ErrInternal
-	}
-
+	h.deleteMessages(ctx, b, chat, chat.ReminderMessageID, chat.JamaatMessageID)
 	return nil
 }
 
@@ -322,17 +303,10 @@ func (h *Handler) remindUserJamaat(
 	}
 
 	if err != nil {
-		if strings.HasPrefix(err.Error(), bot.ErrorForbidden.Error()) {
-			// bot was blocked or user is deactivated so delete chat
-			err = h.db.DeleteChat(ctx, chat.BotID, chat.ChatID)
-			if err != nil {
-				log.Error("remindUserJamaat: delete chat", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
-				return domain.ErrInternal
-			}
-			log.Warn("remindUserJamaat: deleted chat", log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		if h.isBlockedErr(err) {
+			h.deleteChat(ctx, chat)
 			return nil
 		}
-
 		log.Error("remindUserJamaat: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
@@ -343,41 +317,52 @@ func (h *Handler) remindUserJamaat(
 			log.Error("remindUserJamaat: set remind_message_id", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 			return domain.ErrInternal
 		}
-	} else {
-		err = h.db.SetJamaatMessageID(ctx, chat.BotID, chat.ChatID, int32(res.ID))
-		if err != nil {
-			log.Error("remindUserJamaat: set jamaat_message_id", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
-			return domain.ErrInternal
-		}
+		h.deleteMessages(ctx, b, chat, chat.ReminderMessageID) // prevent duplicates
+		return nil                                             // no need to continue further
 	}
 
-	if chat.ReminderMessageID == 0 && chat.JamaatMessageID == 0 { // no message to delete
-		return nil
+	err = h.db.SetJamaatMessageID(ctx, chat.BotID, chat.ChatID, int32(res.ID))
+	if err != nil {
+		log.Error("remindUserJamaat: set jamaat_message_id", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		return domain.ErrInternal
 	}
 
-	if !hasArrived {
-		// make sure no 0 id is sent
-		messageIDs := make([]int, 0, 2)
-		if chat.ReminderMessageID != 0 {
-			messageIDs = append(messageIDs, int(chat.ReminderMessageID))
-		}
-		if chat.JamaatMessageID != 0 {
-			messageIDs = append(messageIDs, int(chat.JamaatMessageID))
-		}
-		if len(messageIDs) == 0 {
-			return nil
-		}
-		_, err = b.DeleteMessages(ctx, &bot.DeleteMessagesParams{
-			ChatID:     chat.ChatID,
-			MessageIDs: messageIDs,
-		})
-		if err != nil {
-			log.Error("remindUserJamaat: delete messages", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
-			return domain.ErrInternal
-		}
-	}
-
+	h.deleteMessages(ctx, b, chat, chat.ReminderMessageID, chat.JamaatMessageID)
 	return nil
+}
+
+func (h *Handler) deleteChat(ctx context.Context, chat *domain.Chat) {
+	err := h.db.DeleteChat(ctx, chat.BotID, chat.ChatID)
+	if err != nil {
+		log.Error("remindUserJamaat: delete chat", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		return
+	}
+	log.Warn("remindUserJamaat: deleted chat", log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+}
+
+func (h *Handler) deleteMessages(ctx context.Context, b *bot.Bot, chat *domain.Chat, ids ...int32) {
+	messageIDs := make([]int, 0, len(ids))
+	for _, id := range ids {
+		if id == 0 {
+			continue
+		}
+		messageIDs = append(messageIDs, int(id))
+	}
+	if len(messageIDs) == 0 {
+		return // nothing to do
+	}
+
+	_, err := b.DeleteMessages(ctx, &bot.DeleteMessagesParams{
+		ChatID:     chat.ChatID,
+		MessageIDs: messageIDs,
+	})
+	if err != nil {
+		log.Error("delete messages", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID), "ids", ids)
+	}
+}
+
+func (h *Handler) isBlockedErr(err error) bool {
+	return strings.HasPrefix(err.Error(), bot.ErrorForbidden.Error())
 }
 
 func (h *Handler) now(loc *time.Location) time.Time {

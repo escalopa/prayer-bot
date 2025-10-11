@@ -7,9 +7,10 @@ ar:
     5: "المغرب"
     6: "العشاء"
   prayer_soon: "⏳ *%s* بعد *%s*"
-  prayer_arrived: "🕌 حان وقت *%s*"
+  prayer_arrived: "⏰ حان وقت *%s*"
   prayer_join: "سأنضم إلى الصلاة"
   prayer_join_delay: "قد أتأخر"
+  prayer_jamaat: "🕌 جماعة بعد *%s*"
 
 en:
   prayer:
@@ -20,9 +21,10 @@ en:
     5: "Maghrib"
     6: "Isha"
   prayer_soon: "⏳ *%s* after *%s*"
-  prayer_arrived: "🕌 It’s time for *%s*"
+  prayer_arrived: "⏰ It’s time for *%s*"
   prayer_join: "I'll join prayer"
   prayer_join_delay: "I might be late"
+  prayer_jamaat: "🕌 Jama'at after *%s*"
 
 es:
   prayer:
@@ -33,9 +35,10 @@ es:
     5: "Maghrib"
     6: "Isha"
   prayer_soon: "⏳ *%s* después de *%s*"
-  prayer_arrived: "🕌 Es hora de *%s*"
+  prayer_arrived: "⏰ Es hora de *%s*"
   prayer_join: "Me uniré a la oración"
   prayer_join_delay: "Podría llegar tarde"
+  prayer_jamaat: "🕌 Oración en grupo después de *%s*"
 
 fr:
   prayer:
@@ -46,9 +49,10 @@ fr:
     5: "Maghrib"
     6: "Icha"
   prayer_soon: "⏳ *%s* après *%s*"
-  prayer_arrived: "🕌 C’est l’heure de *%s*"
+  prayer_arrived: "⏰ C’est l’heure de *%s*"
   prayer_join: "Je rejoindrai la prière"
   prayer_join_delay: "Je pourrais être en retard"
+  prayer_jamaat: "🕌 Prière en groupe après *%s*"
 
 ru:
   prayer:
@@ -59,9 +63,10 @@ ru:
     5: "Магриб"
     6: "Иша"
   prayer_soon: "⏳ *%s* через *%s*"
-  prayer_arrived: "🕌 Время для *%s*"
+  prayer_arrived: "⏰ Время для *%s*"
   prayer_join: "Я присоединюсь к молитве"
   prayer_join_delay: "Я могу опоздать"
+  prayer_jamaat: "🕌 Джамаат после *%s*"
 
 tr:
   prayer:
@@ -72,9 +77,10 @@ tr:
     5: "Agşam"
     6: "Gije"
   prayer_soon: "⏳ *%s* soň *%s*"
-  prayer_arrived: "🕌 *%s* wagty geldi"
+  prayer_arrived: "⏰ *%s* wagty geldi"
   prayer_join: "Men doga gatnaşaryn"
   prayer_join_delay: "Belki giç bolar"
+  prayer_jamaat: "🕌 Jama'at *%s* soň"
 
 tt:
   prayer:
@@ -85,9 +91,10 @@ tt:
     5: "Мәгъриб"
     6: "Иша"
   prayer_soon: "⏳ *%s* соң *%s*"
-  prayer_arrived: "🕌 *%s* вакыты җитте"
+  prayer_arrived: "⏰ *%s* вакыты җитте"
   prayer_join: "Мин догага кушылам"
   prayer_join_delay: "Мин соңга калуым мөмкин"
+  prayer_jamaat: "🕌 Җамагать намазы *%s* соң"
 
 uz:
   prayer:
@@ -98,6 +105,7 @@ uz:
     5: "Shom"
     6: "Xufton"
   prayer_soon: "⏳ *%s* keyin *%s*"
-  prayer_arrived: "🕌 *%s* vaqti keldi"
+  prayer_arrived: "⏰ *%s* vaqti keldi"
   prayer_join: "Men duoga qo‘shilaman"
   prayer_join_delay: "Kechikishim mumkin"
+  prayer_jamaat: "🕌 Jamoat *%s* dan keyin"

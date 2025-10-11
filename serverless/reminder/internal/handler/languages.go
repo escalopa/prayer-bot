@@ -13,6 +13,7 @@ type (
 		PrayerArrived   string         `yaml:"prayer_arrived"`
 		PrayerJoin      string         `yaml:"prayer_join"`
 		PrayerJoinDelay string         `yaml:"prayer_join_delay"`
+		PrayerJamaat    string         `yaml:"prayer_jamaat"`
 	}
 
 	languagesProvider struct {

@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"fmt"
+	"os"
 	"slices"
 	"strconv"
 	"strings"
@@ -15,6 +16,32 @@ import (
 	"github.com/go-telegram/bot/models"
 	"golang.org/x/sync/errgroup"
 )
+
+var (
+	jamaatDelay time.Duration
+)
+
+func init() {
+	const jamattDelayDefault = 10 * time.Minute
+
+	var (
+		jamaatEnvKey   = "JAMAAT_DELAY"
+		jamaatEnvValue = os.Getenv(jamaatEnvKey)
+	)
+
+	if jamaatEnvValue == "" { // not set, use default value
+		jamaatDelay = jamattDelayDefault
+		return
+	}
+
+	jamaatDelayDuration, err := time.ParseDuration(jamaatEnvValue)
+	if err != nil {
+		log.Error("parse jamaat delay", log.Err(err))
+		jamaatDelayDuration = jamattDelayDefault // set to default value on error
+	}
+
+	jamaatDelay = jamaatDelayDuration
+}
 
 type (
 	DB interface {
@@ -263,7 +290,10 @@ func (h *Handler) remindUserJamaat(
 		hasArrived = true
 		message = fmt.Sprintf(text.PrayerArrived, prayer)
 	default:
-		message = fmt.Sprintf(text.PrayerSoon, prayer, domain.FormatDuration(duration))
+		message = fmt.Sprintf("%s\n%s",
+			fmt.Sprintf(text.PrayerSoon, prayer, domain.FormatDuration(duration)),
+			fmt.Sprintf(text.PrayerJamaat, domain.FormatDuration(duration+jamaatDelay)),
+		)
 	}
 
 	var (

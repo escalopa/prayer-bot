@@ -146,10 +146,14 @@ jobs:
 
       - name: Install Goose
         run: |
-          curl -fsSL https://raw.githubusercontent.com/pressly/goose/master/install.sh | \
-          sh -s -- -b $HOME/.goose v${{ env.GOOSE_VERSION }}
+          # Download and install Goose binary directly
+          GOOSE_VERSION="${{ env.GOOSE_VERSION }}"
+          wget -q "https://github.com/pressly/goose/releases/download/v${GOOSE_VERSION}/goose_linux_x86_64" -O goose
+          chmod +x goose
+          mkdir -p $HOME/.goose
+          mv goose $HOME/.goose/
           echo "$HOME/.goose" >> $GITHUB_PATH
-
+          
       - name: Verify Goose installation
         run: |
           export PATH="$HOME/.goose:$PATH"

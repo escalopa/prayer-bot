@@ -51,14 +51,40 @@ runs:
     - name: Write service account key
       shell: bash
       run: |
-        echo "::add-mask::${{ inputs.service_account_key }}"
-        printf '%s' "${{ inputs.service_account_key }}" > iam.json
+        if [ -z "${{ inputs.service_account_key }}" ]; then
+          echo "::error::SERVICE_ACCOUNT_KEY is empty"
+          exit 1
+        fi
+        
+        # Write the key and validate it's valid JSON
+        echo '${{ inputs.service_account_key }}' > iam.json
+        
+        # Validate JSON format
+        if ! jq empty iam.json 2>/dev/null; then
+          echo "::error::SERVICE_ACCOUNT_KEY is not valid JSON"
+          cat iam.json
+          exit 1
+        fi
+        
+        echo "::notice::Service account key file created and validated"
 
     - name: Write config.json
       shell: bash
       run: |
-        echo "::add-mask::${{ inputs.app_config }}"
-        printf '%s' "${{ inputs.app_config }}" > "${{ inputs.config_file_path }}"
+        if [ -z "${{ inputs.app_config }}" ]; then
+          echo "::error::APP_CONFIG is empty"
+          exit 1
+        fi
+        
+        # Write the config and validate it's valid JSON
+        echo '${{ inputs.app_config }}' > "${{ inputs.config_file_path }}"
+        
+        # Validate JSON format
+        if ! jq empty "${{ inputs.config_file_path }}" 2>/dev/null; then
+          echo "::error::APP_CONFIG is not valid JSON"
+          exit 1
+        fi
+        
         echo "::notice::Application config written to: ${{ inputs.config_file_path }}"
 
     - name: Cache Terraform plugins

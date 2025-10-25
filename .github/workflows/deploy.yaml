@@ -21,7 +21,6 @@ env:
   TERRAFORM_VERSION: 1.6.3
   GOOSE_VERSION: 3.16.0
   GO_VERSION: 1.21
-  CACHE_PREFIX: ${{ runner.os }}-${{ github.ref_name }}
   CONFIG_FILE_PATH: config.json
 
 jobs:
@@ -50,7 +49,7 @@ jobs:
       - name: Set cache key
         id: set-cache-key
         run: |
-          CACHE_KEY="${{ env.CACHE_PREFIX }}-terraform-${{ hashFiles('**/.terraform.lock.hcl') }}"
+          CACHE_KEY="${{ runner.os }}-${{ github.ref_name }}-terraform-${{ hashFiles('**/.terraform.lock.hcl') }}"
           echo "cache_key=$CACHE_KEY" >> $GITHUB_OUTPUT
           echo "::notice::Cache key: $CACHE_KEY"
 
@@ -112,9 +111,9 @@ jobs:
           path: |
             ~/.cache/go-build
             ~/go/pkg/mod
-          key: ${{ env.CACHE_PREFIX }}-go-${{ hashFiles('**/go.sum') }}
+          key: ${{ runner.os }}-${{ github.ref_name }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
-            ${{ env.CACHE_PREFIX }}-go-
+            ${{ runner.os }}-${{ github.ref_name }}-go-
 
       - name: Install revive
         run: go install github.com/mgechev/revive@latest
@@ -138,32 +137,18 @@ jobs:
     name: Database Migration
     runs-on: ubuntu-latest
     needs: [setup, lint]
-    if: contains(github.event.head_commit.modified, 'migrations/') || contains(github.event.head_commit.added, 'migrations/')
     environment: ${{ needs.setup.outputs.environment }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-
-      - name: Check for migration changes
-        id: check-migrations
-        run: |
-          if git diff --name-only HEAD^ HEAD | grep -q '^migrations/'; then
-            echo "changed=true" >> $GITHUB_OUTPUT
-          else
-            echo "changed=false" >> $GITHUB_OUTPUT
-          fi
 
       - name: Install Goose
-        if: steps.check-migrations.outputs.changed == 'true'
         run: |
           curl -fsSL https://raw.githubusercontent.com/pressly/goose/master/install.sh | \
           GOOSE_INSTALL=$HOME/.goose sh -s v${{ env.GOOSE_VERSION }}
           echo "$HOME/.goose" >> $GITHUB_PATH
 
       - name: Run Goose migrations
-        if: steps.check-migrations.outputs.changed == 'true'
         env:
           GOOSE_DRIVER: ydb
           GOOSE_DBSTRING: ${{ secrets.DB_CONNECTION_STRING }}
@@ -174,7 +159,7 @@ jobs:
           fi
           cd migrations
           goose up
-          echo "Migration completed successfully"
+          echo "::notice::Migration completed successfully for ${{ needs.setup.outputs.workspace }} environment"
 
   plan:
     name: Terraform Plan

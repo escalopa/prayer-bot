@@ -10,10 +10,10 @@ terraform {
       s3 = "https://storage.yandexcloud.net"
     }
     region = "ru-central1"
-    
+
     bucket = "escalopa-tfstate"
     key    = "prayer-bot/terraform.tfstate"
-  
+
     workspace_key_prefix = ""
 
     skip_region_validation      = true
@@ -27,7 +27,7 @@ terraform {
 }
 
 locals {
-  env    = terraform.workspace
+  env = terraform.workspace
 }
 
 variable "cloud_id" {
@@ -45,9 +45,9 @@ variable "region" {
 
 provider "yandex" {
   service_account_key_file = "iam.json"
-  cloud_id  = var.cloud_id
-  folder_id = var.folder_id
-  zone      = var.region
+  cloud_id                 = var.cloud_id
+  folder_id                = var.folder_id
+  zone                     = var.region
 }
 
 ###########################
@@ -141,7 +141,7 @@ resource "yandex_function" "loader_fn" {
   execution_timeout  = 5
   service_account_id = yandex_iam_service_account.loader_sa.id
   folder_id          = var.folder_id
-  user_hash = filemd5(data.archive_file.loader_zip.output_path)
+  user_hash          = filemd5(data.archive_file.loader_zip.output_path)
 
   environment = {
     APP_CONFIG = file("${path.module}/config.json")
@@ -218,7 +218,7 @@ resource "yandex_function" "dispatcher_fn" {
   execution_timeout  = 5
   service_account_id = yandex_iam_service_account.dispatcher_sa.id
   folder_id          = var.folder_id
-  user_hash = filemd5(data.archive_file.dispatcher_zip.output_path)
+  user_hash          = filemd5(data.archive_file.dispatcher_zip.output_path)
 
   environment = {
     APP_CONFIG = file("${path.module}/config.json")
@@ -275,7 +275,7 @@ resource "yandex_function" "reminder_fn" {
   execution_timeout  = 5
   service_account_id = yandex_iam_service_account.reminder_sa.id
   folder_id          = var.folder_id
-  user_hash = filemd5(data.archive_file.reminder_zip.output_path)
+  user_hash          = filemd5(data.archive_file.reminder_zip.output_path)
 
   environment = {
     APP_CONFIG = file("${path.module}/config.json")

@@ -147,8 +147,13 @@ jobs:
       - name: Install Goose
         run: |
           curl -fsSL https://raw.githubusercontent.com/pressly/goose/master/install.sh | \
-          GOOSE_INSTALL=$HOME/.goose sh -s v${{ env.GOOSE_VERSION }}
+          sh -s -- -b $HOME/.goose v${{ env.GOOSE_VERSION }}
           echo "$HOME/.goose" >> $GITHUB_PATH
+
+      - name: Verify Goose installation
+        run: |
+          export PATH="$HOME/.goose:$PATH"
+          goose --version
 
       - name: Run Goose migrations
         env:
@@ -159,6 +164,7 @@ jobs:
             echo "::error::DB_CONNECTION_STRING secret is not set for ${{ needs.setup.outputs.environment }} environment"
             exit 1
           fi
+          export PATH="$HOME/.goose:$PATH"
           cd migrations
           goose up
           echo "::notice::Migration completed successfully for ${{ needs.setup.outputs.workspace }} environment"
@@ -206,7 +212,7 @@ jobs:
 
       - name: Upload plan artifact
         if: steps.plan.outputs.exitcode == '2'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: tfplan-${{ needs.setup.outputs.workspace }}
           path: tfplan
@@ -247,7 +253,7 @@ jobs:
           terraform state pull > state-backups/terraform-${{ needs.setup.outputs.workspace }}-${TIMESTAMP}-${{ github.run_id }}.tfstate
 
       - name: Upload state backup
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: terraform-state-backup-${{ needs.setup.outputs.workspace }}-${{ github.run_id }}
           path: state-backups/
@@ -255,7 +261,7 @@ jobs:
 
       - name: Download plan artifact
         if: needs.plan.outputs.plan-exists == '2'
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: tfplan-${{ needs.setup.outputs.workspace }}
 
@@ -280,7 +286,7 @@ jobs:
   hook:
     name: Setup Telegram Webhooks
     runs-on: ubuntu-latest
-    needs: [setup, apply]
+    needs: [apply]
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.run_hook == 'true' && needs.apply.result == 'success'
     environment: ${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
     steps:

@@ -66,7 +66,7 @@ func (h *Handler) start(ctx context.Context, b *bot.Bot, update *models.Update) 
 	return h.help(ctx, b, update)
 }
 
-func (h *Handler) help(ctx context.Context, b *bot.Bot, update *models.Update) error {
+func (h *Handler) help(ctx context.Context, b *bot.Bot, _ *models.Update) error {
 	chat := getContextChat(ctx)
 
 	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
@@ -84,7 +84,7 @@ func (h *Handler) help(ctx context.Context, b *bot.Bot, update *models.Update) e
 	return nil
 }
 
-func (h *Handler) today(ctx context.Context, b *bot.Bot, update *models.Update) error {
+func (h *Handler) today(ctx context.Context, b *bot.Bot, _ *models.Update) error {
 	chat := getContextChat(ctx)
 
 	prayerDay, err := h.db.GetPrayerDay(ctx, chat.BotID, h.nowUTC(chat.BotID))
@@ -106,7 +106,7 @@ func (h *Handler) today(ctx context.Context, b *bot.Bot, update *models.Update) 
 	return nil
 }
 
-func (h *Handler) date(ctx context.Context, b *bot.Bot, update *models.Update) error {
+func (h *Handler) date(ctx context.Context, b *bot.Bot, _ *models.Update) error {
 	chat := getContextChat(ctx)
 
 	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
@@ -123,7 +123,7 @@ func (h *Handler) date(ctx context.Context, b *bot.Bot, update *models.Update) e
 	return nil
 }
 
-func (h *Handler) next(ctx context.Context, b *bot.Bot, update *models.Update) error {
+func (h *Handler) next(ctx context.Context, b *bot.Bot, _ *models.Update) error {
 	chat := getContextChat(ctx)
 
 	var (
@@ -184,7 +184,7 @@ func (h *Handler) next(ctx context.Context, b *bot.Bot, update *models.Update) e
 	return nil
 }
 
-func (h *Handler) remind(ctx context.Context, b *bot.Bot, update *models.Update) error {
+func (h *Handler) remind(ctx context.Context, b *bot.Bot, _ *models.Update) error {
 	chat := getContextChat(ctx)
 
 	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
@@ -201,7 +201,7 @@ func (h *Handler) remind(ctx context.Context, b *bot.Bot, update *models.Update)
 	return nil
 }
 
-func (h *Handler) bug(ctx context.Context, b *bot.Bot, update *models.Update) error {
+func (h *Handler) bug(ctx context.Context, b *bot.Bot, _ *models.Update) error {
 	chat := getContextChat(ctx)
 
 	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
@@ -222,7 +222,7 @@ func (h *Handler) bug(ctx context.Context, b *bot.Bot, update *models.Update) er
 	return nil
 }
 
-func (h *Handler) feedback(ctx context.Context, b *bot.Bot, update *models.Update) error {
+func (h *Handler) feedback(ctx context.Context, b *bot.Bot, _ *models.Update) error {
 	chat := getContextChat(ctx)
 
 	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
@@ -243,7 +243,7 @@ func (h *Handler) feedback(ctx context.Context, b *bot.Bot, update *models.Updat
 	return nil
 }
 
-func (h *Handler) language(ctx context.Context, b *bot.Bot, update *models.Update) error {
+func (h *Handler) language(ctx context.Context, b *bot.Bot, _ *models.Update) error {
 	chat := getContextChat(ctx)
 
 	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
@@ -260,7 +260,7 @@ func (h *Handler) language(ctx context.Context, b *bot.Bot, update *models.Updat
 	return nil
 }
 
-func (h *Handler) subscribe(ctx context.Context, b *bot.Bot, update *models.Update) error {
+func (h *Handler) subscribe(ctx context.Context, b *bot.Bot, _ *models.Update) error {
 	chat := getContextChat(ctx)
 
 	err := h.db.SetSubscribed(ctx, chat.BotID, chat.ChatID, true)
@@ -282,7 +282,7 @@ func (h *Handler) subscribe(ctx context.Context, b *bot.Bot, update *models.Upda
 	return nil
 }
 
-func (h *Handler) unsubscribe(ctx context.Context, b *bot.Bot, update *models.Update) error {
+func (h *Handler) unsubscribe(ctx context.Context, b *bot.Bot, _ *models.Update) error {
 	chat := getContextChat(ctx)
 
 	err := h.db.SetSubscribed(ctx, chat.BotID, chat.ChatID, false)
@@ -304,7 +304,7 @@ func (h *Handler) unsubscribe(ctx context.Context, b *bot.Bot, update *models.Up
 	return nil
 }
 
-func (h *Handler) admin(ctx context.Context, b *bot.Bot, update *models.Update) error {
+func (h *Handler) admin(ctx context.Context, b *bot.Bot, _ *models.Update) error {
 	chat := getContextChat(ctx)
 
 	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
@@ -321,7 +321,7 @@ func (h *Handler) admin(ctx context.Context, b *bot.Bot, update *models.Update) 
 	return nil
 }
 
-func (h *Handler) reply(ctx context.Context, b *bot.Bot, update *models.Update) error {
+func (h *Handler) reply(ctx context.Context, b *bot.Bot, _ *models.Update) error {
 	chat := getContextChat(ctx)
 
 	err := h.db.SetState(ctx, chat.BotID, chat.ChatID, string(replyState))
@@ -343,7 +343,7 @@ func (h *Handler) reply(ctx context.Context, b *bot.Bot, update *models.Update) 
 	return nil
 }
 
-func (h *Handler) stats(ctx context.Context, b *bot.Bot, update *models.Update) error {
+func (h *Handler) stats(ctx context.Context, b *bot.Bot, _ *models.Update) error {
 	chat := getContextChat(ctx)
 
 	stats, err := h.db.GetStats(ctx, chat.BotID)
@@ -377,7 +377,7 @@ func (h *Handler) stats(ctx context.Context, b *bot.Bot, update *models.Update) 
 	return nil
 }
 
-func (h *Handler) announce(ctx context.Context, b *bot.Bot, update *models.Update) error {
+func (h *Handler) announce(ctx context.Context, b *bot.Bot, _ *models.Update) error {
 	chat := getContextChat(ctx)
 
 	err := h.db.SetState(ctx, chat.BotID, chat.ChatID, string(announceState))
@@ -399,7 +399,7 @@ func (h *Handler) announce(ctx context.Context, b *bot.Bot, update *models.Updat
 	return nil
 }
 
-func (h *Handler) cancel(ctx context.Context, b *bot.Bot, update *models.Update) error {
+func (h *Handler) cancel(ctx context.Context, b *bot.Bot, _ *models.Update) error {
 	chat := getContextChat(ctx)
 
 	if chat.State == string(defaultState) {

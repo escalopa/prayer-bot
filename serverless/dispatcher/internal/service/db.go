@@ -45,6 +45,7 @@ func NewDB(ctx context.Context) (*DB, error) {
 	return &DB{client: sdk.Table()}, nil
 }
 
+//revive:disable:argument-limit
 func (db *DB) CreateChat(
 	ctx context.Context,
 	botID int64,

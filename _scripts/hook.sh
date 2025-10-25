@@ -1,11 +1,21 @@
 #!/bin/bash
 
-DISPATCHER_ENDPOINT="https://functions.yandexcloud.net/$(terraform output -raw dispatcher_fn_id)"
-export DISPATCHER_ENDPOINT
+if [[ -z "$CONFIG_FILE_PATH" ]]; then
+  echo "[ERROR] CONFIG_FILE_PATH is not set"
+  exit 1
+fi
 
-CONFIG_FILE="_config/$(terraform workspace show)/config.json"
+if [[ -z "$DISPATCHER_FUNCTION_ID" ]]; then
+  echo "[ERROR] DISPATCHER_FUNCTION_ID is not set"
+  exit 1
+fi
+
+export DISPATCHER_ENDPOINT="https://functions.yandexcloud.net/${DISPATCHER_FUNCTION_ID}"
+
+CONFIG_FILE="$CONFIG_FILE_PATH"
 
 echo "[INFO] using config file: \"$CONFIG_FILE\""
+echo "[INFO] using dispatcher function ID: \"$DISPATCHER_FUNCTION_ID\""
 
 jq -c 'to_entries[]' "$CONFIG_FILE" | while read -r entry; do
     BOT_ID=$(echo "$entry" | jq -r '.value.bot_id')

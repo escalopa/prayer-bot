@@ -27,6 +27,7 @@ type PrayerDay struct {
 	Isha    time.Time `json:"isha"`
 }
 
+//revive:disable:argument-limit
 func NewPrayerDay(
 	date time.Time,
 	fajr time.Time,

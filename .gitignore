@@ -14,3 +14,7 @@ _config
 *.tfstate.*
 *.tfvars
 *.zip
+
+# secret
+iam.json
+key.json

@@ -67,12 +67,13 @@ func daysInMonth(month time.Month, year int) int {
 }
 
 // layoutRowsInfo calculates number of rows needed to display input count and number of empty cells in the last row.
-func layoutRowsInfo(totalItems, itemsPerRow int) (int, int) {
+func layoutRowsInfo(totalItems, itemsPerRow int) (filled int, empty int) {
 	if totalItems%itemsPerRow == 0 {
 		return totalItems / itemsPerRow, 0
 	}
-	empty := itemsPerRow - (totalItems % itemsPerRow)
-	return (totalItems / itemsPerRow) + 1, empty
+	empty = itemsPerRow - (totalItems % itemsPerRow)
+	filled = (totalItems / itemsPerRow) + 1
+	return
 }
 
 func isJamaat(chat models.Chat) bool {

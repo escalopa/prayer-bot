@@ -1,7 +1,7 @@
 #!/bin/bash
 
-if [[ -z "$CONFIG_FILE_PATH" ]]; then
-  echo "[ERROR] CONFIG_FILE_PATH is not set"
+if [[ -z "$APP_CONFIG_PATH" ]]; then
+  echo "[ERROR] APP_CONFIG_PATH is not set"
   exit 1
 fi
 
@@ -12,7 +12,7 @@ fi
 
 export DISPATCHER_ENDPOINT="https://functions.yandexcloud.net/${DISPATCHER_FUNCTION_ID}"
 
-CONFIG_FILE="$CONFIG_FILE_PATH"
+CONFIG_FILE="$APP_CONFIG_PATH"
 
 echo "[INFO] using config file: \"$CONFIG_FILE\""
 echo "[INFO] using dispatcher function ID: \"$DISPATCHER_FUNCTION_ID\""

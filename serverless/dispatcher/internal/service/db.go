@@ -122,7 +122,7 @@ func (db *DB) GetChat(ctx context.Context, botID int64, chatID int64) (chat *dom
 		defer func(res result.Result) { _ = res.Close() }(res)
 		if res.NextResultSet(ctx) && res.NextRow() {
 			chat = &domain.Chat{}
-			var reminderJSON *string
+			var reminderJSON string
 			err = res.ScanWithDefaults(
 				&chat.BotID,
 				&chat.ChatID,
@@ -136,7 +136,7 @@ func (db *DB) GetChat(ctx context.Context, botID int64, chatID int64) (chat *dom
 			}
 
 			var reminder domain.Reminder
-			if err := json.Unmarshal([]byte(*reminderJSON), &reminder); err != nil {
+			if err := json.Unmarshal([]byte(reminderJSON), &reminder); err != nil {
 				return err
 			}
 
@@ -178,7 +178,7 @@ func (db *DB) GetChats(ctx context.Context, botID int64) (chats []*domain.Chat, 
 		if res.NextResultSet(ctx) {
 			for res.NextRow() {
 				chat := &domain.Chat{}
-				var reminderJSON *string
+				var reminderJSON string
 				err = res.ScanWithDefaults(
 					&chat.BotID,
 					&chat.ChatID,
@@ -192,7 +192,7 @@ func (db *DB) GetChats(ctx context.Context, botID int64) (chats []*domain.Chat, 
 				}
 
 				var reminder domain.Reminder
-				if err := json.Unmarshal([]byte(*reminderJSON), &reminder); err != nil {
+				if err := json.Unmarshal([]byte(reminderJSON), &reminder); err != nil {
 					return err
 				}
 				chat.Reminder = &reminder

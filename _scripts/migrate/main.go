@@ -191,7 +191,7 @@ func transformChat(oldChat OldChat, moscowLocation *time.Location) (NewChat, err
 
 	// Build reminder object
 	reminderOffset := int32(20)
-	if oldChat.ReminderOffset != nil {
+	if oldChat.ReminderOffset != nil && *oldChat.ReminderOffset != 0 {
 		reminderOffset = *oldChat.ReminderOffset
 	}
 
@@ -226,7 +226,6 @@ func transformChat(oldChat OldChat, moscowLocation *time.Location) (NewChat, err
 			LastAt:    now.Format(time.RFC3339),
 		},
 		Arrive: &ReminderConfig{
-			Offset:    0,
 			MessageID: jamaatMessageID,
 			LastAt:    now.Format(time.RFC3339),
 		},

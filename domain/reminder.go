@@ -5,8 +5,9 @@ import "time"
 type ReminderType string
 
 const (
-	ReminderTypeToday ReminderType = "today"
-	ReminderTypeSoon  ReminderType = "soon"
+	ReminderTypeTomorrow ReminderType = "tomorrow"
+	ReminderTypeSoon     ReminderType = "soon"
+	ReminderTypeArrive   ReminderType = "arrive"
 )
 
 func (rt ReminderType) String() string {

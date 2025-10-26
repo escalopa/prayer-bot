@@ -21,11 +21,11 @@ const (
 	prayerText       = `
 🗓 %s,  %s
 
-🕊 %s — %s  
-🌤 %s — %s  
-☀️ %s — %s  
-🌇 %s — %s  
-🌅 %s — %s  
+🕊 %s — %s
+🌤 %s — %s
+☀️ %s — %s
+🌇 %s — %s
+🌅 %s — %s
 🌙 %s — %s
 `
 )
@@ -151,16 +151,19 @@ func (h *Handler) next(ctx context.Context, b *bot.Bot, _ *models.Update) error 
 		prayerID, duration = domain.PrayerIDMaghrib, prayerDay.Maghrib.Sub(now)
 	case prayerDay.Isha.After(now):
 		prayerID, duration = domain.PrayerIDIsha, prayerDay.Isha.Sub(now)
-	}
-
-	// when no prayer time is found, return the first prayer of the next day
-	if prayerID == domain.PrayerIDUnknown || duration == 0 {
-		prayerDay, err = h.db.GetPrayerDay(ctx, chat.BotID, date.AddDate(0, 0, 1))
-		if err != nil {
-			log.Error("next: get prayer day", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
-			return domain.ErrInternal
-		}
-		prayerID, duration = domain.PrayerIDFajr, prayerDay.Fajr.Sub(now)
+	case prayerDay.NextDay.Fajr.After(now):
+		prayerID, duration = domain.PrayerIDFajr, prayerDay.NextDay.Fajr.Sub(now)
+	case prayerDay.NextDay.Shuruq.After(now):
+		prayerID, duration = domain.PrayerIDShuruq, prayerDay.NextDay.Shuruq.Sub(now)
+	default:
+		log.Error("next: no prayer time found",
+			log.BotID(chat.BotID),
+			log.ChatID(chat.ChatID),
+			log.String("date", date.String()),
+			log.String("prayer_day", fmt.Sprintf("%+v", prayerDay)),
+			log.String("now", now.String()),
+		)
+		return nil
 	}
 
 	text := h.lp.GetText(chat.LanguageCode)

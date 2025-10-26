@@ -237,13 +237,15 @@ func (h *Handler) getChat(ctx context.Context, update *models.Update) (*domain.C
 		Today:  &domain.ReminderConfig{LastAt: now},
 		Soon:   &domain.ReminderConfig{LastAt: now},
 		Arrive: &domain.ReminderConfig{LastAt: now},
-		JamaatDelay: &domain.JamaatDelay{
-			Fajr:    10 * time.Minute,
-			Shuruq:  10 * time.Minute,
-			Dhuhr:   10 * time.Minute,
-			Asr:     10 * time.Minute,
-			Maghrib: 10 * time.Minute,
-			Isha:    20 * time.Minute,
+		Jamaat: &domain.JamaatConfig{
+			Delay: &domain.JamaatDelayConfig{
+				Fajr:    10 * time.Minute,
+				Shuruq:  10 * time.Minute,
+				Dhuhr:   10 * time.Minute,
+				Asr:     10 * time.Minute,
+				Maghrib: 10 * time.Minute,
+				Isha:    20 * time.Minute,
+			},
 		},
 	}
 

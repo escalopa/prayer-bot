@@ -316,18 +316,23 @@ func (db *DB) SetState(ctx context.Context, botID int64, chatID int64, state str
 }
 
 func (db *DB) GetPrayerDay(ctx context.Context, botID int64, date time.Time) (prayerDay *domain.PrayerDay, _ error) {
+	nextDate := date.Add(24 * time.Hour)
+
 	query := `
 		DECLARE $bot_id AS Int64;
 		DECLARE $date AS Date;
+		DECLARE $next_date AS Date;
 
 		SELECT prayer_date, fajr, shuruq, dhuhr, asr, maghrib, isha
 		FROM prayers
-		WHERE bot_id = $bot_id AND prayer_date = $date;
+		WHERE bot_id = $bot_id AND prayer_date IN ($date, $next_date)
+		ORDER BY prayer_date;
 	`
 
 	params := table.NewQueryParameters(
 		table.ValueParam("$bot_id", types.Int64Value(botID)),
 		table.ValueParam("$date", types.DateValueFromTime(date)),
+		table.ValueParam("$next_date", types.DateValueFromTime(nextDate)),
 	)
 
 	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
@@ -337,17 +342,38 @@ func (db *DB) GetPrayerDay(ctx context.Context, botID int64, date time.Time) (pr
 		}
 
 		defer func(res result.Result) { _ = res.Close() }(res)
-		if res.NextResultSet(ctx) && res.NextRow() {
-			prayerDay = &domain.PrayerDay{}
-			err = res.ScanWithDefaults(
-				&prayerDay.Date,
-				&prayerDay.Fajr, &prayerDay.Shuruq,
-				&prayerDay.Dhuhr, &prayerDay.Asr,
-				&prayerDay.Maghrib, &prayerDay.Isha,
-			)
-			if err != nil {
-				return err
+		if res.NextResultSet(ctx) {
+			if res.NextRow() {
+				prayerDay = &domain.PrayerDay{}
+				err = res.ScanWithDefaults(
+					&prayerDay.Date,
+					&prayerDay.Fajr, &prayerDay.Shuruq,
+					&prayerDay.Dhuhr, &prayerDay.Asr,
+					&prayerDay.Maghrib, &prayerDay.Isha,
+				)
+				if err != nil {
+					return err
+				}
+			} else {
+				return domain.ErrNotFound
 			}
+
+			if res.NextRow() {
+				nextDay := &domain.PrayerDay{}
+				err = res.ScanWithDefaults(
+					&nextDay.Date,
+					&nextDay.Fajr, &nextDay.Shuruq,
+					&nextDay.Dhuhr, &nextDay.Asr,
+					&nextDay.Maghrib, &nextDay.Isha,
+				)
+				if err != nil {
+					return err
+				}
+				prayerDay.NextDay = nextDay
+			} else {
+				return domain.ErrNotFound // no next day found (cannot happen)
+			}
+
 			return nil
 		}
 

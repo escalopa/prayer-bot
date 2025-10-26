@@ -49,15 +49,13 @@ func (h *Handler) formatPrayerDay(botID int64, date *domain.PrayerDay, languageC
 
 // now returns the current time with seconds and nanoseconds set to 0
 func (h *Handler) now(botID int64) time.Time {
-	t := time.Now().In(h.cfg[botID].Location.V())
-	return time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), 0, 0, t.Location())
+	return time.Now().In(h.cfg[botID].Location.V()).Truncate(time.Minute)
 }
 
 // nowUTC returns the current time in UTC with seconds and nanoseconds set to 0
 // Use this function to get prayerDay or current year for a specific botID timezone.
 func (h *Handler) nowUTC(botID int64) time.Time {
-	t := time.Now().In(h.cfg[botID].Location.V())
-	return time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), 0, 0, time.UTC)
+	return time.Now().In(h.cfg[botID].Location.V()).Truncate(time.Minute).UTC()
 }
 
 // daysInMonth returns the number of days in a month.

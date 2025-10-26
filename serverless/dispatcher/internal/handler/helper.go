@@ -53,6 +53,11 @@ func (h *Handler) now(botID int64) time.Time {
 	return time.Now().In(h.cfg[botID].Location.V()).Truncate(time.Minute)
 }
 
+func (h *Handler) nowDateUTC(botID int64) time.Time {
+	now := h.now(botID)
+	return time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+}
+
 // daysInMonth returns the number of days in a month.
 func daysInMonth(month time.Month, year int) int {
 	// month is incremented by 1 and day is 0 because we want the last day of the month.

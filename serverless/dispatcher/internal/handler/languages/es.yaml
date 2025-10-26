@@ -71,6 +71,7 @@ help: |
   *Oraciones:*
 
   ⏰ /today – Horarios de hoy
+  🌅 /tomorrow – Horarios de mañana
   📅 /date – Horarios de un día específico
   ⏳ /next – ¿Cuándo es la próxima oración?
   📨 /remind – Configurar recordatorios

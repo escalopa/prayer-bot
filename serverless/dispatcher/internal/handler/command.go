@@ -40,6 +40,7 @@ const (
 	startCommand       command = "start"
 	helpCommand        command = "help"
 	todayCommand       command = "today"
+	tomorrowCommand    command = "tomorrow"
 	dateCommand        command = "date" // 2 stages
 	nextCommand        command = "next"
 	remindCommand      command = "remind"   // 1 stage
@@ -88,7 +89,7 @@ func (h *Handler) help(ctx context.Context, b *bot.Bot, _ *models.Update) error 
 func (h *Handler) today(ctx context.Context, b *bot.Bot, _ *models.Update) error {
 	chat := getContextChat(ctx)
 
-	prayerDay, err := h.db.GetPrayerDay(ctx, chat.BotID, h.now(chat.BotID))
+	prayerDay, err := h.db.GetPrayerDay(ctx, chat.BotID, h.nowDateUTC(chat.BotID))
 	if err != nil {
 		log.Error("today: get prayer day", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
@@ -100,6 +101,29 @@ func (h *Handler) today(ctx context.Context, b *bot.Bot, _ *models.Update) error
 	})
 	if err != nil {
 		log.Error("today: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		return domain.ErrInternal
+	}
+
+	h.resetState(ctx, chat)
+	return nil
+}
+
+func (h *Handler) tomorrow(ctx context.Context, b *bot.Bot, _ *models.Update) error {
+	chat := getContextChat(ctx)
+
+	tomorrow := h.nowDateUTC(chat.BotID).Add(24 * time.Hour)
+	prayerDay, err := h.db.GetPrayerDay(ctx, chat.BotID, tomorrow)
+	if err != nil {
+		log.Error("tomorrow: get prayer day", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		return domain.ErrInternal
+	}
+
+	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
+		ChatID: chat.ChatID,
+		Text:   h.formatPrayerDay(chat.BotID, prayerDay, chat.LanguageCode),
+	})
+	if err != nil {
+		log.Error("tomorrow: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -129,7 +153,7 @@ func (h *Handler) next(ctx context.Context, b *bot.Bot, _ *models.Update) error 
 
 	var (
 		now  = h.now(chat.BotID)
-		date = now.Truncate(24 * time.Hour)
+		date = h.nowDateUTC(chat.BotID)
 	)
 
 	prayerDay, err := h.db.GetPrayerDay(ctx, chat.BotID, date)

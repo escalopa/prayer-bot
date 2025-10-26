@@ -71,6 +71,7 @@ help: |
   *Prayers:*
 
   ⏰ /today – Today's times
+  🌅 /tomorrow – Tomorrow's times
   📅 /date – Times for a chosen day
   ⏳ /next – When's the next prayer?
   📨 /remind – Configure reminders

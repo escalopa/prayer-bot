@@ -72,17 +72,18 @@ help: |
   *Namozlar:*
 
   ⏰ /today – Bugungi vaqtlar
+  🌅 /tomorrow – Ertangi vaqtlar
   📅 /date – Tanlangan kun uchun vaqtlar
   ⏳ /next – Keyingi namoz qachon?
   📨 /remind – Eslatmalarni sozlash
 
   *Sozlamalar:*
 
-  🌐 /language – Tilni o‘zgartirish
+  🌐 /language – Tilni o'zgartirish
 
   *Yordam:*
 
-  📖 /help – Ushbu qo‘llanmani ko‘rsatish
+  📖 /help – Ushbu qo'llanmani ko'rsatish
   🐞 /bug – Xatolik haqida xabar berish
   💬 /feedback – Fikr-mulohaza yuborish
 

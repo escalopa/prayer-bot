@@ -66,13 +66,14 @@ jamaat_edit:
   title: "🕌 Horaire Jamaat %s\n⏱ Temps après l'Adhan"
 
 help: |
-  Besoin d'aide ? 😊 Voici ce que je peux faire : 👇
+  Besoin d'aide ? 😊 Voici ce que je peux faire : 👇
 
   *Prières:*
 
   ⏰ /today – Horaires d'aujourd'hui
+  🌅 /tomorrow – Horaires de demain
   📅 /date – Horaires pour une date choisie
-  ⏳ /next – Quand est la prochaine prière ?
+  ⏳ /next – Quand est la prochaine prière ?
   📨 /remind – Configurer les rappels
 
   *Paramètres:*
@@ -86,12 +87,12 @@ help: |
   💬 /feedback – Envoyer un retour
 
 feedback:
-  start: "💬 Partagez vos commentaires ! (ou tapez /cancel pour arrêter)"
-  success: "✅ Merci ! Votre commentaire a été envoyé"
+  start: "💬 Partagez vos commentaires ! (ou tapez /cancel pour arrêter)"
+  success: "✅ Merci ! Votre commentaire a été envoyé"
 
 bug:
   start: "🐞 Décrivez le bug rencontré (ou tapez /cancel pour arrêter)"
-  success: "✅ Merci ! Votre rapport a été reçu"
+  success: "✅ Merci ! Votre rapport a été reçu"
 
 help_admin: |
   📊 /info – Voir les infos et paramètres du chat

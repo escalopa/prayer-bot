@@ -63,6 +63,7 @@ func (h *Handler) opts() []bot.Option {
 		bot.WithMessageTextHandler(startCommand.String(), bot.MatchTypeCommandStartOnly, h.errorH(h.chatH(h.start))),
 		bot.WithMessageTextHandler(helpCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.help))),
 		bot.WithMessageTextHandler(todayCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.today))),
+		bot.WithMessageTextHandler(tomorrowCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.tomorrow))),
 		bot.WithMessageTextHandler(dateCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.date))),
 		bot.WithMessageTextHandler(nextCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.next))),
 		bot.WithMessageTextHandler(remindCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.remind))),

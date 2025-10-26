@@ -84,7 +84,7 @@ type (
 		Users            uint64            // users using the bot
 		Subscribed       uint64            // subscribed users
 		Unsubscribed     uint64            // unsubscribed users
-		LanguagesGrouped map[string]uint64 // users using a language
+		LanguagesGrouped map[string]uint64 // users grouped by language
 	}
 
 	Chat struct {
@@ -93,6 +93,6 @@ type (
 		State        string
 		LanguageCode string
 		IsGroup      bool
-		Reminder     *Reminder
+		Reminder     Reminder
 	}
 )

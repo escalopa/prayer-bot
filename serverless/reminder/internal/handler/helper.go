@@ -80,3 +80,7 @@ func deleteMessages(ctx context.Context, b *bot.Bot, chat *domain.Chat, ids ...i
 func isBlockedErr(err error) bool {
 	return strings.HasPrefix(err.Error(), bot.ErrorForbidden.Error())
 }
+
+func isGroupChat(chatID int64) bool {
+	return chatID < 0
+}

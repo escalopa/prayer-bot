@@ -17,7 +17,7 @@ import (
 
 type (
 	DB interface {
-		CreateChat(ctx context.Context, botID int64, chatID int64, languageCode string, state string, isGroup bool, reminder *domain.Reminder) error
+		CreateChat(ctx context.Context, botID int64, chatID int64, languageCode string, state string, reminder *domain.Reminder) error
 		GetChat(ctx context.Context, botID int64, chatID int64) (chat *domain.Chat, _ error)
 		GetChats(ctx context.Context, botID int64) (chats []*domain.Chat, _ error)
 		SetState(ctx context.Context, botID int64, chatID int64, state string) error
@@ -200,15 +200,12 @@ func (h *Handler) getBot(botID int64) (*bot.Bot, error) {
 func (h *Handler) getChat(ctx context.Context, update *models.Update) (*domain.Chat, error) {
 	botID := getContextBotID(ctx)
 	chatID := int64(0)
-	isGroup := false
 
 	switch {
 	case update.Message != nil:
 		chatID = update.Message.Chat.ID
-		isGroup = isGroupChat(update.Message.Chat)
 	case update.CallbackQuery != nil && update.CallbackQuery.Message.Message != nil:
 		chatID = update.CallbackQuery.Message.Message.Chat.ID
-		isGroup = isGroupChat(update.CallbackQuery.Message.Message.Chat)
 	default:
 		bytes, _ := json.Marshal(update)
 		log.Info("ignore message", log.BotID(botID), log.String("update", string(bytes)))
@@ -234,8 +231,11 @@ func (h *Handler) getChat(ctx context.Context, update *models.Update) (*domain.C
 
 	now := h.now(botID)
 	reminder := &domain.Reminder{
-		Today:  &domain.ReminderConfig{LastAt: now},
-		Soon:   &domain.ReminderConfig{LastAt: now},
+		Today: &domain.ReminderConfig{LastAt: now},
+		Soon: &domain.ReminderConfig{
+			LastAt: now,
+			Offset: 20 * time.Minute,
+		},
 		Arrive: &domain.ReminderConfig{LastAt: now},
 		Jamaat: &domain.JamaatConfig{
 			Delay: &domain.JamaatDelayConfig{
@@ -249,7 +249,7 @@ func (h *Handler) getChat(ctx context.Context, update *models.Update) (*domain.C
 		},
 	}
 
-	err = h.db.CreateChat(ctx, botID, chatID, languageCode, string(defaultState), isGroup, reminder)
+	err = h.db.CreateChat(ctx, botID, chatID, languageCode, string(defaultState), reminder)
 	if err != nil {
 		log.Error("create chat", log.Err(err), log.BotID(botID), log.ChatID(chatID), "update", update)
 		return nil, domain.ErrInternal
@@ -260,7 +260,6 @@ func (h *Handler) getChat(ctx context.Context, update *models.Update) (*domain.C
 		ChatID:       chatID,
 		State:        string(defaultState),
 		LanguageCode: languageCode,
-		IsGroup:      isGroup,
 		Reminder:     reminder,
 	}
 

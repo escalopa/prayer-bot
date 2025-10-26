@@ -81,7 +81,7 @@ func (r *SoonReminder) Send(ctx context.Context, b *bot.Bot, chat *domain.Chat, 
 
 	deleteMessages(ctx, b, chat, chat.Reminder.Soon.MessageID, chat.Reminder.Arrive.MessageID)
 
-	if chat.IsGroup && chat.Reminder.Jamaat.Enabled {
+	if chat.Reminder.Jamaat.Enabled {
 		delay := chat.Reminder.Jamaat.Delay.GetDelayByPrayerID(prayerID)
 		message := fmt.Sprintf("%s\n%s",
 			fmt.Sprintf(text.PrayerSoon, prayer, domain.FormatDuration(chat.Reminder.Soon.Offset)),

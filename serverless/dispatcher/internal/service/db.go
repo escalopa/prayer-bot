@@ -53,7 +53,6 @@ func (db *DB) CreateChat(
 	chatID int64,
 	languageCode string,
 	state string,
-	isGroup bool,
 	reminder *domain.Reminder,
 ) error {
 
@@ -68,11 +67,10 @@ func (db *DB) CreateChat(
 		DECLARE $chat_id AS Int64;
 		DECLARE $language_code AS Utf8;
 		DECLARE $state AS Utf8;
-		DECLARE $is_group AS Bool;
 		DECLARE $reminder AS Json;
 
-		INSERT INTO chats (bot_id, chat_id, language_code, state, is_group, reminder, created_at)
-		VALUES ($bot_id, $chat_id, $language_code, $state, $is_group, $reminder, CurrentUtcDatetime());
+		INSERT INTO chats (bot_id, chat_id, language_code, state, reminder, created_at)
+		VALUES ($bot_id, $chat_id, $language_code, $state, $reminder, CurrentUtcDatetime());
 	`
 
 	params := table.NewQueryParameters(
@@ -80,7 +78,6 @@ func (db *DB) CreateChat(
 		table.ValueParam("$chat_id", types.Int64Value(chatID)),
 		table.ValueParam("$language_code", types.UTF8Value(languageCode)),
 		table.ValueParam("$state", types.UTF8Value(state)),
-		table.ValueParam("$is_group", types.BoolValue(isGroup)),
 		table.ValueParam("$reminder", types.JSONValue(string(reminderJSON))),
 	)
 
@@ -105,7 +102,7 @@ func (db *DB) GetChat(ctx context.Context, botID int64, chatID int64) (chat *dom
 		DECLARE $bot_id AS Int64;
 		DECLARE $chat_id AS int64;
 
-		SELECT bot_id, chat_id, state, language_code, is_group, reminder
+		SELECT bot_id, chat_id, state, language_code, reminder
 		FROM chats
 		WHERE bot_id = $bot_id AND chat_id = $chat_id;
 	`
@@ -131,7 +128,6 @@ func (db *DB) GetChat(ctx context.Context, botID int64, chatID int64) (chat *dom
 				&chat.ChatID,
 				&chat.State,
 				&chat.LanguageCode,
-				&chat.IsGroup,
 				&reminderJSON,
 			)
 			if err != nil {
@@ -164,7 +160,7 @@ func (db *DB) GetChats(ctx context.Context, botID int64) (chats []*domain.Chat, 
 	query := `
 		DECLARE $bot_id AS Int64;
 
-		SELECT bot_id, chat_id, state, language_code, is_group, reminder
+		SELECT bot_id, chat_id, state, language_code, reminder
 		FROM chats
 		WHERE bot_id = $bot_id;
 	`
@@ -187,7 +183,6 @@ func (db *DB) GetChats(ctx context.Context, botID int64) (chats []*domain.Chat, 
 					&chat.ChatID,
 					&chat.State,
 					&chat.LanguageCode,
-					&chat.IsGroup,
 					&reminderJSON,
 				)
 				if err != nil {

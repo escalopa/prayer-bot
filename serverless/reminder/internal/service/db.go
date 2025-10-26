@@ -51,7 +51,7 @@ func (db *DB) GetChatsByIDs(ctx context.Context, botID int64, chatIDs []int64) (
 		DECLARE $bot_id AS Int64;
 		DECLARE $chat_ids AS List<Int64>;
 
-		SELECT bot_id, chat_id, state, language_code, is_group, reminder
+		SELECT bot_id, chat_id, state, language_code, reminder
 		FROM chats
 		WHERE bot_id = $bot_id AND chat_id IN $chat_ids;
 	`
@@ -83,7 +83,6 @@ func (db *DB) GetChatsByIDs(ctx context.Context, botID int64, chatIDs []int64) (
 					&chat.ChatID,
 					&chat.State,
 					&chat.LanguageCode,
-					&chat.IsGroup,
 					&reminderJSON,
 				)
 				if err != nil {

@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/escalopa/prayer-bot/domain"
-	"github.com/go-telegram/bot/models"
 )
 
 type (
@@ -72,8 +71,4 @@ func layoutRowsInfo(totalItems, itemsPerRow int) (filled int, empty int) {
 	empty = itemsPerRow - (totalItems % itemsPerRow)
 	filled = (totalItems / itemsPerRow) + 1
 	return
-}
-
-func isGroupChat(chat models.Chat) bool {
-	return chat.Type == models.ChatTypeGroup || chat.Type == models.ChatTypeSupergroup
 }

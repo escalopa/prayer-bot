@@ -5,7 +5,6 @@ CREATE TABLE chats (
     language_code Utf8,
     state Utf8,
     reminder Json,
-    is_group Bool,
     subscribed Bool,
     subscribed_at Datetime,
     created_at Datetime,

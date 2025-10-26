@@ -223,14 +223,6 @@ jobs:
             exit 1
           fi
 
-      - name: Upload plan artifact
-        if: steps.plan.outputs.exitcode == '2'
-        uses: actions/upload-artifact@v4
-        with:
-          name: tfplan-${{ needs.setup.outputs.workspace }}
-          path: tfplan
-          retention-days: 7
-
   apply:
     name: Terraform Apply
     runs-on: ubuntu-latest
@@ -272,19 +264,13 @@ jobs:
           path: state-backups/
           retention-days: 90
 
-      - name: Download plan artifact
-        if: needs.plan.outputs.plan-exists == '2'
-        uses: actions/download-artifact@v4
-        with:
-          name: tfplan-${{ needs.setup.outputs.workspace }}
-
       - name: Terraform Apply
         env:
           TF_VAR_cloud_id: ${{ secrets.CLOUD_ID }}
           TF_VAR_folder_id: ${{ secrets.FOLDER_ID }}
         run: |
           if [ -f tfplan ]; then
-            terraform apply -auto-approve tfplan
+            terraform apply -auto-approve
           else
             echo "No changes to apply"
           fi

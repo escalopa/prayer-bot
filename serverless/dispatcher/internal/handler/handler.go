@@ -231,7 +231,10 @@ func (h *Handler) getChat(ctx context.Context, update *models.Update) (*domain.C
 
 	now := h.now(botID)
 	reminder := &domain.Reminder{
-		Today: &domain.ReminderConfig{LastAt: now},
+		Today: &domain.ReminderConfig{
+			LastAt: now,
+			Offset: 3 * time.Hour,
+		},
 		Soon: &domain.ReminderConfig{
 			LastAt: now,
 			Offset: 20 * time.Minute,

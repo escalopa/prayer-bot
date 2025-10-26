@@ -3,9 +3,6 @@ package handler
 import (
 	"context"
 	"fmt"
-	"os"
-	"slices"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -17,41 +14,20 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-var (
-	jamaatDelay time.Duration
-)
-
-func init() {
-	const jamattDelayDefault = 10 * time.Minute
-
-	var (
-		jamaatEnvKey   = "JAMAAT_DELAY"
-		jamaatEnvValue = os.Getenv(jamaatEnvKey)
-	)
-
-	if jamaatEnvValue == "" { // not set, use default value
-		jamaatDelay = jamattDelayDefault
-		return
-	}
-
-	jamaatDelayDuration, err := time.ParseDuration(jamaatEnvValue)
-	if err != nil {
-		log.Error("parse jamaat delay", log.Err(err))
-		jamaatDelayDuration = jamattDelayDefault // set to default value on error
-	}
-
-	jamaatDelay = jamaatDelayDuration
-}
-
 type (
 	DB interface {
 		GetChatsByIDs(ctx context.Context, botID int64, chatIDs []int64) (chats []*domain.Chat, _ error)
 		GetSubscribers(ctx context.Context, botID int64) (chatIDs []int64, _ error)
-		GetSubscribersByOffset(ctx context.Context, botID int64, offset int32) (chatIDs []int64, _ error)
 		GetPrayerDay(ctx context.Context, botID int64, date time.Time) (prayerDay *domain.PrayerDay, _ error)
-		SetReminderMessageID(ctx context.Context, botID int64, chatID int64, reminderMessageID int32) error
-		SetJamaatMessageID(ctx context.Context, botID int64, chatID int64, jamaatMessageID int32) error
 		DeleteChat(ctx context.Context, botID int64, chatID int64) error
+		UpdateReminder(
+			ctx context.Context,
+			botID int64,
+			chatID int64,
+			reminderType domain.ReminderType,
+			messageID int,
+			lastAt time.Time,
+		) error
 	}
 
 	Handler struct {
@@ -65,7 +41,7 @@ type (
 )
 
 func New(cfg map[int64]*domain.BotConfig, db DB) (*Handler, error) {
-	lp, err := newLanguageProvider()
+	lp, err := newLanguagesProvider()
 	if err != nil {
 		return nil, err
 	}
@@ -104,117 +80,108 @@ func (h *Handler) getBot(botID int64) (*bot.Bot, error) {
 }
 
 func (h *Handler) Handel(ctx context.Context, botID int64) error {
-	cfg := h.cfg[botID]
-	prayerID, reminderOffset, err := h.getPrayer(ctx, botID, cfg.Location.V())
-	if err != nil {
-		log.Error("get prayer", log.Err(err), log.BotID(botID))
-		return domain.ErrInternal
-	}
-
-	var chatIDs []int64
-	switch {
-	case reminderOffset == 0:
-		chatIDs, err = h.db.GetSubscribers(ctx, botID)
-	case slices.Contains(domain.ReminderOffsets(), reminderOffset):
-		chatIDs, err = h.db.GetSubscribersByOffset(ctx, botID, reminderOffset)
-	}
-
+	chatIDs, err := h.db.GetSubscribers(ctx, botID)
 	if err != nil {
 		log.Error("get subscribers", log.Err(err), log.BotID(botID))
 		return domain.ErrInternal
 	}
+
 	if len(chatIDs) == 0 {
 		return nil
 	}
 
-	err = h.remindUsers(ctx, botID, chatIDs, prayerID, reminderOffset)
-	if err != nil {
-		log.Error("remindUsers", log.Err(err))
-		return domain.ErrInternal
-	}
-
-	return nil
-}
-
-func (h *Handler) getPrayer(ctx context.Context, botID int64, loc *time.Location) (domain.PrayerID, int32, error) {
-	date := h.now(loc)
-	prayerDay, err := h.db.GetPrayerDay(ctx, botID, date)
-	if err != nil {
-		log.Error("get prayer day",
-			log.Err(err),
-			log.BotID(botID),
-			log.String("date", date.String()),
-			log.String("location", loc.String()),
-		)
-		return 0, 0, domain.ErrInternal
-	}
-
-	switch {
-	case prayerDay.Fajr.After(date) || prayerDay.Fajr.Equal(date):
-		return domain.PrayerIDFajr, int32(prayerDay.Fajr.Sub(date).Minutes()), nil
-	case prayerDay.Shuruq.After(date) || prayerDay.Shuruq.Equal(date):
-		return domain.PrayerIDShuruq, int32(prayerDay.Shuruq.Sub(date).Minutes()), nil
-	case prayerDay.Dhuhr.After(date) || prayerDay.Dhuhr.Equal(date):
-		return domain.PrayerIDDhuhr, int32(prayerDay.Dhuhr.Sub(date).Minutes()), nil
-	case prayerDay.Asr.After(date) || prayerDay.Asr.Equal(date):
-		return domain.PrayerIDAsr, int32(prayerDay.Asr.Sub(date).Minutes()), nil
-	case prayerDay.Maghrib.After(date) || prayerDay.Maghrib.Equal(date):
-		return domain.PrayerIDMaghrib, int32(prayerDay.Maghrib.Sub(date).Minutes()), nil
-	case prayerDay.Isha.After(date) || prayerDay.Isha.Equal(date):
-		return domain.PrayerIDIsha, int32(prayerDay.Isha.Sub(date).Minutes()), nil
-	}
-
-	// if no prayer time is found, return the first prayer of the next day
-	prayerDay, err = h.db.GetPrayerDay(ctx, botID, date.AddDate(0, 0, 1))
-	if err != nil {
-		log.Error("get next prayer day",
-			log.Err(err),
-			log.BotID(botID),
-			log.String("date", date.String()),
-			log.String("location", loc.String()),
-		)
-		return 0, 0, domain.ErrInternal
-	}
-
-	return domain.PrayerIDFajr, int32(prayerDay.Fajr.Sub(date).Minutes()), nil
-}
-
-func (h *Handler) remindUsers(
-	ctx context.Context,
-	botID int64,
-	chatIDs []int64,
-	prayerID domain.PrayerID,
-	reminderOffset int32,
-) error {
+	// Get chat details
 	chats, err := h.db.GetChatsByIDs(ctx, botID, chatIDs)
 	if err != nil {
 		log.Error("get chats", log.Err(err), log.BotID(botID))
 		return domain.ErrInternal
 	}
 
+	// Get bot
 	b, err := h.getBot(botID)
 	if err != nil {
 		log.Error("get bot", log.Err(err), log.BotID(botID))
 		return domain.ErrInternal
 	}
 
+	// Get current day prayer times
+	cfg := h.cfg[botID]
+	now := time.Now().In(cfg.Location.V())
+	date := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+	prayerDay, err := h.db.GetPrayerDay(ctx, botID, date)
+	if err != nil {
+		log.Error("get prayer day", log.Err(err), log.BotID(botID))
+		return domain.ErrInternal
+	}
+
+	// Initialize reminder types
+	reminders := []ReminderType{
+		&TodayReminder{
+			lp:              h.lp,
+			botConfig:       h.cfg,
+			formatPrayerDay: h.formatPrayerDay,
+		},
+		&SoonReminder{lp: h.lp},
+		&ArriveReminder{lp: h.lp},
+		&JamaatReminder{lp: h.lp},
+	}
+
+	// Process each chat
 	errG := &errgroup.Group{}
 	for _, chat := range chats {
 		chat := chat
 		errG.Go(func() error {
-			fn := h.remindUser
-			if chat.Jamaat && prayerID != domain.PrayerIDShuruq /* shuruq isn't prayed in Jamaat */ {
-				fn = h.remindUserJamaat
+			// Skip chats without reminder config
+			if chat.Reminder == nil {
+				return nil
 			}
-			err := fn(ctx, b, chat, prayerID, reminderOffset)
-			if err != nil {
-				log.Error("remindUsers",
-					log.Err(err),
-					log.BotID(chat.BotID),
-					log.ChatID(chat.ChatID),
-					log.String("prayer_id", strconv.Itoa(int(prayerID))),
-					log.String("reminder_offset", strconv.Itoa(int(reminderOffset))),
-				)
+
+			// Check each reminder type
+			for _, reminder := range reminders {
+				shouldSend, prayerID := reminder.Check(ctx, chat, prayerDay, now)
+				if !shouldSend {
+					continue
+				}
+
+				// Send reminder
+				err := reminder.Send(ctx, b, chat, prayerID, prayerDay)
+				if err != nil {
+					if h.isBlockedErr(err) {
+						h.deleteChat(ctx, chat)
+						return nil
+					}
+					log.Error("send reminder",
+						log.Err(err),
+						log.BotID(chat.BotID),
+						log.ChatID(chat.ChatID),
+						log.String("reminder_type", reminder.Name()),
+					)
+					continue
+				}
+
+				// Update state
+				var messageID int
+				switch reminder.Name() {
+				case "today":
+					messageID = chat.Reminder.Today.MessageID
+				case "soon":
+					messageID = chat.Reminder.Soon.MessageID
+				case "arrive":
+					messageID = chat.Reminder.Arrive.MessageID
+				case "jamaat":
+					// Jamaat is stateless, no message ID to track
+					messageID = 0
+				}
+
+				err = reminder.UpdateState(ctx, h.db, chat, messageID, now)
+				if err != nil {
+					log.Error("update reminder state",
+						log.Err(err),
+						log.BotID(chat.BotID),
+						log.ChatID(chat.ChatID),
+						log.String("reminder_type", reminder.Name()),
+					)
+				}
 			}
 			return nil
 		})
@@ -360,6 +327,7 @@ func (h *Handler) remindUserJamaat(
 	h.deleteMessages(ctx, b, chat, chat.ReminderMessageID, chat.JamaatMessageID)
 	return nil
 }
+// formatPrayerDay formats the domain.PrayerDay into a string (copied from dispatcher service)
 
 func (h *Handler) deleteChat(ctx context.Context, chat *domain.Chat) {
 	err := h.db.DeleteChat(ctx, chat.BotID, chat.ChatID)
@@ -378,6 +346,7 @@ func (h *Handler) deleteMessages(ctx context.Context, b *bot.Bot, chat *domain.C
 		}
 		messageIDs = append(messageIDs, int(id))
 	}
+
 	if len(messageIDs) == 0 {
 		return // nothing to do
 	}

@@ -100,9 +100,10 @@ func (h *Handler) remindQuery(ctx context.Context, b *bot.Bot, update *models.Up
 
 	reminderOffset, _ := strconv.Atoi(strings.TrimPrefix(update.CallbackQuery.Data, remindQuery.String()))
 
-	err := h.db.SetReminderOffset(ctx, chat.BotID, chat.ChatID, int32(reminderOffset))
+	offset := time.Duration(reminderOffset) * time.Minute
+	err := h.db.SetReminderOffset(ctx, chat.BotID, chat.ChatID, domain.ReminderTypeSoon, offset)
 	if err != nil {
-		log.Error("remindQuery: set remind offset", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		log.Error("remindQuery: set reminder soon offset", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 

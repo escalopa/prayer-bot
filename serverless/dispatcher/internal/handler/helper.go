@@ -76,6 +76,6 @@ func layoutRowsInfo(totalItems, itemsPerRow int) (filled int, empty int) {
 	return
 }
 
-func isJamaat(chat models.Chat) bool {
+func isGroupChat(chat models.Chat) bool {
 	return chat.Type == models.ChatTypeGroup || chat.Type == models.ChatTypeSupergroup
 }

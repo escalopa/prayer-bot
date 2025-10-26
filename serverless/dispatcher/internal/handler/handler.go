@@ -17,7 +17,7 @@ import (
 
 type (
 	DB interface {
-		CreateChat(ctx context.Context, botID int64, chatID int64, languageCode string, reminderOffset int32, state string, jamaat bool) error
+		CreateChat(ctx context.Context, botID int64, chatID int64, languageCode string, state string, isGroup bool, reminder *domain.Reminder) error
 		GetChat(ctx context.Context, botID int64, chatID int64) (chat *domain.Chat, _ error)
 		GetChats(ctx context.Context, botID int64) (chats []*domain.Chat, _ error)
 		SetState(ctx context.Context, botID int64, chatID int64, state string) error
@@ -27,7 +27,7 @@ type (
 
 		SetSubscribed(ctx context.Context, botID int64, chatID int64, subscribed bool) error
 		SetLanguageCode(ctx context.Context, botID int64, chatID int64, languageCode string) error
-		SetReminderOffset(ctx context.Context, botID int64, chatID int64, reminderOffset int32) error
+		SetReminderOffset(ctx context.Context, botID int64, chatID int64, reminderType domain.ReminderType, offset time.Duration) error
 	}
 
 	Handler struct {
@@ -200,15 +200,15 @@ func (h *Handler) getBot(botID int64) (*bot.Bot, error) {
 func (h *Handler) getChat(ctx context.Context, update *models.Update) (*domain.Chat, error) {
 	botID := getContextBotID(ctx)
 	chatID := int64(0)
-	jamaat := false
+	isGroup := false
 
 	switch {
 	case update.Message != nil:
 		chatID = update.Message.Chat.ID
-		jamaat = isJamaat(update.Message.Chat)
+		isGroup = isGroupChat(update.Message.Chat)
 	case update.CallbackQuery != nil && update.CallbackQuery.Message.Message != nil:
 		chatID = update.CallbackQuery.Message.Message.Chat.ID
-		jamaat = isJamaat(update.CallbackQuery.Message.Message.Chat)
+		isGroup = isGroupChat(update.CallbackQuery.Message.Message.Chat)
 	default:
 		bytes, _ := json.Marshal(update)
 		log.Info("ignore message", log.BotID(botID), log.String("update", string(bytes)))
@@ -232,20 +232,34 @@ func (h *Handler) getChat(ctx context.Context, update *models.Update) (*domain.C
 		languageCode = update.Message.From.LanguageCode
 	}
 
-	err = h.db.CreateChat(ctx, botID, chatID, languageCode, int32(0), string(defaultState), jamaat)
+	now := h.now(botID)
+	reminder := &domain.Reminder{
+		Today:  &domain.ReminderConfig{LastAt: now},
+		Soon:   &domain.ReminderConfig{LastAt: now},
+		Arrive: &domain.ReminderConfig{LastAt: now},
+		JamaatDelay: &domain.JamaatDelay{
+			Fajr:    10 * time.Minute,
+			Shuruq:  10 * time.Minute,
+			Dhuhr:   10 * time.Minute,
+			Asr:     10 * time.Minute,
+			Maghrib: 10 * time.Minute,
+			Isha:    20 * time.Minute,
+		},
+	}
+
+	err = h.db.CreateChat(ctx, botID, chatID, languageCode, string(defaultState), isGroup, reminder)
 	if err != nil {
 		log.Error("create chat", log.Err(err), log.BotID(botID), log.ChatID(chatID), "update", update)
 		return nil, domain.ErrInternal
 	}
 
 	chat = &domain.Chat{
-		BotID:             botID,
-		ChatID:            chatID,
-		State:             string(defaultState),
-		LanguageCode:      languageCode,
-		ReminderMessageID: 0,
-		Jamaat:            jamaat,
-		JamaatMessageID:   0,
+		BotID:        botID,
+		ChatID:       chatID,
+		State:        string(defaultState),
+		LanguageCode: languageCode,
+		IsGroup:      isGroup,
+		Reminder:     reminder,
 	}
 
 	return chat, nil

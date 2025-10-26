@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"time"
 
@@ -51,32 +52,38 @@ func (db *DB) CreateChat(
 	botID int64,
 	chatID int64,
 	languageCode string,
-	reminderOffset int32,
 	state string,
-	jamaat bool,
+	isGroup bool,
+	reminder *domain.Reminder,
 ) error {
+
+	reminderJSON, err := json.Marshal(reminder)
+	if err != nil {
+		return err
+	}
+
 	query := `
 		DECLARE $bot_id AS Int64;
 		DECLARE $chat_id AS Int64;
 		DECLARE $language_code AS Utf8;
-		DECLARE $reminder_offset AS Int32;
 		DECLARE $state AS Utf8;
-		DECLARE $jamaat AS Bool;
+		DECLARE $is_group AS Bool;
+		DECLARE $reminder AS Json;
 
-		INSERT INTO chats (bot_id, chat_id, language_code, reminder_offset, state, jamaat, created_at)
-		VALUES ($bot_id, $chat_id, $language_code, $reminder_offset, $state, $jamaat, CurrentUtcDatetime());
+		INSERT INTO chats (bot_id, chat_id, language_code, state, is_group, reminder, created_at)
+		VALUES ($bot_id, $chat_id, $language_code, $state, $is_group, $reminder, CurrentUtcDatetime());
 	`
 
 	params := table.NewQueryParameters(
 		table.ValueParam("$bot_id", types.Int64Value(botID)),
 		table.ValueParam("$chat_id", types.Int64Value(chatID)),
 		table.ValueParam("$language_code", types.UTF8Value(languageCode)),
-		table.ValueParam("$reminder_offset", types.Int32Value(reminderOffset)),
 		table.ValueParam("$state", types.UTF8Value(state)),
-		table.ValueParam("$jamaat", types.BoolValue(jamaat)),
+		table.ValueParam("$is_group", types.BoolValue(isGroup)),
+		table.ValueParam("$reminder", types.JSONValue(string(reminderJSON))),
 	)
 
-	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
+	err = db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
 		_, _, err := s.Execute(ctx, writeTx, query, params)
 		return err
 	})
@@ -96,7 +103,7 @@ func (db *DB) GetChat(ctx context.Context, botID int64, chatID int64) (chat *dom
 		DECLARE $bot_id AS Int64;
 		DECLARE $chat_id AS int64;
 
-		SELECT bot_id, chat_id, state, language_code, reminder_message_id, jamaat, jamaat_message_id
+		SELECT bot_id, chat_id, state, language_code, is_group, reminder
 		FROM chats
 		WHERE bot_id = $bot_id AND chat_id = $chat_id;
 	`
@@ -115,18 +122,26 @@ func (db *DB) GetChat(ctx context.Context, botID int64, chatID int64) (chat *dom
 		defer func(res result.Result) { _ = res.Close() }(res)
 		if res.NextResultSet(ctx) && res.NextRow() {
 			chat = &domain.Chat{}
+			var reminderJSON *string
 			err = res.ScanWithDefaults(
 				&chat.BotID,
 				&chat.ChatID,
 				&chat.State,
 				&chat.LanguageCode,
-				&chat.ReminderMessageID,
-				&chat.Jamaat,
-				&chat.JamaatMessageID,
+				&chat.IsGroup,
+				&reminderJSON,
 			)
 			if err != nil {
 				return err
 			}
+
+			var reminder domain.Reminder
+			if err := json.Unmarshal([]byte(*reminderJSON), &reminder); err != nil {
+				return err
+			}
+
+			chat.Reminder = &reminder
+
 			return nil
 		}
 
@@ -147,7 +162,7 @@ func (db *DB) GetChats(ctx context.Context, botID int64) (chats []*domain.Chat, 
 	query := `
 		DECLARE $bot_id AS Int64;
 
-		SELECT bot_id, chat_id, state, language_code, reminder_message_id, jamaat, jamaat_message_id
+		SELECT bot_id, chat_id, state, language_code, is_group, reminder
 		FROM chats
 		WHERE bot_id = $bot_id;
 	`
@@ -163,18 +178,25 @@ func (db *DB) GetChats(ctx context.Context, botID int64) (chats []*domain.Chat, 
 		if res.NextResultSet(ctx) {
 			for res.NextRow() {
 				chat := &domain.Chat{}
+				var reminderJSON *string
 				err = res.ScanWithDefaults(
 					&chat.BotID,
 					&chat.ChatID,
 					&chat.State,
 					&chat.LanguageCode,
-					&chat.ReminderMessageID,
-					&chat.Jamaat,
-					&chat.JamaatMessageID,
+					&chat.IsGroup,
+					&reminderJSON,
 				)
 				if err != nil {
 					return err
 				}
+
+				var reminder domain.Reminder
+				if err := json.Unmarshal([]byte(*reminderJSON), &reminder); err != nil {
+					return err
+				}
+				chat.Reminder = &reminder
+
 				chats = append(chats, chat)
 			}
 		}
@@ -239,21 +261,25 @@ func (db *DB) SetSubscribed(ctx context.Context, botID int64, chatID int64, subs
 	return err
 }
 
-func (db *DB) SetReminderOffset(ctx context.Context, botID int64, chatID int64, offset int32) error {
+func (db *DB) SetReminderOffset(ctx context.Context, botID int64, chatID int64, reminderType domain.ReminderType, offset time.Duration) error {
+	offsetNanos := offset.Nanoseconds()
+
 	query := `
 		DECLARE $bot_id AS Int64;
 		DECLARE $chat_id AS Int64;
-		DECLARE $reminder_offset AS Int32;
+		DECLARE $reminder_type AS Utf8;
+		DECLARE $offset AS Int64;
 
 		UPDATE chats
-		SET reminder_offset = $reminder_offset
+		SET reminder = Json_SetField(reminder, $reminder_type || ".offset", CAST($offset AS Json))
 		WHERE bot_id = $bot_id AND chat_id = $chat_id;
 	`
 
 	params := table.NewQueryParameters(
 		table.ValueParam("$bot_id", types.Int64Value(botID)),
 		table.ValueParam("$chat_id", types.Int64Value(chatID)),
-		table.ValueParam("$reminder_offset", types.Int32Value(offset)),
+		table.ValueParam("$reminder_type", types.UTF8Value(reminderType.String())),
+		table.ValueParam("$offset", types.Int64Value(offsetNanos)),
 	)
 
 	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {

@@ -95,9 +95,39 @@ bug:
   success: "✅ Rahmat! Xatolik qabul qilindi"
 
 help_admin: |
+  📊 /info – Chat ma'lumotlari va sozlamalarini ko'rish
   📩 /reply – Foydalanuvchilarga javob berish
-  📊 /stats – Bot statistikasi
+  📈 /stats – Bot statistikasi
   📢 /announce – Hamma foydalanuvchilarga xabar yuborish
+
+info:
+  default: |
+    📊 *Chat Ma'lumotlari*
+
+    🆔 *Chat ID:* `%s`
+    💬 *Turi:* %s
+    🌐 *Til:* %s
+    📍 *Holat:* %s
+
+    ⏰ *Eslatma Sozlamalari:*
+    Holat: %s
+    • 🌅 Ertangi Ko'rinish: %s
+    • ⏰ Namoz Eslatmasi: %s%s
+  jamaat: |
+
+    🕌 *Jamoat Sozlamalari:*
+    Holat: %s
+    • Bomdod: %s
+    • Quyosh: %s
+    • Peshin: %s
+    • Asr: %s
+    • Shom: %s
+    • Xufton: %s
+  type:
+    private: "Shaxsiy"
+    group: "Guruh"
+  enabled: "✅ Yoqilgan"
+  disabled: "❌ O'chirilgan"
 
 reply:
   start: "✍️ Javobni quyida yozing (/cancel yozib to‘xtatish mumkin)"

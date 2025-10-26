@@ -94,9 +94,39 @@ bug:
   success: "✅ ¡Gracias! Tu reporte ha sido recibido"
 
 help_admin: |
+  📊 /info – Ver información y configuración del chat
   📩 /reply – Responder a los usuarios
-  📊 /stats – Estadísticas del bot
+  📈 /stats – Estadísticas del bot
   📢 /announce – Enviar un mensaje a todos
+
+info:
+  default: |
+    📊 *Información del Chat*
+
+    🆔 *ID del Chat:* `%s`
+    💬 *Tipo:* %s
+    🌐 *Idioma:* %s
+    📍 *Estado:* %s
+
+    ⏰ *Configuración de Recordatorios:*
+    Estado: %s
+    • 🌅 Vista Previa de Mañana: %s
+    • ⏰ Alerta de Oración: %s%s
+  jamaat: |
+
+    🕌 *Configuración de Jamaat:*
+    Estado: %s
+    • Fajr: %s
+    • Shuruq: %s
+    • Dhuhr: %s
+    • Asr: %s
+    • Maghrib: %s
+    • Isha: %s
+  type:
+    private: "Privado"
+    group: "Grupo"
+  enabled: "✅ Habilitado"
+  disabled: "❌ Deshabilitado"
 
 reply:
   start: "✍️ Escribe tu respuesta abajo (o escribe /cancel para cancelar)"

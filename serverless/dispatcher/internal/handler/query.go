@@ -224,7 +224,7 @@ func (h *Handler) remindEditQuery(ctx context.Context, b *bot.Bot, update *model
 		return domain.ErrInternal
 	}
 
-	reminderType := domain.ReminderType(parts[2])
+	reminderType := domain.ReminderType(strings.TrimSuffix(parts[2], "|"))
 
 	var messageText string
 	var offset time.Duration
@@ -239,7 +239,7 @@ func (h *Handler) remindEditQuery(ctx context.Context, b *bot.Bot, update *model
 		log.Error("remindEditQuery: unknown reminder type",
 			log.BotID(chat.BotID),
 			log.ChatID(chat.ChatID),
-			log.String("type", string(reminderType)),
+			log.String("type", reminderType.String()),
 		)
 		return domain.ErrInternal
 	}

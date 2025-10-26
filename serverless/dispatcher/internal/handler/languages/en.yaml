@@ -94,9 +94,39 @@ bug:
   success: "✅ Thanks! Your report has been received"
 
 help_admin: |
+  📊 /info – View chat info & settings
   📩 /reply – Reply to users
-  📊 /stats – Bot usage stats
+  📈 /stats – Bot usage stats
   📢 /announce – Send message to everyone
+
+info:
+  default: |
+    📊 *Chat Information*
+
+    🆔 *Chat ID:* `%s`
+    💬 *Type:* %s
+    🌐 *Language:* %s
+    📍 *State:* %s
+
+    ⏰ *Reminder Settings:*
+    Status: %s
+    • 🌅 Tomorrow Preview: %s
+    • ⏰ Prayer Alert: %s%s
+  jamaat: |
+
+    🕌 *Jamaat Settings:*
+    Status: %s
+    • Fajr: %s
+    • Shuruq: %s
+    • Dhuhr: %s
+    • Asr: %s
+    • Maghrib: %s
+    • Isha: %s
+  type:
+    private: "Private"
+    group: "Group"
+  enabled: "✅ Enabled"
+  disabled: "❌ Disabled"
 
 reply:
   start: "✍️ Type your reply below (or /cancel to stop)"

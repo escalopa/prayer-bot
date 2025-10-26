@@ -94,9 +94,39 @@ bug:
   success: "✅ Sag boluň! Nädogrulyk hasaba alyndy"
 
 help_admin: |
+  📊 /info – Söhbetdeşlik maglumatlary we sazlamalary görmek
   📩 /reply – Ulanyjylara jogap bermek
-  📊 /stats – Baryň statistikasyny görmek
+  📈 /stats – Baryň statistikasyny görmek
   📢 /announce – Ähli ulanyjylara habar ugratmak
+
+info:
+  default: |
+    📊 *Söhbetdeşlik Maglumatlary*
+
+    🆔 *Söhbetdeşlik ID:* `%s`
+    💬 *Görnüşi:* %s
+    🌐 *Dil:* %s
+    📍 *Ýagdaý:* %s
+
+    ⏰ *Duýduryş Sazlamalary:*
+    Ýagdaý: %s
+    • 🌅 Ertir Syn: %s
+    • ⏰ Namaz Duýduryşy: %s%s
+  jamaat: |
+
+    🕌 *Jemgyýet Sazlamalary:*
+    Ýagdaý: %s
+    • Fäjir: %s
+    • Şuruk: %s
+    • Gündiz: %s
+    • Ikindi: %s
+    • Agşam: %s
+    • Gije: %s
+  type:
+    private: "Şahsy"
+    group: "Topar"
+  enabled: "✅ Açyk"
+  disabled: "❌ Ýapyk"
 
 reply:
   start: "✍️ Jogabyňyzy aşakda ýazyň (ýa-da /cancel ýazyp duruzuň)"

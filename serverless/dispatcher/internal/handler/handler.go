@@ -72,6 +72,7 @@ func (h *Handler) opts() []bot.Option {
 		bot.WithMessageTextHandler(cancelCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.cancel))),
 
 		bot.WithMessageTextHandler(adminCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.authorizeH(h.admin)))),
+		bot.WithMessageTextHandler(infoCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.authorizeH(h.info)))),
 		bot.WithMessageTextHandler(replyCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.authorizeH(h.reply)))),
 		bot.WithMessageTextHandler(statsCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.authorizeH(h.stats)))),
 		bot.WithMessageTextHandler(announceCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.authorizeH(h.announce)))),

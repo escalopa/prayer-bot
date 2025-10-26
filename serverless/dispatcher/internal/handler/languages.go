@@ -57,6 +57,19 @@ type (
 		Back string `yaml:"back"`
 	}
 
+	InfoTypeText struct {
+		Private string `yaml:"private"`
+		Group   string `yaml:"group"`
+	}
+
+	InfoText struct {
+		Default  string       `yaml:"default"`
+		Jamaat   string       `yaml:"jamaat"`
+		Type     InfoTypeText `yaml:"type"`
+		Enabled  string       `yaml:"enabled"`
+		Disabled string       `yaml:"disabled"`
+	}
+
 	Text struct {
 		Name string `yaml:"name"`
 
@@ -74,9 +87,7 @@ type (
 		JamaatMenu JamaatMenuText `yaml:"jamaat_menu"`
 		JamaatEdit JamaatEditText `yaml:"jamaat_edit"`
 		Buttons    ButtonsText    `yaml:"buttons"`
-
-		SubscriptionSuccess   string `yaml:"subscription_success"`
-		UnsubscriptionSuccess string `yaml:"unsubscription_success"`
+		Info       InfoText       `yaml:"info"`
 
 		PrayerSoon string `yaml:"prayer_soon"`
 

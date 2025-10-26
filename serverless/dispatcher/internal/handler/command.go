@@ -53,6 +53,7 @@ const (
 	// admin commands
 
 	adminCommand    command = "admin"
+	infoCommand     command = "info"
 	replyCommand    command = "reply" // 1 stage
 	statsCommand    command = "stats"
 	announceCommand command = "announce" // 1 stage
@@ -281,6 +282,62 @@ func (h *Handler) admin(ctx context.Context, b *bot.Bot, _ *models.Update) error
 	})
 	if err != nil {
 		log.Error("admin: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		return domain.ErrInternal
+	}
+
+	h.resetState(ctx, chat)
+	return nil
+}
+
+func (h *Handler) info(ctx context.Context, b *bot.Bot, _ *models.Update) error {
+	chat := getContextChat(ctx)
+	text := h.lp.GetText(chat.LanguageCode)
+
+	chatType := text.Info.Type.Private
+	if isChatGroup(chat.ChatID) {
+		chatType = text.Info.Type.Group
+	}
+
+	subscriptionStatus := text.Info.Disabled
+	if chat.Subscribed {
+		subscriptionStatus = text.Info.Enabled
+	}
+
+	jamaatInfo := ""
+	if isChatGroup(chat.ChatID) {
+		jamaatStatus := text.Info.Disabled
+		if chat.Reminder.Jamaat.Enabled {
+			jamaatStatus = text.Info.Enabled
+		}
+		jamaatInfo = fmt.Sprintf(text.Info.Jamaat,
+			jamaatStatus,
+			domain.FormatDuration(chat.Reminder.Jamaat.Delay.Fajr),
+			domain.FormatDuration(chat.Reminder.Jamaat.Delay.Shuruq),
+			domain.FormatDuration(chat.Reminder.Jamaat.Delay.Dhuhr),
+			domain.FormatDuration(chat.Reminder.Jamaat.Delay.Asr),
+			domain.FormatDuration(chat.Reminder.Jamaat.Delay.Maghrib),
+			domain.FormatDuration(chat.Reminder.Jamaat.Delay.Isha),
+		)
+	}
+
+	message := fmt.Sprintf(text.Info.Default,
+		fmt.Sprintf("%d", chat.ChatID),
+		chatType,
+		chat.LanguageCode,
+		chat.State,
+		subscriptionStatus,
+		domain.FormatDuration(chat.Reminder.Tomorrow.Offset),
+		domain.FormatDuration(chat.Reminder.Soon.Offset),
+		jamaatInfo,
+	)
+
+	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
+		ChatID:    chat.ChatID,
+		Text:      message,
+		ParseMode: models.ParseModeMarkdown,
+	})
+	if err != nil {
+		log.Error("info: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 

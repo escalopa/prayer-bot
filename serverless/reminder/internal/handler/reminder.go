@@ -16,7 +16,6 @@ type ReminderType interface {
 	Name() domain.ReminderType
 }
 
-// TodayReminder - Daily schedule
 type TodayReminder struct {
 	lp              *languagesProvider
 	botConfig       map[int64]*domain.BotConfig
@@ -61,20 +60,8 @@ func (r *SoonReminder) Check(ctx context.Context, chat *domain.Chat, prayerDay *
 		{domain.PrayerIDAsr, prayerDay.Asr},
 		{domain.PrayerIDMaghrib, prayerDay.Maghrib},
 		{domain.PrayerIDIsha, prayerDay.Isha},
-	}
-
-	// Add next day's prayers if available
-	if prayerDay.NextDay != nil {
-		prayers = append(prayers,
-			struct {
-				id   domain.PrayerID
-				time time.Time
-			}{domain.PrayerIDFajr, prayerDay.NextDay.Fajr},
-			struct {
-				id   domain.PrayerID
-				time time.Time
-			}{domain.PrayerIDShuruq, prayerDay.NextDay.Shuruq},
-		)
+		{domain.PrayerIDFajr, prayerDay.NextDay.Fajr},
+		{domain.PrayerIDShuruq, prayerDay.NextDay.Shuruq},
 	}
 
 	config := chat.Reminder.Soon

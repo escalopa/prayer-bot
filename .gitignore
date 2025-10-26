@@ -18,3 +18,4 @@ _config
 # secret
 iam.json
 key.json
+config.json

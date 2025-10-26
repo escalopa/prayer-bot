@@ -183,51 +183,9 @@ terraform show -json plan.out > plan.json
 docker run --rm -it -p 9000:9000 -v $(pwd)/plan.json:/src/plan.json im2nguyen/rover:latest -planJSONPath=plan.json
 ```
 
-Hello!
+## Useful
 
-I want to change how I work with reminders, before I have reminder offest and reminder message id, now I have changed the type in db into json and will use the following Reminder object
-
-```go
-type ReminderConfig struct {
-  Offest    time.Duration `json:"offset"`
-  MessageID int `json:"message_id"`
-  LastAt time.Time `json:"last_at"`
-}
-
-type JamaatOffset struct {
-  Fajr time.Duration `json:"fajr"` // default 10m
-  Shuruq time.Duration `json:"shuruq"` // default 10m
-  Dhuhr time.Duration `json:"dhuhr"` // default 10m
-  Asr time.Duration `json:"asr"` // default 10m
-  Maghrib time.Duration `json:"maghrib"` // default 10m
-  Isha time.Duration `json:"isha"` // default 20m
-}
-
-type Reminder struct {
-  // last_at is a date without hours, if last_at + 24h - offset is less than now then trigger
-  Today  ReminderConfig `json:"today"`
-  // if last_at < prayer_time-offset, then trigger
-  Soon   ReminderConfig `json:"soon"`
-  // if last_at < prayer_time+offset then trigger
-  Arrive ReminderConfig `json:"arrive"` // offset here not used
-  // Use to set the value in Jamaat after X min
-  GroupJamaatOffset JamaatOffset `json:"group_jamaa_offset"`
-}
+```bash
+export AWS_ACCESS_KEY_ID=$(jq -r '.aws_access_key_id' key.json)
+export AWS_SECRET_ACCESS_KEY=$(jq -r '.aws_secret_access_key' key.json)
 ```
-
-Now, to now that I need to send a message, event time + offset(might be negative) must be after last_at and before or equal now
-
-Update the dispatcher code when setting reminder, the value will be set on soon.offset
-
-add a today handler in reminder to send today's prayer message and delete previous one if any (using message_id)
-
-Refactor the code in reminder so that we have checks for each reminder (today, soon, arrive), if check passed, send message and delete previous message_id and update last_at and message_id
-
----
-
-I need you to improve this prompt instead of making changes
-
-
-
-- update code to match new infra
-- delpoy to production

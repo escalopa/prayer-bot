@@ -235,7 +235,7 @@ resource "yandex_function" "dispatcher_fn" {
   }
 }
 
-output "dispatcher_fn_id" {
+output "dispatcher_function_id" {
   value = yandex_function.dispatcher_fn.id // used to set Webhook URL on Telegram
 }
 

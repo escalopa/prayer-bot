@@ -5,13 +5,6 @@ on:
     branches:
       - main
       - dev
-  workflow_dispatch:
-    inputs:
-      run_hook:
-        description: 'Run webhook setup'
-        required: false
-        type: boolean
-        default: false
 
 concurrency:
   group: deploy-${{ github.ref }}
@@ -19,8 +12,6 @@ concurrency:
 
 env:
   TERRAFORM_VERSION: 1.6.3
-  GOOSE_VERSION: 3.26.0
-  GO_VERSION: 1.21
   APP_CONFIG_PATH: config.json
 
 jobs:
@@ -30,7 +21,6 @@ jobs:
     environment: ${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
     outputs:
       workspace: ${{ steps.set-workspace.outputs.workspace }}
-      environment: ${{ steps.set-workspace.outputs.environment }}
       cache_key: ${{ steps.set-cache-key.outputs.cache_key }}
     steps:
       - name: Checkout code
@@ -41,10 +31,8 @@ jobs:
         run: |
           if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
             echo "workspace=prod" >> $GITHUB_OUTPUT
-            echo "environment=prod" >> $GITHUB_OUTPUT
           elif [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
             echo "workspace=dev" >> $GITHUB_OUTPUT
-            echo "environment=dev" >> $GITHUB_OUTPUT
           fi
 
       - name: Set cache key
@@ -65,106 +53,6 @@ jobs:
           aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           cache_key: ${{ steps.set-cache-key.outputs.cache_key }}
-
-  lint:
-    name: Code Linting
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
-
-      - name: Cache Go modules
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-${{ github.ref_name }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ github.ref_name }}-go-
-
-      - name: Install revive
-        run: go install github.com/mgechev/revive@latest
-
-      - name: Run revive - loader
-        run: |
-          cd serverless/loader
-          revive -config ../../revive.toml -formatter friendly ./...
-
-      - name: Run revive - dispatcher
-        run: |
-          cd serverless/dispatcher
-          revive -config ../../revive.toml -formatter friendly ./...
-
-      - name: Run revive - reminder
-        run: |
-          cd serverless/reminder
-          revive -config ../../revive.toml -formatter friendly ./...
-
-  migrate:
-    name: Database Migration
-    runs-on: ubuntu-latest
-    needs: [setup, lint]
-    environment: ${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install YC CLI
-        run: |
-          curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
-          echo "${HOME}/yandex-cloud/bin" >> $GITHUB_PATH
-
-      - name: Authenticate YC CLI
-        env:
-          YC_SERVICE_ACCOUNT_KEY: ${{ secrets.SERVICE_ACCOUNT_KEY }}
-          YC_CLOUD_ID: ${{ secrets.CLOUD_ID }}
-          YC_FOLDER_ID: ${{ secrets.FOLDER_ID }}
-        run: |
-          echo "$YC_SERVICE_ACCOUNT_KEY" > iam.json
-          yc config set service-account-key iam.json
-          yc config set cloud-id "$YC_CLOUD_ID"
-          yc config set folder-id "$YC_FOLDER_ID"
-
-      - name: Generate short-lived IAM token
-        run: |
-          export YDB_ACCESS_TOKEN_CREDENTIALS=$(yc iam create-token)
-          echo "YDB_ACCESS_TOKEN_CREDENTIALS=$YDB_ACCESS_TOKEN_CREDENTIALS" >> $GITHUB_ENV
-
-      - name: Install Goose
-        run: |
-          GOOSE_VERSION="${{ env.GOOSE_VERSION }}"
-          wget -q "https://github.com/pressly/goose/releases/download/v${GOOSE_VERSION}/goose_linux_x86_64" -O goose
-          chmod +x goose
-          mkdir -p $HOME/.goose
-          mv goose $HOME/.goose/
-          echo "$HOME/.goose" >> $GITHUB_PATH
-
-      - name: Run Goose migrations
-        env:
-          GOOSE_DRIVER: ydb
-          # ydb connection string format
-          # grpcs://<endpoint>:<port>/?database=<database>&go_query_mode=scripting&go_fake_tx=scripting&go_query_bind=declare,numeric
-          GOOSE_DBSTRING: ${{ secrets.DB_CONNECTION_STRING }}
-        run: |
-          export PATH="$HOME/.goose:$PATH"
-          cd migrations
-
-          # Ensure DB string uses TLS (grpcs://)
-          if ! echo "$GOOSE_DBSTRING" | grep -q "^grpcs://"; then
-            echo "::error::DB_CONNECTION_STRING must start with grpcs:// (secure)"
-            exit 1
-          fi
-
-          echo "::notice::Running Goose migrations on $GOOSE_DBSTRING"
-          goose up
-          echo "::notice::Migration completed successfully for ${{ needs.setup.outputs.workspace }} environment"
-        continue-on-error: true
 
   validate:
     name: Terraform Validate
@@ -197,7 +85,7 @@ jobs:
   plan:
     name: Terraform Plan
     runs-on: ubuntu-latest
-    needs: [setup, lint, validate]
+    needs: [setup, validate]
     environment: ${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
     outputs:
       plan-exists: ${{ steps.plan.outputs.exitcode }}
@@ -226,6 +114,9 @@ jobs:
           terraform plan -out=tfplan -detailed-exitcode || EXIT_CODE=$?
           echo "exitcode=$EXIT_CODE" >> $GITHUB_OUTPUT
           
+          # Print the plan output
+          terraform show tfplan
+          
           if [ $EXIT_CODE -eq 2 ]; then
             echo "::notice::Changes detected in Terraform plan"
           elif [ $EXIT_CODE -eq 0 ]; then
@@ -238,8 +129,7 @@ jobs:
   apply:
     name: Terraform Apply
     runs-on: ubuntu-latest
-    needs: [setup, plan, migrate]
-    if: always() && needs.plan.result == 'success' && (needs.migrate.result == 'success' || needs.migrate.result == 'skipped')
+    needs: [setup, plan]
     environment: ${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
     outputs:
       dispatcher_fn_id: ${{ steps.outputs.outputs.dispatcher_fn_id }}
@@ -280,12 +170,7 @@ jobs:
         env:
           TF_VAR_cloud_id: ${{ secrets.CLOUD_ID }}
           TF_VAR_folder_id: ${{ secrets.FOLDER_ID }}
-        run: |
-          if [ -f tfplan ]; then
-            terraform apply -auto-approve
-          else
-            echo "No changes to apply"
-          fi
+        run: terraform apply -auto-approve
 
       - name: Export Terraform Outputs
         id: outputs
@@ -294,35 +179,10 @@ jobs:
           echo "dispatcher_fn_id=$DISPATCHER_FN_ID" >> $GITHUB_OUTPUT
           echo "::notice::Dispatcher Function ID: $DISPATCHER_FN_ID"
 
-  hook:
-    name: Setup Telegram Webhooks
-    runs-on: ubuntu-latest
-    needs: [apply]
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.run_hook == 'true' && needs.apply.result == 'success'
-    environment: ${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Execute webhook setup script
-        env:
-          DISPATCHER_FUNCTION_ID: ${{ needs.apply.outputs.dispatcher_fn_id }}
-        run: |
-          echo "::notice::Config file: $APP_CONFIG_PATH"
-          echo "::notice::Dispatcher function ID: $DISPATCHER_FUNCTION_ID"
-          
-          chmod +x _scripts/hook.sh
-          bash _scripts/hook.sh
-        continue-on-error: false
-
-      - name: Verify webhook setup
-        run: |
-          echo "::notice::Webhook setup completed successfully for ${{ needs.setup.outputs.workspace }} environment"
-
   summary:
     name: Deployment Summary
     runs-on: ubuntu-latest
-    needs: [setup, validate, lint, migrate, plan, apply, hook]
+    needs: [setup, validate, plan, apply]
     if: always()
     steps:
       - name: Generate summary
@@ -332,11 +192,8 @@ jobs:
           echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
           echo "| Validate | ${{ needs.validate.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Code Linting | ${{ needs.lint.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Database Migration | ${{ needs.migrate.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Terraform Plan | ${{ needs.plan.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Terraform Apply | ${{ needs.apply.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Webhook Setup | ${{ needs.hook.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
           echo "**Workspace:** ${{ needs.setup.outputs.workspace }}" >> $GITHUB_STEP_SUMMARY
@@ -345,8 +202,4 @@ jobs:
           
           if [ "${{ needs.apply.outputs.dispatcher_fn_id }}" != "" ]; then
             echo "**Dispatcher Function ID:** ${{ needs.apply.outputs.dispatcher_fn_id }}" >> $GITHUB_STEP_SUMMARY
-          fi
-          
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            echo "**Manual Trigger:** Webhook setup requested: ${{ github.event.inputs.run_hook }}" >> $GITHUB_STEP_SUMMARY
           fi

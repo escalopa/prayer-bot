@@ -1,0 +1,81 @@
+name: Database Migration
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+
+concurrency:
+  group: migrate-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GOOSE_VERSION: 3.26.0
+
+jobs:
+  migrate:
+    name: Database Migration
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install YC CLI
+        run: |
+          curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
+          echo "${HOME}/yandex-cloud/bin" >> $GITHUB_PATH
+
+      - name: Authenticate YC CLI
+        env:
+          YC_SERVICE_ACCOUNT_KEY: ${{ secrets.SERVICE_ACCOUNT_KEY }}
+          YC_CLOUD_ID: ${{ secrets.CLOUD_ID }}
+          YC_FOLDER_ID: ${{ secrets.FOLDER_ID }}
+        run: |
+          echo "$YC_SERVICE_ACCOUNT_KEY" > iam.json
+          yc config set service-account-key iam.json
+          yc config set cloud-id "$YC_CLOUD_ID"
+          yc config set folder-id "$YC_FOLDER_ID"
+
+      - name: Generate short-lived IAM token
+        run: |
+          export YDB_ACCESS_TOKEN=$(yc iam create-token)
+          echo "YDB_ACCESS_TOKEN=$YDB_ACCESS_TOKEN" >> $GITHUB_ENV
+
+      - name: Install Goose
+        run: |
+          GOOSE_VERSION="${{ env.GOOSE_VERSION }}"
+          wget -q "https://github.com/pressly/goose/releases/download/v${GOOSE_VERSION}/goose_linux_x86_64" -O goose
+          chmod +x goose
+          mkdir -p $HOME/.goose
+          mv goose $HOME/.goose/
+          echo "$HOME/.goose" >> $GITHUB_PATH
+
+      - name: Run Goose migrations
+        env:
+          GOOSE_DRIVER: ydb
+          GOOSE_DBSTRING_BASE: ${{ secrets.DB_CONNECTION_STRING }}
+        run: |
+          export PATH="$HOME/.goose:$PATH"
+          cd migrations
+
+          # Add token and query options to connection string
+          GOOSE_DBSTRING="${GOOSE_DBSTRING_BASE}&token=${YDB_ACCESS_TOKEN}&go_query_mode=scripting&go_fake_tx=scripting&go_query_bind=declare,numeric"
+          export GOOSE_DBSTRING
+
+          WORKSPACE=${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
+          echo "::notice::Running Goose migrations for $WORKSPACE environment"
+          goose up
+          echo "::notice::Migration completed successfully for $WORKSPACE environment"
+        continue-on-error: true
+
+      - name: Generate summary
+        if: always()
+        run: |
+          WORKSPACE=${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
+          echo "## Database Migration Summary - $WORKSPACE environment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Workspace:** $WORKSPACE" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY

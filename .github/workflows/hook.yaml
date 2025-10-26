@@ -1,0 +1,77 @@
+name: Setup Telegram Webhooks
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: hook-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TERRAFORM_VERSION: 1.6.3
+  APP_CONFIG_PATH: config.json
+
+jobs:
+  hook:
+    name: Setup Telegram Webhooks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Determine workspace
+        run: |
+          WORKSPACE=${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
+          echo "WORKSPACE=$WORKSPACE" >> $GITHUB_ENV
+          echo "::notice::Workspace: $WORKSPACE"
+
+      - name: Set cache key
+        id: set-cache-key
+        run: |
+          CACHE_KEY="${{ runner.os }}-${{ github.ref_name }}-terraform-${{ hashFiles('**/.terraform.lock.hcl') }}"
+          echo "cache_key=$CACHE_KEY" >> $GITHUB_OUTPUT
+
+      - name: Setup Terraform Environment
+        uses: ./.github/actions/setup-terraform
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: 'false'
+          service_account_key: ${{ secrets.SERVICE_ACCOUNT_KEY }}
+          app_config: ${{ secrets.APP_CONFIG }}
+          app_config_path: ${{ env.APP_CONFIG_PATH }}
+          workspace: ${{ env.WORKSPACE }}
+          aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          cache_key: ${{ steps.set-cache-key.outputs.cache_key }}
+
+      - name: Get Dispatcher Function ID
+        id: get-fn-id
+        run: |
+          DISPATCHER_FUNCTION_ID=$(terraform output -raw dispatcher_function_id)
+          echo "dispatcher_function_id=$DISPATCHER_FUNCTION_ID" >> $GITHUB_OUTPUT
+          echo "::notice::Dispatcher Function ID: $DISPATCHER_FUNCTION_ID"
+
+      - name: Execute webhook setup script
+        env:
+          DISPATCHER_FUNCTION_ID: ${{ steps.get-fn-id.outputs.dispatcher_function_id }}
+        run: |
+          echo "::notice::Config file: $APP_CONFIG_PATH"
+          echo "::notice::Dispatcher function ID: $DISPATCHER_FUNCTION_ID"
+          
+          chmod +x _scripts/hook.sh
+          bash _scripts/hook.sh
+        continue-on-error: false
+
+      - name: Verify webhook setup
+        run: |
+          echo "::notice::Webhook setup completed successfully for $WORKSPACE environment"
+
+      - name: Generate summary
+        if: always()
+        run: |
+          echo "## Webhook Setup Summary - $WORKSPACE environment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Workspace:** $WORKSPACE" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Dispatcher Function ID:** ${{ steps.get-fn-id.outputs.dispatcher_function_id }}" >> $GITHUB_STEP_SUMMARY

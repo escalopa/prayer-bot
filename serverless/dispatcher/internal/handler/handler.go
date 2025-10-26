@@ -253,7 +253,6 @@ func (h *Handler) getChat(ctx context.Context, update *models.Update) (*domain.C
 		Jamaat: &domain.JamaatConfig{
 			Delay: &domain.JamaatDelayConfig{
 				Fajr:    10 * time.Minute,
-				Shuruq:  10 * time.Minute,
 				Dhuhr:   10 * time.Minute,
 				Asr:     10 * time.Minute,
 				Maghrib: 10 * time.Minute,

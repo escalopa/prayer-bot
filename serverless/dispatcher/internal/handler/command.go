@@ -312,7 +312,6 @@ func (h *Handler) info(ctx context.Context, b *bot.Bot, _ *models.Update) error 
 		jamaatInfo = fmt.Sprintf(text.Info.Jamaat,
 			jamaatStatus,
 			domain.FormatDuration(chat.Reminder.Jamaat.Delay.Fajr),
-			domain.FormatDuration(chat.Reminder.Jamaat.Delay.Shuruq),
 			domain.FormatDuration(chat.Reminder.Jamaat.Delay.Dhuhr),
 			domain.FormatDuration(chat.Reminder.Jamaat.Delay.Asr),
 			domain.FormatDuration(chat.Reminder.Jamaat.Delay.Maghrib),

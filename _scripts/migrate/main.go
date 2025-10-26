@@ -24,7 +24,6 @@ import (
 // Domain types matching the new schema
 type JamaatDelayConfig struct {
 	Fajr    int64 `json:"fajr"`    // nanoseconds
-	Shuruq  int64 `json:"shuruq"`  // nanoseconds
 	Dhuhr   int64 `json:"dhuhr"`   // nanoseconds
 	Asr     int64 `json:"asr"`     // nanoseconds
 	Maghrib int64 `json:"maghrib"` // nanoseconds
@@ -233,7 +232,6 @@ func transformChat(oldChat OldChat, moscowLocation *time.Location) (NewChat, err
 			Enabled: subscribed && jamaat,
 			Delay: &JamaatDelayConfig{
 				Fajr:    int64(10 * time.Minute),
-				Shuruq:  int64(10 * time.Minute),
 				Dhuhr:   int64(10 * time.Minute),
 				Asr:     int64(10 * time.Minute),
 				Maghrib: int64(10 * time.Minute),

@@ -167,7 +167,15 @@ func (h *Handler) remindEditKeyboard(reminderType domain.ReminderType, languageC
 func (h *Handler) jammatMenuKeyboard(chat *domain.Chat) *models.InlineKeyboardMarkup {
 	text := h.lp.GetText(chat.LanguageCode)
 
-	kb := &models.InlineKeyboardMarkup{InlineKeyboard: make([][]models.InlineKeyboardButton, 5)}
+	prayerIDs := []domain.PrayerID{
+		domain.PrayerIDFajr,
+		domain.PrayerIDDhuhr,
+		domain.PrayerIDAsr,
+		domain.PrayerIDMaghrib,
+		domain.PrayerIDIsha,
+	}
+
+	kb := &models.InlineKeyboardMarkup{InlineKeyboard: make([][]models.InlineKeyboardButton, len(prayerIDs)+2)}
 
 	if chat.Reminder.Jamaat.Enabled {
 		kb.InlineKeyboard[0] = []models.InlineKeyboardButton{
@@ -179,28 +187,17 @@ func (h *Handler) jammatMenuKeyboard(chat *domain.Chat) *models.InlineKeyboardMa
 		}
 	}
 
-	fajrDelay := domain.FormatDuration(chat.Reminder.Jamaat.Delay.Fajr)
-	shuruqDelay := domain.FormatDuration(chat.Reminder.Jamaat.Delay.Shuruq)
-	kb.InlineKeyboard[1] = []models.InlineKeyboardButton{
-		{Text: fmt.Sprintf("%s (%s)", text.Prayer[int(domain.PrayerIDFajr)], fajrDelay), CallbackData: "remind:jamaat:edit:fajr|"},
-		{Text: fmt.Sprintf("%s (%s)", text.Prayer[int(domain.PrayerIDShuruq)], shuruqDelay), CallbackData: "remind:jamaat:edit:shuruq|"},
+	for i, prayerID := range prayerIDs {
+		delay := chat.Reminder.Jamaat.Delay.GetDelayByPrayerID(prayerID)
+		kb.InlineKeyboard[i+1] = []models.InlineKeyboardButton{
+			{
+				Text:         fmt.Sprintf("%s (%s)", text.Prayer[int(prayerID)], domain.FormatDuration(delay)),
+				CallbackData: fmt.Sprintf("remind:jamaat:edit:%s|", prayerID.String()),
+			},
+		}
 	}
 
-	dhuhrDelay := domain.FormatDuration(chat.Reminder.Jamaat.Delay.Dhuhr)
-	asrDelay := domain.FormatDuration(chat.Reminder.Jamaat.Delay.Asr)
-	kb.InlineKeyboard[2] = []models.InlineKeyboardButton{
-		{Text: fmt.Sprintf("%s (%s)", text.Prayer[int(domain.PrayerIDDhuhr)], dhuhrDelay), CallbackData: "remind:jamaat:edit:dhuhr|"},
-		{Text: fmt.Sprintf("%s (%s)", text.Prayer[int(domain.PrayerIDAsr)], asrDelay), CallbackData: "remind:jamaat:edit:asr|"},
-	}
-
-	maghribDelay := domain.FormatDuration(chat.Reminder.Jamaat.Delay.Maghrib)
-	ishaDelay := domain.FormatDuration(chat.Reminder.Jamaat.Delay.Isha)
-	kb.InlineKeyboard[3] = []models.InlineKeyboardButton{
-		{Text: fmt.Sprintf("%s (%s)", text.Prayer[int(domain.PrayerIDMaghrib)], maghribDelay), CallbackData: "remind:jamaat:edit:maghrib|"},
-		{Text: fmt.Sprintf("%s (%s)", text.Prayer[int(domain.PrayerIDIsha)], ishaDelay), CallbackData: "remind:jamaat:edit:isha|"},
-	}
-
-	kb.InlineKeyboard[4] = []models.InlineKeyboardButton{
+	kb.InlineKeyboard[len(prayerIDs)+1] = []models.InlineKeyboardButton{
 		{Text: buttonBack, CallbackData: "remind:back:menu|"},
 	}
 

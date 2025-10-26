@@ -234,7 +234,7 @@ jobs:
   apply:
     name: Terraform Apply
     runs-on: ubuntu-latest
-    needs: [plan, migrate]
+    needs: [setup, plan, migrate]
     if: always() && needs.plan.result == 'success' && (needs.migrate.result == 'success' || needs.migrate.result == 'skipped')
     environment: ${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
     outputs:

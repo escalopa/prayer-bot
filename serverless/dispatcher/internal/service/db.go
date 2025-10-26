@@ -59,7 +59,8 @@ func (db *DB) CreateChat(
 
 	reminderJSON, err := json.Marshal(reminder)
 	if err != nil {
-		return err
+		log.Error("marshal reminder json", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+		return domain.ErrInternal
 	}
 
 	query := `
@@ -92,7 +93,8 @@ func (db *DB) CreateChat(
 		if ydb.IsOperationError(err, Ydb.StatusIds_PRECONDITION_FAILED) { // chat already exists
 			return domain.ErrAlreadyExists
 		}
-		return err
+		log.Error("create chat", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+		return domain.ErrInternal
 	}
 
 	return nil
@@ -116,7 +118,8 @@ func (db *DB) GetChat(ctx context.Context, botID int64, chatID int64) (chat *dom
 	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
 		_, res, err := s.Execute(ctx, readTx, query, params)
 		if err != nil {
-			return err
+			log.Error("execute get chat query", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+			return domain.ErrInternal
 		}
 
 		defer func(res result.Result) { _ = res.Close() }(res)
@@ -132,7 +135,8 @@ func (db *DB) GetChat(ctx context.Context, botID int64, chatID int64) (chat *dom
 				&reminderJSON,
 			)
 			if err != nil {
-				return err
+				log.Error("scan chat fields", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+				return domain.ErrInternal
 			}
 
 			var reminder domain.Reminder
@@ -150,9 +154,6 @@ func (db *DB) GetChat(ctx context.Context, botID int64, chatID int64) (chat *dom
 	})
 
 	if err != nil {
-		if ydb.IsOperationError(err, Ydb.StatusIds_NOT_FOUND) {
-			return nil, domain.ErrNotFound
-		}
 		return nil, err
 	}
 
@@ -172,7 +173,8 @@ func (db *DB) GetChats(ctx context.Context, botID int64) (chats []*domain.Chat, 
 	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
 		_, res, err := s.Execute(ctx, readTx, query, params)
 		if err != nil {
-			return err
+			log.Error("execute get chats query", log.Err(err), log.BotID(botID))
+			return domain.ErrInternal
 		}
 
 		defer func(res result.Result) { _ = res.Close() }(res)
@@ -189,7 +191,8 @@ func (db *DB) GetChats(ctx context.Context, botID int64) (chats []*domain.Chat, 
 					&reminderJSON,
 				)
 				if err != nil {
-					return err
+					log.Error("scan chat fields", log.Err(err), log.BotID(botID))
+					return domain.ErrInternal
 				}
 
 				var reminder domain.Reminder
@@ -232,7 +235,11 @@ func (db *DB) SetLanguageCode(ctx context.Context, botID int64, chatID int64, la
 
 	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
 		_, _, err := s.Execute(ctx, writeTx, query, params)
-		return err
+		if err != nil {
+			log.Error("execute set language code query", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+			return domain.ErrInternal
+		}
+		return nil
 	})
 
 	return err
@@ -257,7 +264,11 @@ func (db *DB) SetSubscribed(ctx context.Context, botID int64, chatID int64, subs
 
 	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
 		_, _, err := s.Execute(ctx, writeTx, query, params)
-		return err
+		if err != nil {
+			log.Error("execute set subscribed query", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+			return domain.ErrInternal
+		}
+		return nil
 	})
 
 	return err
@@ -317,7 +328,8 @@ func (db *DB) SetReminderOffset(ctx context.Context, botID int64, chatID int64, 
 
 		updatedReminderJSON, err := json.Marshal(&reminder)
 		if err != nil {
-			return err
+			log.Error("marshal updated reminder json", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+			return domain.ErrInternal
 		}
 
 		updateQuery := `
@@ -338,7 +350,11 @@ func (db *DB) SetReminderOffset(ctx context.Context, botID int64, chatID int64, 
 
 		txCommit := table.TxControl(table.WithTx(txID), table.CommitTx())
 		_, _, err = s.Execute(ctx, txCommit, updateQuery, updateParams)
-		return err
+		if err != nil {
+			log.Error("execute update reminder query", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+			return domain.ErrInternal
+		}
+		return nil
 	})
 
 	return err
@@ -363,7 +379,11 @@ func (db *DB) SetState(ctx context.Context, botID int64, chatID int64, state str
 
 	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
 		_, _, err := s.Execute(ctx, writeTx, query, params)
-		return err
+		if err != nil {
+			log.Error("execute set state query", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+			return domain.ErrInternal
+		}
+		return nil
 	})
 
 	return err
@@ -392,7 +412,8 @@ func (db *DB) GetPrayerDay(ctx context.Context, botID int64, date time.Time) (pr
 	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
 		_, res, err := s.Execute(ctx, readTx, query, params)
 		if err != nil {
-			return err
+			log.Error("execute get prayer day query", log.Err(err), log.BotID(botID))
+			return domain.ErrInternal
 		}
 
 		defer func(res result.Result) { _ = res.Close() }(res)
@@ -406,7 +427,8 @@ func (db *DB) GetPrayerDay(ctx context.Context, botID int64, date time.Time) (pr
 					&prayerDay.Maghrib, &prayerDay.Isha,
 				)
 				if err != nil {
-					return err
+					log.Error("scan prayer day fields", log.Err(err), log.BotID(botID))
+					return domain.ErrInternal
 				}
 			} else {
 				return domain.ErrNotFound
@@ -421,7 +443,8 @@ func (db *DB) GetPrayerDay(ctx context.Context, botID int64, date time.Time) (pr
 					&nextDay.Maghrib, &nextDay.Isha,
 				)
 				if err != nil {
-					return err
+					log.Error("scan next prayer day fields", log.Err(err), log.BotID(botID))
+					return domain.ErrInternal
 				}
 				prayerDay.NextDay = nextDay
 			} else {
@@ -435,9 +458,6 @@ func (db *DB) GetPrayerDay(ctx context.Context, botID int64, date time.Time) (pr
 	})
 
 	if err != nil {
-		if ydb.IsOperationError(err, Ydb.StatusIds_NOT_FOUND) {
-			return nil, domain.ErrNotFound
-		}
 		return nil, err
 	}
 
@@ -469,14 +489,16 @@ func (db *DB) GetStats(ctx context.Context, botID int64) (*domain.Stats, error) 
 	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
 		_, res, err := s.Execute(ctx, readTx, query, params)
 		if err != nil {
-			return err
+			log.Error("execute get stats query", log.Err(err), log.BotID(botID))
+			return domain.ErrInternal
 		}
 
 		defer func(res result.Result) { _ = res.Close() }(res)
 		if res.NextResultSet(ctx) && res.NextRow() {
 			err = res.ScanWithDefaults(&stats.Users, &stats.Subscribed, &stats.Unsubscribed)
 			if err != nil {
-				return err
+				log.Error("scan stats fields", log.Err(err), log.BotID(botID))
+				return domain.ErrInternal
 			}
 		}
 
@@ -489,7 +511,8 @@ func (db *DB) GetStats(ctx context.Context, botID int64) (*domain.Stats, error) 
 
 				err = res.ScanWithDefaults(&languageCode, &count)
 				if err != nil {
-					return err
+					log.Error("scan language stats", log.Err(err), log.BotID(botID))
+					return domain.ErrInternal
 				}
 				stats.LanguagesGrouped[languageCode] = count
 			}

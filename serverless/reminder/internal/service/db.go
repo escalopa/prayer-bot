@@ -8,7 +8,6 @@ import (
 
 	"github.com/escalopa/prayer-bot/domain"
 	"github.com/escalopa/prayer-bot/log"
-	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb"
 	"github.com/ydb-platform/ydb-go-sdk/v3"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table/result"
@@ -40,7 +39,8 @@ func NewDB(ctx context.Context) (*DB, error) {
 		yc.WithInternalCA(),
 	)
 	if err != nil {
-		return nil, err
+		log.Error("failed to open ydb connection", log.Err(err))
+		return nil, domain.ErrInternal
 	}
 
 	return &DB{client: sdk.Table()}, nil
@@ -69,7 +69,8 @@ func (db *DB) GetChatsByIDs(ctx context.Context, botID int64, chatIDs []int64) (
 	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
 		_, res, err := s.Execute(ctx, readTx, query, params)
 		if err != nil {
-			return err
+			log.Error("execute get chats by ids query", log.Err(err), log.BotID(botID))
+			return domain.ErrInternal
 		}
 
 		defer func(res result.Result) { _ = res.Close() }(res)
@@ -86,7 +87,8 @@ func (db *DB) GetChatsByIDs(ctx context.Context, botID int64, chatIDs []int64) (
 					&reminderJSON,
 				)
 				if err != nil {
-					return err
+					log.Error("scan chat fields", log.Err(err), log.BotID(botID))
+					return domain.ErrInternal
 				}
 
 				var reminder domain.Reminder
@@ -123,7 +125,8 @@ func (db *DB) GetSubscribers(ctx context.Context, botID int64) (chatIDs []int64,
 	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
 		_, res, err := s.Execute(ctx, readTx, query, params)
 		if err != nil {
-			return err
+			log.Error("execute get subscribers query", log.Err(err), log.BotID(botID))
+			return domain.ErrInternal
 		}
 
 		defer func(res result.Result) { _ = res.Close() }(res)
@@ -132,7 +135,8 @@ func (db *DB) GetSubscribers(ctx context.Context, botID int64) (chatIDs []int64,
 				var chatID int64
 				err = res.ScanWithDefaults(&chatID)
 				if err != nil {
-					return err
+					log.Error("scan subscriber chat id", log.Err(err), log.BotID(botID))
+					return domain.ErrInternal
 				}
 				chatIDs = append(chatIDs, chatID)
 			}
@@ -171,7 +175,8 @@ func (db *DB) GetPrayerDay(ctx context.Context, botID int64, date time.Time) (pr
 	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
 		_, res, err := s.Execute(ctx, readTx, query, params)
 		if err != nil {
-			return err
+			log.Error("execute get prayer day query", log.Err(err), log.BotID(botID))
+			return domain.ErrInternal
 		}
 
 		defer func(res result.Result) { _ = res.Close() }(res)
@@ -185,7 +190,8 @@ func (db *DB) GetPrayerDay(ctx context.Context, botID int64, date time.Time) (pr
 					&prayerDay.Maghrib, &prayerDay.Isha,
 				)
 				if err != nil {
-					return err
+					log.Error("scan prayer day fields", log.Err(err), log.BotID(botID))
+					return domain.ErrInternal
 				}
 			} else {
 				return domain.ErrNotFound
@@ -200,7 +206,8 @@ func (db *DB) GetPrayerDay(ctx context.Context, botID int64, date time.Time) (pr
 					&nextDay.Maghrib, &nextDay.Isha,
 				)
 				if err != nil {
-					return err
+					log.Error("scan next prayer day fields", log.Err(err), log.BotID(botID))
+					return domain.ErrInternal
 				}
 				prayerDay.NextDay = nextDay
 			} else {
@@ -214,9 +221,6 @@ func (db *DB) GetPrayerDay(ctx context.Context, botID int64, date time.Time) (pr
 	})
 
 	if err != nil {
-		if ydb.IsOperationError(err, Ydb.StatusIds_NOT_FOUND) {
-			return nil, domain.ErrNotFound
-		}
 		return nil, err
 	}
 
@@ -250,7 +254,8 @@ func (db *DB) UpdateReminder(
 
 		txID, res, err := s.Execute(ctx, txBegin, selectQuery, selectParams)
 		if err != nil {
-			return err
+			log.Error("execute select query", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+			return domain.ErrInternal
 		}
 
 		defer func(res result.Result) { _ = res.Close() }(res)
@@ -259,7 +264,8 @@ func (db *DB) UpdateReminder(
 		if res.NextResultSet(ctx) && res.NextRow() {
 			err = res.ScanWithDefaults(&reminderJSON)
 			if err != nil {
-				return err
+				log.Error("scan reminder json", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+				return domain.ErrInternal
 			}
 		} else {
 			return domain.ErrNotFound
@@ -285,7 +291,8 @@ func (db *DB) UpdateReminder(
 
 		updatedReminderJSON, err := json.Marshal(&reminder)
 		if err != nil {
-			return err
+			log.Error("marshal updated reminder json", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+			return domain.ErrInternal
 		}
 
 		updateQuery := `
@@ -306,7 +313,11 @@ func (db *DB) UpdateReminder(
 
 		txCommit := table.TxControl(table.WithTx(txID), table.CommitTx())
 		_, _, err = s.Execute(ctx, txCommit, updateQuery, updateParams)
-		return err
+		if err != nil {
+			log.Error("execute update reminder query", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+			return domain.ErrInternal
+		}
+		return nil
 	})
 
 	return err
@@ -328,7 +339,11 @@ func (db *DB) DeleteChat(ctx context.Context, botID int64, chatID int64) error {
 
 	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
 		_, _, err := s.Execute(ctx, writeTx, query, params)
-		return err
+		if err != nil {
+			log.Error("execute delete chat query", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+			return domain.ErrInternal
+		}
+		return nil
 	})
 
 	return err

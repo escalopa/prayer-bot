@@ -59,16 +59,16 @@ runs:
           echo "::error::SERVICE_ACCOUNT_KEY is empty"
           exit 1
         fi
-        
+
         # Write the key and validate it's valid JSON
         echo '${{ inputs.service_account_key }}' > "${{ inputs.service_account_key_path }}"
-        
+
         # Validate JSON format
         if ! jq empty "${{ inputs.service_account_key_path }}" 2>/dev/null; then
           echo "::error::SERVICE_ACCOUNT_KEY is not valid JSON"
           exit 1
         fi
-        
+
         echo "::notice::Service account key file created and validated"
 
     - name: Write config.json
@@ -78,16 +78,19 @@ runs:
           echo "::error::APP_CONFIG is empty"
           exit 1
         fi
-        
+
+        # Mask the config value to prevent it from appearing in logs
+        echo "::add-mask::${{ inputs.app_config }}"
+
         # Write the config and validate it's valid JSON
         echo '${{ inputs.app_config }}' > "${{ inputs.app_config_path }}"
-        
+
         # Validate JSON format
         if ! jq empty "${{ inputs.app_config_path }}" 2>/dev/null; then
           echo "::error::APP_CONFIG is not valid JSON"
           exit 1
         fi
-        
+
         echo "::notice::Application config written to: ${{ inputs.app_config_path }}"
 
     - name: Cache Terraform plugins

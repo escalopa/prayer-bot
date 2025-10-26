@@ -213,10 +213,10 @@ jobs:
         run: |
           terraform plan -out=tfplan -detailed-exitcode || EXIT_CODE=$?
           echo "exitcode=$EXIT_CODE" >> $GITHUB_OUTPUT
-          
+
           # Print the plan output
           terraform show tfplan
-          
+
           if [ $EXIT_CODE -eq 2 ]; then
             echo "::notice::Changes detected in Terraform plan"
           elif [ $EXIT_CODE -eq 0 ]; then
@@ -318,7 +318,7 @@ jobs:
         run: |
           echo "::notice::Config file: ${{ env.APP_CONFIG_PATH }}"
           echo "::notice::Dispatcher function ID: $DISPATCHER_FUNCTION_ID"
-          
+
           chmod +x _scripts/hook.sh
           bash _scripts/hook.sh
         continue-on-error: false
@@ -355,11 +355,11 @@ jobs:
           echo "**Workspace:** $WORKSPACE" >> $GITHUB_STEP_SUMMARY
           echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
           echo "**Cache Key:** ${{ needs.setup.outputs.cache_key }}" >> $GITHUB_STEP_SUMMARY
-          
+
           if [ "${{ needs.apply.outputs.dispatcher_function_id }}" != "" ]; then
             echo "**Dispatcher Function ID:** ${{ needs.apply.outputs.dispatcher_function_id }}" >> $GITHUB_STEP_SUMMARY
           fi
-          
+
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             echo "**Manual Trigger:** Yes" >> $GITHUB_STEP_SUMMARY
           fi

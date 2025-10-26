@@ -27,7 +27,8 @@ terraform {
 }
 
 locals {
-  env = terraform.workspace
+  env               = terraform.workspace
+  app_config_base64 = sensitive(base64encode(file("${path.module}/config.json")))
 }
 
 variable "cloud_id" {
@@ -144,7 +145,7 @@ resource "yandex_function" "loader_fn" {
   user_hash          = filemd5(data.archive_file.loader_zip.output_path)
 
   environment = {
-    APP_CONFIG = file("${path.module}/config.json")
+    APP_CONFIG = local.app_config_base64
 
     S3_ENDPOINT  = "https://storage.yandexcloud.net"
     YDB_ENDPOINT = yandex_ydb_database_serverless.ydb.ydb_full_endpoint
@@ -221,7 +222,7 @@ resource "yandex_function" "dispatcher_fn" {
   user_hash          = filemd5(data.archive_file.dispatcher_zip.output_path)
 
   environment = {
-    APP_CONFIG = file("${path.module}/config.json")
+    APP_CONFIG = local.app_config_base64
 
     YDB_ENDPOINT = yandex_ydb_database_serverless.ydb.ydb_full_endpoint
 
@@ -278,7 +279,7 @@ resource "yandex_function" "reminder_fn" {
   user_hash          = filemd5(data.archive_file.reminder_zip.output_path)
 
   environment = {
-    APP_CONFIG = file("${path.module}/config.json")
+    APP_CONFIG = local.app_config_base64
 
     YDB_ENDPOINT = yandex_ydb_database_serverless.ydb.ydb_full_endpoint
 

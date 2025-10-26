@@ -21,14 +21,17 @@ runs:
           echo "::error::APP_CONFIG is empty"
           exit 1
         fi
-        
+
+        # Mask the config value to prevent it from appearing in logs
+        echo "::add-mask::${{ inputs.app_config }}"
+
         # Write the config and validate it's valid JSON
         echo '${{ inputs.app_config }}' > "${{ inputs.app_config_path }}"
-        
+
         # Validate JSON format
         if ! jq empty "${{ inputs.app_config_path }}" 2>/dev/null; then
           echo "::error::APP_CONFIG is not valid JSON"
           exit 1
         fi
-        
-        echo "::notice::Application config written to: ${{ inputs.app_config_path }}"
+
+        echo "::notice::Application config file created successfully"

@@ -5,10 +5,10 @@ import "time"
 type ReminderType string
 
 const (
-	ReminderTypeToday       ReminderType = "today"
-	ReminderTypeSoon        ReminderType = "soon"
-	ReminderTypeArrive      ReminderType = "arrive"
-	ReminderTypeJamaatDelay ReminderType = "jamaat_delay"
+	ReminderTypeToday  ReminderType = "today"
+	ReminderTypeSoon   ReminderType = "soon"
+	ReminderTypeArrive ReminderType = "arrive"
+	ReminderTypeJamaat ReminderType = "jamaat"
 )
 
 func (rt ReminderType) String() string {
@@ -16,14 +16,18 @@ func (rt ReminderType) String() string {
 }
 
 type (
-	JamaatDelay struct {
-		Enabled bool          `json:"enabled"`
+	JamaatDelayConfig struct {
 		Fajr    time.Duration `json:"fajr"`
 		Shuruq  time.Duration `json:"shuruq"`
 		Dhuhr   time.Duration `json:"dhuhr"`
 		Asr     time.Duration `json:"asr"`
 		Maghrib time.Duration `json:"maghrib"`
 		Isha    time.Duration `json:"isha"`
+	}
+
+	JamaatConfig struct {
+		Enabled bool               `json:"enabled"`
+		Delay   *JamaatDelayConfig `json:"delay"`
 	}
 
 	ReminderConfig struct {
@@ -33,14 +37,14 @@ type (
 	}
 
 	Reminder struct {
-		Today       *ReminderConfig `json:"today"`
-		Soon        *ReminderConfig `json:"soon"`
-		Arrive      *ReminderConfig `json:"arrive"`
-		JamaatDelay *JamaatDelay    `json:"jamaat_delay"`
+		Today  *ReminderConfig `json:"today"`
+		Soon   *ReminderConfig `json:"soon"`
+		Arrive *ReminderConfig `json:"arrive"`
+		Jamaat *JamaatConfig   `json:"jamaat"`
 	}
 )
 
-func (j *JamaatDelay) GetDelayByPrayerID(prayerID PrayerID) time.Duration {
+func (j *JamaatDelayConfig) GetDelayByPrayerID(prayerID PrayerID) time.Duration {
 	switch prayerID {
 	case PrayerIDFajr:
 		return j.Fajr

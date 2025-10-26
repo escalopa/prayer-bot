@@ -17,6 +17,7 @@ func (rt ReminderType) String() string {
 
 type (
 	JamaatDelay struct {
+		Enabled bool          `json:"enabled"`
 		Fajr    time.Duration `json:"fajr"`
 		Shuruq  time.Duration `json:"shuruq"`
 		Dhuhr   time.Duration `json:"dhuhr"`

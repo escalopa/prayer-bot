@@ -18,13 +18,14 @@ const (
 )
 
 type PrayerDay struct {
-	Date    time.Time `json:"date"`
-	Fajr    time.Time `json:"fajr"`
-	Shuruq  time.Time `json:"shuruq"`
-	Dhuhr   time.Time `json:"dhuhr"`
-	Asr     time.Time `json:"asr"`
-	Maghrib time.Time `json:"maghrib"`
-	Isha    time.Time `json:"isha"`
+	Date    time.Time  `json:"date"`
+	Fajr    time.Time  `json:"fajr"`
+	Shuruq  time.Time  `json:"shuruq"`
+	Dhuhr   time.Time  `json:"dhuhr"`
+	Asr     time.Time  `json:"asr"`
+	Maghrib time.Time  `json:"maghrib"`
+	Isha    time.Time  `json:"isha"`
+	NextDay *PrayerDay `json:"next_day"`
 }
 
 //revive:disable:argument-limit

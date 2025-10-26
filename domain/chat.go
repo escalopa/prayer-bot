@@ -2,6 +2,7 @@ package domain
 
 import (
 	"errors"
+	"time"
 )
 
 var (
@@ -37,6 +38,47 @@ func ReminderOffsets() []int32 {
 	}
 }
 
+type ReminderConfig struct {
+	Offset    time.Duration `json:"offset"`
+	MessageID int           `json:"message_id"`
+	LastAt    time.Time     `json:"last_at"`
+}
+
+type JamaatDelay struct {
+	Fajr    time.Duration `json:"fajr"`    // default 10m (set on creation only)
+	Shuruq  time.Duration `json:"shuruq"`  // default 10m (set on creation only)
+	Dhuhr   time.Duration `json:"dhuhr"`   // default 10m (set on creation only)
+	Asr     time.Duration `json:"asr"`     // default 10m (set on creation only)
+	Maghrib time.Duration `json:"maghrib"` // default 10m (set on creation only)
+	Isha    time.Duration `json:"isha"`    // default 20m (set on creation only)
+}
+
+func (j *JamaatDelay) GetDelayByPrayerID(prayerID PrayerID) time.Duration {
+	switch prayerID {
+	case PrayerIDFajr:
+		return j.Fajr
+	case PrayerIDShuruq:
+		return j.Shuruq
+	case PrayerIDDhuhr:
+		return j.Dhuhr
+	case PrayerIDAsr:
+		return j.Asr
+	case PrayerIDMaghrib:
+		return j.Maghrib
+	case PrayerIDIsha:
+		return j.Isha
+	default:
+		return 0
+	}
+}
+
+type Reminder struct {
+	Today       ReminderConfig `json:"today"`
+	Soon        ReminderConfig `json:"soon"`
+	Arrive      ReminderConfig `json:"arrive"`
+	JamaatDelay JamaatDelay    `json:"jamaat_delay"`
+}
+
 type (
 	Stats struct {
 		Users            uint64            // users using the bot
@@ -46,12 +88,11 @@ type (
 	}
 
 	Chat struct {
-		BotID             int64
-		ChatID            int64
-		State             string
-		LanguageCode      string
-		ReminderMessageID int32
-		Jamaat            bool
-		JamaatMessageID   int32
+		BotID        int64
+		ChatID       int64
+		State        string
+		LanguageCode string
+		IsGroup      bool
+		Reminder     *Reminder
 	}
 )

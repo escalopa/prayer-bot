@@ -88,7 +88,7 @@ func (h *Handler) help(ctx context.Context, b *bot.Bot, _ *models.Update) error 
 func (h *Handler) today(ctx context.Context, b *bot.Bot, _ *models.Update) error {
 	chat := getContextChat(ctx)
 
-	prayerDay, err := h.db.GetPrayerDay(ctx, chat.BotID, h.nowUTC(chat.BotID))
+	prayerDay, err := h.db.GetPrayerDay(ctx, chat.BotID, h.now(chat.BotID))
 	if err != nil {
 		log.Error("today: get prayer day", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
@@ -129,7 +129,7 @@ func (h *Handler) next(ctx context.Context, b *bot.Bot, _ *models.Update) error 
 
 	var (
 		now  = h.now(chat.BotID)
-		date = h.nowUTC(chat.BotID)
+		date = now.Truncate(24 * time.Hour)
 	)
 
 	prayerDay, err := h.db.GetPrayerDay(ctx, chat.BotID, date)

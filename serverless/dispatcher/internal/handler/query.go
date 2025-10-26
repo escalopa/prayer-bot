@@ -76,7 +76,7 @@ func (h *Handler) monthQuery(ctx context.Context, b *bot.Bot, update *models.Upd
 		ChatID:      chat.ChatID,
 		MessageID:   update.CallbackQuery.Message.Message.ID,
 		Text:        h.lp.GetText(chat.LanguageCode).PrayerDate,
-		ReplyMarkup: h.daysKeyboard(h.nowUTC(chat.BotID), month),
+		ReplyMarkup: h.daysKeyboard(h.now(chat.BotID), month),
 	})
 	if err != nil {
 		log.Error("monthQuery: edit message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
@@ -98,7 +98,7 @@ func (h *Handler) dayQuery(ctx context.Context, b *bot.Bot, update *models.Updat
 	parts := strings.Split(update.CallbackQuery.Data, dataSplitterQuery)
 	month, _ := strconv.Atoi(parts[1])
 	day, _ := strconv.Atoi(parts[2])
-	date := domain.DateUTC(day, time.Month(month), h.nowUTC(chat.BotID).Year())
+	date := domain.DateUTC(day, time.Month(month), h.now(chat.BotID).Year())
 
 	prayerDay, err := h.db.GetPrayerDay(ctx, chat.BotID, date)
 	if err != nil {

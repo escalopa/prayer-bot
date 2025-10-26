@@ -53,12 +53,6 @@ func (h *Handler) now(botID int64) time.Time {
 	return time.Now().In(h.cfg[botID].Location.V()).Truncate(time.Minute)
 }
 
-// nowUTC returns the current time in UTC with seconds and nanoseconds set to 0
-// Use this function to get prayerDay or current year for a specific botID timezone.
-func (h *Handler) nowUTC(botID int64) time.Time {
-	return time.Now().In(h.cfg[botID].Location.V()).Truncate(time.Minute).UTC()
-}
-
 // daysInMonth returns the number of days in a month.
 func daysInMonth(month time.Month, year int) int {
 	// month is incremented by 1 and day is 0 because we want the last day of the month.

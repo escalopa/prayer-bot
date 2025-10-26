@@ -17,7 +17,6 @@ func (rt ReminderType) String() string {
 type (
 	JamaatDelayConfig struct {
 		Fajr    time.Duration `json:"fajr"`
-		Shuruq  time.Duration `json:"shuruq"`
 		Dhuhr   time.Duration `json:"dhuhr"`
 		Asr     time.Duration `json:"asr"`
 		Maghrib time.Duration `json:"maghrib"`
@@ -47,8 +46,6 @@ func (j *JamaatDelayConfig) GetDelayByPrayerID(prayerID PrayerID) time.Duration 
 	switch prayerID {
 	case PrayerIDFajr:
 		return j.Fajr
-	case PrayerIDShuruq:
-		return j.Shuruq
 	case PrayerIDDhuhr:
 		return j.Dhuhr
 	case PrayerIDAsr:
@@ -66,8 +63,6 @@ func (j *JamaatDelayConfig) SetDelayByPrayerID(prayerID PrayerID, delay time.Dur
 	switch prayerID {
 	case PrayerIDFajr:
 		j.Fajr = delay
-	case PrayerIDShuruq:
-		j.Shuruq = delay
 	case PrayerIDDhuhr:
 		j.Dhuhr = delay
 	case PrayerIDAsr:

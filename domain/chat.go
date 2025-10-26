@@ -51,7 +51,6 @@ type (
 		ChatID       int64
 		State        string
 		LanguageCode string
-		IsGroup      bool
 		Reminder     *Reminder
 	}
 )

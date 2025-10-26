@@ -134,12 +134,8 @@ func (h *Handler) authorizeH(fn func(ctx context.Context, b *bot.Bot, update *mo
 	return func(ctx context.Context, b *bot.Bot, update *models.Update) error {
 		chat := getContextChat(ctx)
 
-		var (
-			isAdminUser = h.cfg[chat.BotID].OwnerID == update.Message.From.ID
-			isAdminChat = h.cfg[chat.BotID].OwnerID == update.Message.Chat.ID
-		)
-
-		if isAdminUser && isAdminChat {
+		isAdminUser := h.cfg[chat.BotID].OwnerID == update.Message.From.ID
+		if isAdminUser {
 			return fn(ctx, b, update)
 		}
 

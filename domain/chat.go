@@ -51,6 +51,7 @@ type (
 		ChatID       int64
 		State        string
 		LanguageCode string
+		Subscribed   bool
 		Reminder     *Reminder
 	}
 )

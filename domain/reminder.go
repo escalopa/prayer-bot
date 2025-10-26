@@ -5,10 +5,8 @@ import "time"
 type ReminderType string
 
 const (
-	ReminderTypeToday  ReminderType = "today"
-	ReminderTypeSoon   ReminderType = "soon"
-	ReminderTypeArrive ReminderType = "arrive"
-	ReminderTypeJamaat ReminderType = "jamaat"
+	ReminderTypeToday ReminderType = "today"
+	ReminderTypeSoon  ReminderType = "soon"
 )
 
 func (rt ReminderType) String() string {
@@ -60,5 +58,22 @@ func (j *JamaatDelayConfig) GetDelayByPrayerID(prayerID PrayerID) time.Duration 
 		return j.Isha
 	default:
 		return 0
+	}
+}
+
+func (j *JamaatDelayConfig) SetDelayByPrayerID(prayerID PrayerID, delay time.Duration) {
+	switch prayerID {
+	case PrayerIDFajr:
+		j.Fajr = delay
+	case PrayerIDShuruq:
+		j.Shuruq = delay
+	case PrayerIDDhuhr:
+		j.Dhuhr = delay
+	case PrayerIDAsr:
+		j.Asr = delay
+	case PrayerIDMaghrib:
+		j.Maghrib = delay
+	case PrayerIDIsha:
+		j.Isha = delay
 	}
 }

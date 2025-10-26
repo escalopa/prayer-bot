@@ -587,6 +587,8 @@ github.com/escalopa/prayer-bot v0.0.0-20251026143023-d4a267e72915 h1:9ZEsx5crGtm
 github.com/escalopa/prayer-bot v0.0.0-20251026143023-d4a267e72915/go.mod h1:HOpIxziLKMTC/a+Q6z40Rn5tJDEZsFyzhniLA4iB2i0=
 github.com/escalopa/prayer-bot v0.0.0-20251026143228-e2dc7dc54616 h1:grgbusjCNuCfkkd+SK1M04V9zsUehLsH+gB8/PgQ87s=
 github.com/escalopa/prayer-bot v0.0.0-20251026143228-e2dc7dc54616/go.mod h1:HOpIxziLKMTC/a+Q6z40Rn5tJDEZsFyzhniLA4iB2i0=
+github.com/escalopa/prayer-bot v0.0.0-20251026151834-550e0761105f h1:0BBakjDC7oE/napryWCpmJOY7zahq1ezwm6O+43+U2Y=
+github.com/escalopa/prayer-bot v0.0.0-20251026151834-550e0761105f/go.mod h1:HOpIxziLKMTC/a+Q6z40Rn5tJDEZsFyzhniLA4iB2i0=
 github.com/fogleman/gg v1.2.1-0.20190220221249-0403632d5b90/go.mod h1:R/bRT+9gY/C5z7JzPU0zXsXHKM4/ayA+zqcVNZzPa1k=
 github.com/fogleman/gg v1.3.0/go.mod h1:R/bRT+9gY/C5z7JzPU0zXsXHKM4/ayA+zqcVNZzPa1k=
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=

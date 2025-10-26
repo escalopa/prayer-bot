@@ -278,6 +278,7 @@ jobs:
           TF_VAR_cloud_id: ${{ secrets.CLOUD_ID }}
           TF_VAR_folder_id: ${{ secrets.FOLDER_ID }}
         run: terraform apply -auto-approve
+        continue-on-error: false
 
       - name: Export Terraform Outputs
         id: outputs

@@ -3,6 +3,8 @@ package handler
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/escalopa/prayer-bot/domain"
@@ -71,4 +73,17 @@ func layoutRowsInfo(totalItems, itemsPerRow int) (filled int, empty int) {
 	empty = itemsPerRow - (totalItems % itemsPerRow)
 	filled = (totalItems / itemsPerRow) + 1
 	return
+}
+
+// parseAdjustment parses the adjustment string and returns the time duration.
+func parseAdjustment(adj string) time.Duration {
+	if strings.HasSuffix(adj, "m") {
+		val, _ := strconv.Atoi(strings.TrimSuffix(adj, "m"))
+		return time.Duration(val) * time.Minute
+	}
+	if strings.HasSuffix(adj, "h") {
+		val, _ := strconv.Atoi(strings.TrimSuffix(adj, "h"))
+		return time.Duration(val) * time.Hour
+	}
+	return 0
 }

@@ -25,6 +25,38 @@ type (
 		Success string `yaml:"success"`
 	}
 
+	RemindMenuText struct {
+		TitleEnabled   string `yaml:"title_enabled"`
+		TitleDisabled  string `yaml:"title_disabled"`
+		Enable         string `yaml:"enable"`
+		Disable        string `yaml:"disable"`
+		Today          string `yaml:"today"`
+		Soon           string `yaml:"soon"`
+		JamaatSettings string `yaml:"jamaat_settings"`
+		Close          string `yaml:"close"`
+	}
+
+	RemindEditText struct {
+		TitleToday string `yaml:"title_today"`
+		TitleSoon  string `yaml:"title_soon"`
+	}
+
+	JamaatMenuText struct {
+		TitleEnabled  string `yaml:"title_enabled"`
+		TitleDisabled string `yaml:"title_disabled"`
+		Enable        string `yaml:"enable"`
+		Disable       string `yaml:"disable"`
+	}
+
+	JamaatEditText struct {
+		Title string `yaml:"title"`
+	}
+
+	ButtonsText struct {
+		Save string `yaml:"save"`
+		Back string `yaml:"back"`
+	}
+
 	Text struct {
 		Name string `yaml:"name"`
 
@@ -36,6 +68,12 @@ type (
 
 		Remind   InteractiveMessage `yaml:"remind"`
 		Language InteractiveMessage `yaml:"language"`
+
+		RemindMenu RemindMenuText `yaml:"remind_menu"`
+		RemindEdit RemindEditText `yaml:"remind_edit"`
+		JamaatMenu JamaatMenuText `yaml:"jamaat_menu"`
+		JamaatEdit JamaatEditText `yaml:"jamaat_edit"`
+		Buttons    ButtonsText    `yaml:"buttons"`
 
 		SubscriptionSuccess   string `yaml:"subscription_success"`
 		UnsubscriptionSuccess string `yaml:"unsubscription_success"`

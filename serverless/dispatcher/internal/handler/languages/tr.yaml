@@ -42,29 +42,51 @@ language:
   start: "🌐 Halaýan diliňizi saýlaň"
   success: "✅ Dil *%s* diýip üýtgedildi"
 
-subscription_success: "✅ Namaz duýduryşlaryna abuna boldyňyz"
-unsubscription_success: "✅ Namaz duýduryşlaryna abuna bolmagyňyz bes edildi"
+remind_menu:
+  title_enabled: "⚙️ Duýduryşlary Sazlamak - Açyk"
+  title_disabled: "⚙️ Duýduryşlary Sazlamak - Ýapyk"
+  enable: "🔔 Açmak"
+  disable: "🔕 Ýapmak"
+  today: "⏰ Şu gün"
+  soon: "🔜 Tiz wagtda"
+  jamaat_settings: "🕌 Jemgyýet Sazlamalary"
+  close: "❌ Ýapmak"
+
+remind_edit:
+  title_today: "⏰ Şu gün"
+  title_soon: "🔜 Tiz wagtda"
+
+jamaat_menu:
+  title_enabled: "🕌 Jemgyýet Sazlamalary - Açyk"
+  title_disabled: "🕌 Jemgyýet Sazlamalary - Ýapyk"
+  enable: "🔔 Açmak"
+  disable: "🔕 Ýapmak"
+
+jamaat_edit:
+  title: "%s Jemgyýet Gijikdirmesi"
+
+buttons:
+  save: "💾"
+  back: "🔙"
 
 help: |
   Kömek gerekmi? 😊 Men şulary edip bilýärin: 👇
-  
+
   *Namazlar:*
 
-  ⏰ /today – Şu günki wagtlar  
-  📅 /date – Saýlanan gün üçin wagtlar  
-  ⏳ /next – Indiki namaz haçan?  
-  📨 /remind – Namazdan öň duýduryş goýmak
-  🔔 /subscribe – Her gün duýduryş almak  
-  🔕 /unsubscribe – Duýduryşlary bes etmek  
+  ⏰ /today – Şu günki wagtlar
+  📅 /date – Saýlanan gün üçin wagtlar
+  ⏳ /next – Indiki namaz haçan?
+  📨 /remind – Duýduryşlary sazlamak
 
   *Sazlamalar:*
 
-  🌐 /language – Dili üýtgetmek  
+  🌐 /language – Dili üýtgetmek
 
   *Goldaw:*
 
-  📖 /help – Bu görkezmäni görkez  
-  🐞 /bug – Nädogrulygy habar ber  
+  📖 /help – Bu görkezmäni görkez
+  🐞 /bug – Nädogrulygy habar ber
   💬 /feedback – Pikiriňizi iberiň
 
 feedback:
@@ -91,9 +113,9 @@ announce:
 stats: |
   📊 Bot statistikalary:
 
-  • Ulanyjylar: %d  
-  • Abuna bolanlar: %d  
-  • Abuna bolmadyklar: %d  
+  • Ulanyjylar: %d
+  • Abuna bolanlar: %d
+  • Abuna bolmadyklar: %d
 
   🌍 Ulanylýan diller:
 

@@ -42,29 +42,51 @@ language:
   start: "🌐 Pick your preferred language"
   success: "✅ Language changed to *%s*"
 
-subscription_success: "✅ You’re now subscribed to prayer reminders"
-unsubscription_success: "✅ You’ve unsubscribed from prayer reminders"
+remind_menu:
+  title_enabled: "⚙️ Configure Reminders - Enabled"
+  title_disabled: "⚙️ Configure Reminders - Disabled"
+  enable: "🔔 Enable"
+  disable: "🔕 Disable"
+  today: "⏰ Today"
+  soon: "🔜 Soon"
+  jamaat_settings: "🕌 Jamaat Settings"
+  close: "❌ Close"
+
+remind_edit:
+  title_today: "⏰ Today"
+  title_soon: "🔜 Soon"
+
+jamaat_menu:
+  title_enabled: "🕌 Jamaat Settings - Enabled"
+  title_disabled: "🕌 Jamaat Settings - Disabled"
+  enable: "🔔 Enable"
+  disable: "🔕 Disable"
+
+jamaat_edit:
+  title: "%s Jamaat Delay"
+
+buttons:
+  save: "💾"
+  back: "🔙"
 
 help: |
-  Need help? 😊 Here’s what I can do: 👇
-  
+  Need help? 😊 Here's what I can do: 👇
+
   *Prayers:*
 
-  ⏰ /today – Today’s times  
-  📅 /date – Times for a chosen day  
-  ⏳ /next – When’s the next prayer?  
-  📨 /remind – Set a reminder before prayer
-  🔔 /subscribe – Get daily reminders  
-  🔕 /unsubscribe – Stop daily reminders  
+  ⏰ /today – Today's times
+  📅 /date – Times for a chosen day
+  ⏳ /next – When's the next prayer?
+  📨 /remind – Configure reminders
 
   *Settings:*
 
-  🌐 /language – Change language  
+  🌐 /language – Change language
 
   *Support:*
 
-  📖 /help – Show this guide  
-  🐞 /bug – Report a problem  
+  📖 /help – Show this guide
+  🐞 /bug – Report a problem
   💬 /feedback – Send feedback
 
 feedback:
@@ -90,13 +112,13 @@ announce:
 
 stats: |
   📊 Bot Stats:
-  
-  • Users: %d  
-  • Subscribed: %d  
-  • Unsubscribed: %d  
+
+  • Users: %d
+  • Subscribed: %d
+  • Unsubscribed: %d
 
   🌍 Languages used:
-  
+
   %s
 
 cancel: "✅ Process cancelled"

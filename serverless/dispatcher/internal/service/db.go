@@ -102,7 +102,7 @@ func (db *DB) GetChat(ctx context.Context, botID int64, chatID int64) (chat *dom
 		DECLARE $bot_id AS Int64;
 		DECLARE $chat_id AS int64;
 
-		SELECT bot_id, chat_id, state, language_code, reminder
+		SELECT bot_id, chat_id, state, language_code, subscribed, reminder
 		FROM chats
 		WHERE bot_id = $bot_id AND chat_id = $chat_id;
 	`
@@ -128,6 +128,7 @@ func (db *DB) GetChat(ctx context.Context, botID int64, chatID int64) (chat *dom
 				&chat.ChatID,
 				&chat.State,
 				&chat.LanguageCode,
+				&chat.Subscribed,
 				&reminderJSON,
 			)
 			if err != nil {
@@ -160,7 +161,7 @@ func (db *DB) GetChats(ctx context.Context, botID int64) (chats []*domain.Chat, 
 	query := `
 		DECLARE $bot_id AS Int64;
 
-		SELECT bot_id, chat_id, state, language_code, reminder
+		SELECT bot_id, chat_id, state, language_code, subscribed, reminder
 		FROM chats
 		WHERE bot_id = $bot_id;
 	`
@@ -183,6 +184,7 @@ func (db *DB) GetChats(ctx context.Context, botID int64) (chats []*domain.Chat, 
 					&chat.ChatID,
 					&chat.State,
 					&chat.LanguageCode,
+					&chat.Subscribed,
 					&reminderJSON,
 				)
 				if err != nil {
@@ -270,89 +272,26 @@ func (db *DB) SetSubscribed(ctx context.Context, botID int64, chatID int64, subs
 }
 
 func (db *DB) SetReminderOffset(ctx context.Context, botID int64, chatID int64, reminderType domain.ReminderType, offset time.Duration) error {
-	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
-		txBegin := table.TxControl(table.BeginTx(table.WithSerializableReadWrite()))
-
-		selectQuery := `
-			DECLARE $bot_id AS Int64;
-			DECLARE $chat_id AS Int64;
-
-			SELECT reminder
-			FROM chats
-			WHERE bot_id = $bot_id AND chat_id = $chat_id;
-		`
-
-		selectParams := table.NewQueryParameters(
-			table.ValueParam("$bot_id", types.Int64Value(botID)),
-			table.ValueParam("$chat_id", types.Int64Value(chatID)),
-		)
-
-		txID, res, err := s.Execute(ctx, txBegin, selectQuery, selectParams)
-		if err != nil {
-			log.Error("execute select query", log.Err(err), log.BotID(botID), log.ChatID(chatID))
-			return domain.ErrInternal
-		}
-
-		defer func(res result.Result) { _ = res.Close() }(res)
-
-		var reminderJSON string
-		if res.NextResultSet(ctx) && res.NextRow() {
-			err = res.ScanWithDefaults(&reminderJSON)
-			if err != nil {
-				log.Error("scan reminder json", log.Err(err), log.BotID(botID), log.ChatID(chatID))
-				return domain.ErrInternal
-			}
-		} else {
-			return domain.ErrNotFound
-		}
-
-		var reminder domain.Reminder
-		if err := json.Unmarshal([]byte(reminderJSON), &reminder); err != nil {
-			log.Error("unmarshal reminder json", log.Err(err), log.BotID(botID), log.ChatID(chatID))
-			return domain.ErrUnmarshalJSON
-		}
-
+	return db.updateReminder(ctx, botID, chatID, func(reminder *domain.Reminder) {
 		switch reminderType {
 		case domain.ReminderTypeToday:
 			reminder.Today.Offset = offset
 		case domain.ReminderTypeSoon:
 			reminder.Soon.Offset = offset
-		case domain.ReminderTypeArrive:
-			reminder.Arrive.Offset = offset
 		}
-
-		updatedReminderJSON, err := json.Marshal(&reminder)
-		if err != nil {
-			log.Error("marshal updated reminder json", log.Err(err), log.BotID(botID), log.ChatID(chatID))
-			return domain.ErrInternal
-		}
-
-		updateQuery := `
-			DECLARE $bot_id AS Int64;
-			DECLARE $chat_id AS Int64;
-			DECLARE $reminder AS Json;
-
-			UPDATE chats
-			SET reminder = $reminder
-			WHERE bot_id = $bot_id AND chat_id = $chat_id;
-		`
-
-		updateParams := table.NewQueryParameters(
-			table.ValueParam("$bot_id", types.Int64Value(botID)),
-			table.ValueParam("$chat_id", types.Int64Value(chatID)),
-			table.ValueParam("$reminder", types.JSONValue(string(updatedReminderJSON))),
-		)
-
-		txCommit := table.TxControl(table.WithTx(txID), table.CommitTx())
-		_, _, err = s.Execute(ctx, txCommit, updateQuery, updateParams)
-		if err != nil {
-			log.Error("execute update reminder query", log.Err(err), log.BotID(botID), log.ChatID(chatID))
-			return domain.ErrInternal
-		}
-		return nil
 	})
+}
 
-	return err
+func (db *DB) SetJamaatEnabled(ctx context.Context, botID int64, chatID int64, enabled bool) error {
+	return db.updateReminder(ctx, botID, chatID, func(reminder *domain.Reminder) {
+		reminder.Jamaat.Enabled = enabled
+	})
+}
+
+func (db *DB) SetJamaatDelay(ctx context.Context, botID int64, chatID int64, prayerID domain.PrayerID, delay time.Duration) error {
+	return db.updateReminder(ctx, botID, chatID, func(reminder *domain.Reminder) {
+		reminder.Jamaat.Delay.SetDelayByPrayerID(prayerID, delay)
+	})
 }
 
 func (db *DB) SetState(ctx context.Context, botID int64, chatID int64, state string) error {
@@ -520,4 +459,83 @@ func (db *DB) GetStats(ctx context.Context, botID int64) (*domain.Stats, error) 
 	}
 
 	return stats, nil
+}
+
+func (db *DB) updateReminder(ctx context.Context, botID int64, chatID int64, mutate func(*domain.Reminder)) error {
+	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
+		txBegin := table.TxControl(table.BeginTx(table.WithSerializableReadWrite()))
+
+		selectQuery := `
+			DECLARE $bot_id AS Int64;
+			DECLARE $chat_id AS Int64;
+
+			SELECT reminder
+			FROM chats
+			WHERE bot_id = $bot_id AND chat_id = $chat_id;
+		`
+
+		selectParams := table.NewQueryParameters(
+			table.ValueParam("$bot_id", types.Int64Value(botID)),
+			table.ValueParam("$chat_id", types.Int64Value(chatID)),
+		)
+
+		txID, res, err := s.Execute(ctx, txBegin, selectQuery, selectParams)
+		if err != nil {
+			log.Error("execute select query", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+			return domain.ErrInternal
+		}
+
+		defer func(res result.Result) { _ = res.Close() }(res)
+
+		var reminderJSON string
+		if res.NextResultSet(ctx) && res.NextRow() {
+			err = res.ScanWithDefaults(&reminderJSON)
+			if err != nil {
+				log.Error("scan reminder json", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+				return domain.ErrInternal
+			}
+		} else {
+			return domain.ErrNotFound
+		}
+
+		var reminder domain.Reminder
+		if err := json.Unmarshal([]byte(reminderJSON), &reminder); err != nil {
+			log.Error("unmarshal reminder json", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+			return domain.ErrUnmarshalJSON
+		}
+
+		mutate(&reminder)
+
+		updatedReminderJSON, err := json.Marshal(&reminder)
+		if err != nil {
+			log.Error("marshal updated reminder json", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+			return domain.ErrInternal
+		}
+
+		updateQuery := `
+			DECLARE $bot_id AS Int64;
+			DECLARE $chat_id AS Int64;
+			DECLARE $reminder AS Json;
+
+			UPDATE chats
+			SET reminder = $reminder
+			WHERE bot_id = $bot_id AND chat_id = $chat_id;
+		`
+
+		updateParams := table.NewQueryParameters(
+			table.ValueParam("$bot_id", types.Int64Value(botID)),
+			table.ValueParam("$chat_id", types.Int64Value(chatID)),
+			table.ValueParam("$reminder", types.JSONValue(string(updatedReminderJSON))),
+		)
+
+		txCommit := table.TxControl(table.WithTx(txID), table.CommitTx())
+		_, _, err = s.Execute(ctx, txCommit, updateQuery, updateParams)
+		if err != nil {
+			log.Error("execute update reminder query", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+			return domain.ErrInternal
+		}
+		return nil
+	})
+
+	return err
 }

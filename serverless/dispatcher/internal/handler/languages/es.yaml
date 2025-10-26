@@ -42,29 +42,51 @@ language:
   start: "🌐 Elige tu idioma preferido"
   success: "✅ Idioma cambiado a *%s*"
 
-subscription_success: "✅ Te has suscrito a los recordatorios de oración"
-unsubscription_success: "✅ Te has dado de baja de los recordatorios de oración"
+remind_menu:
+  title_enabled: "⚙️ Configurar Recordatorios - Habilitado"
+  title_disabled: "⚙️ Configurar Recordatorios - Deshabilitado"
+  enable: "🔔 Habilitar"
+  disable: "🔕 Deshabilitar"
+  today: "⏰ Hoy"
+  soon: "🔜 Pronto"
+  jamaat_settings: "🕌 Configuración de Jamaat"
+  close: "❌ Cerrar"
+
+remind_edit:
+  title_today: "⏰ Hoy"
+  title_soon: "🔜 Pronto"
+
+jamaat_menu:
+  title_enabled: "🕌 Configuración de Jamaat - Habilitado"
+  title_disabled: "🕌 Configuración de Jamaat - Deshabilitado"
+  enable: "🔔 Habilitar"
+  disable: "🔕 Deshabilitar"
+
+jamaat_edit:
+  title: "Retraso de Jamaat %s"
+
+buttons:
+  save: "💾"
+  back: "🔙"
 
 help: |
   ¿Necesitas ayuda? 😊 Aquí está lo que puedo hacer: 👇
-  
+
   *Oraciones:*
 
-  ⏰ /today – Horarios de hoy  
-  📅 /date – Horarios de un día específico  
-  ⏳ /next – ¿Cuándo es la próxima oración?  
-  📨 /remind – Configura un recordatorio antes de la oración
-  🔔 /subscribe – Recibir recordatorios diarios  
-  🔕 /unsubscribe – Detener recordatorios diarios  
+  ⏰ /today – Horarios de hoy
+  📅 /date – Horarios de un día específico
+  ⏳ /next – ¿Cuándo es la próxima oración?
+  📨 /remind – Configurar recordatorios
 
   *Configuraciones:*
 
-  🌐 /language – Cambiar idioma  
+  🌐 /language – Cambiar idioma
 
   *Soporte:*
 
-  📖 /help – Mostrar esta guía  
-  🐞 /bug – Reportar un problema  
+  📖 /help – Mostrar esta guía
+  🐞 /bug – Reportar un problema
   💬 /feedback – Enviar retroalimentación
 
 feedback:
@@ -90,13 +112,13 @@ announce:
 
 stats: |
   📊 Estadísticas del bot:
-  
-  • Usuarios: %d  
-  • Suscritos: %d  
-  • No suscritos: %d  
+
+  • Usuarios: %d
+  • Suscritos: %d
+  • No suscritos: %d
 
   🌍 Idiomas usados:
-  
+
   %s
 
 cancel: "✅ Proceso cancelado"

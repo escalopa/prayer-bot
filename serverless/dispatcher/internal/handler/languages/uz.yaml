@@ -42,29 +42,52 @@ language:
   start: "🌐 O‘zingizga qulay tilni tanlang"
   success: "✅ Til *%s* ga o‘zgartirildi"
 
-subscription_success: "✅ Namoz eslatmalariga obuna bo‘ldingiz"
-unsubscription_success: "✅ Namoz eslatmalaridan obuna bekor qilindi"
+
+remind_menu:
+  title_enabled: "⚙️ Eslatmalarni Sozlash - Yoqilgan"
+  title_disabled: "⚙️ Eslatmalarni Sozlash - O'chirilgan"
+  enable: "🔔 Yoqish"
+  disable: "🔕 O'chirish"
+  today: "⏰ Bugun"
+  soon: "🔜 Tez orada"
+  jamaat_settings: "🕌 Jamoat Sozlamalari"
+  close: "❌ Yopish"
+
+remind_edit:
+  title_today: "⏰ Bugun"
+  title_soon: "🔜 Tez orada"
+
+jamaat_menu:
+  title_enabled: "🕌 Jamoat Sozlamalari - Yoqilgan"
+  title_disabled: "🕌 Jamoat Sozlamalari - O'chirilgan"
+  enable: "🔔 Yoqish"
+  disable: "🔕 O'chirish"
+
+jamaat_edit:
+  title: "%s Jamoat Kechikishi"
+
+buttons:
+  save: "💾"
+  back: "🔙"
 
 help: |
   Yordam kerakmi? 😊 Men quyidagilarni bajara olaman: 👇
-  
+
   *Namozlar:*
 
-  ⏰ /today – Bugungi vaqtlar  
-  📅 /date – Tanlangan kun uchun vaqtlar  
-  ⏳ /next – Keyingi namoz qachon?  
-  📨 /remind – Namozdan oldin eslatma o‘rnatish
-  🔔 /subscribe – Har kungi eslatmalarni olish  
-  🔕 /unsubscribe – Eslatmalarni to‘xtatish  
+  ⏰ /today – Bugungi vaqtlar
+  📅 /date – Tanlangan kun uchun vaqtlar
+  ⏳ /next – Keyingi namoz qachon?
+  📨 /remind – Eslatmalarni sozlash
 
   *Sozlamalar:*
 
-  🌐 /language – Tilni o‘zgartirish  
+  🌐 /language – Tilni o‘zgartirish
 
   *Yordam:*
 
-  📖 /help – Ushbu qo‘llanmani ko‘rsatish  
-  🐞 /bug – Xatolik haqida xabar berish  
+  📖 /help – Ushbu qo‘llanmani ko‘rsatish
+  🐞 /bug – Xatolik haqida xabar berish
   💬 /feedback – Fikr-mulohaza yuborish
 
 feedback:
@@ -91,9 +114,9 @@ announce:
 stats: |
   📊 Bot statistikasi:
 
-  • Foydalanuvchilar: %d  
-  • Obuna bo‘lganlar: %d  
-  • Obunani bekor qilganlar: %d  
+  • Foydalanuvchilar: %d
+  • Obuna bo‘lganlar: %d
+  • Obunani bekor qilganlar: %d
 
   🌍 Foydalanilayotgan tillar:
 

@@ -42,29 +42,51 @@ language:
   start: "🌐 Choisissez votre langue préférée"
   success: "✅ Langue changée en *%s*"
 
-subscription_success: "✅ Vous êtes maintenant abonné aux rappels de prière"
-unsubscription_success: "✅ Vous vous êtes désabonné des rappels de prière"
+remind_menu:
+  title_enabled: "⚙️ Configurer les Rappels - Activé"
+  title_disabled: "⚙️ Configurer les Rappels - Désactivé"
+  enable: "🔔 Activer"
+  disable: "🔕 Désactiver"
+  today: "⏰ Aujourd'hui"
+  soon: "🔜 Bientôt"
+  jamaat_settings: "🕌 Paramètres Jamaat"
+  close: "❌ Fermer"
+
+remind_edit:
+  title_today: "⏰ Aujourd'hui"
+  title_soon: "🔜 Bientôt"
+
+jamaat_menu:
+  title_enabled: "🕌 Paramètres Jamaat - Activé"
+  title_disabled: "🕌 Paramètres Jamaat - Désactivé"
+  enable: "🔔 Activer"
+  disable: "🔕 Désactiver"
+
+jamaat_edit:
+  title: "Délai Jamaat %s"
+
+buttons:
+  save: "💾"
+  back: "🔙"
 
 help: |
   Besoin d'aide ? 😊 Voici ce que je peux faire : 👇
-  
+
   *Prières:*
 
-  ⏰ /today – Horaires d'aujourd'hui  
-  📅 /date – Horaires pour une date choisie  
-  ⏳ /next – Quand est la prochaine prière ?  
-  📨 /remind – Définir un rappel avant la prière
-  🔔 /subscribe – Recevoir des rappels quotidiens  
-  🔕 /unsubscribe – Arrêter les rappels quotidiens  
+  ⏰ /today – Horaires d'aujourd'hui
+  📅 /date – Horaires pour une date choisie
+  ⏳ /next – Quand est la prochaine prière ?
+  📨 /remind – Configurer les rappels
 
   *Paramètres:*
 
-  🌐 /language – Changer de langue  
+  🌐 /language – Changer de langue
 
   *Support:*
 
-  📖 /help – Afficher ce guide  
-  🐞 /bug – Signaler un problème  
+  📖 /help – Afficher ce guide
+  🐞 /bug – Signaler un problème
   💬 /feedback – Envoyer un retour
 
 feedback:
@@ -91,9 +113,9 @@ announce:
 stats: |
   📊 Statistiques du bot:
 
-  • Utilisateurs: %d  
-  • Abonnés: %d  
-  • Désabonnés: %d  
+  • Utilisateurs: %d
+  • Abonnés: %d
+  • Désabonnés: %d
 
   🌍 Langues utilisées:
 

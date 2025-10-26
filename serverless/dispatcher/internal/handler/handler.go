@@ -28,6 +28,8 @@ type (
 		SetSubscribed(ctx context.Context, botID int64, chatID int64, subscribed bool) error
 		SetLanguageCode(ctx context.Context, botID int64, chatID int64, languageCode string) error
 		SetReminderOffset(ctx context.Context, botID int64, chatID int64, reminderType domain.ReminderType, offset time.Duration) error
+		SetJamaatEnabled(ctx context.Context, botID int64, chatID int64, enabled bool) error
+		SetJamaatDelay(ctx context.Context, botID int64, chatID int64, prayerID domain.PrayerID, delay time.Duration) error
 	}
 
 	Handler struct {
@@ -67,8 +69,6 @@ func (h *Handler) opts() []bot.Option {
 		bot.WithMessageTextHandler(bugCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.bug))),
 		bot.WithMessageTextHandler(feedbackCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.feedback))),
 		bot.WithMessageTextHandler(languageCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.language))),
-		bot.WithMessageTextHandler(subscribeCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.subscribe))),
-		bot.WithMessageTextHandler(unsubscribeCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.unsubscribe))),
 		bot.WithMessageTextHandler(cancelCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.cancel))),
 
 		bot.WithMessageTextHandler(adminCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.authorizeH(h.admin)))),
@@ -78,9 +78,20 @@ func (h *Handler) opts() []bot.Option {
 
 		bot.WithCallbackQueryDataHandler(monthQuery.String(), bot.MatchTypePrefix, h.errorH(h.chatH(h.monthQuery))),
 		bot.WithCallbackQueryDataHandler(dayQuery.String(), bot.MatchTypePrefix, h.errorH(h.chatH(h.dayQuery))),
-		bot.WithCallbackQueryDataHandler(remindQuery.String(), bot.MatchTypePrefix, h.errorH(h.chatH(h.remindQuery))),
 		bot.WithCallbackQueryDataHandler(languageQuery.String(), bot.MatchTypePrefix, h.errorH(h.chatH(h.languageQuery))),
 		bot.WithCallbackQueryDataHandler(emptyQuery.String(), bot.MatchTypePrefix, h.errorH(h.chatH(h.emptyQuery))),
+		bot.WithCallbackQueryDataHandler(remindMenuQuery.String(), bot.MatchTypePrefix, h.errorH(h.chatH(h.remindMenuQuery))),
+		bot.WithCallbackQueryDataHandler(remindToggleQuery.String(), bot.MatchTypePrefix, h.errorH(h.chatH(h.remindToggleQuery))),
+		bot.WithCallbackQueryDataHandler(remindEditQuery.String(), bot.MatchTypePrefix, h.errorH(h.chatH(h.remindEditQuery))),
+		bot.WithCallbackQueryDataHandler(remindAdjustQuery.String(), bot.MatchTypePrefix, h.errorH(h.chatH(h.remindAdjustQuery))),
+		bot.WithCallbackQueryDataHandler(remindSaveQuery.String(), bot.MatchTypePrefix, h.errorH(h.chatH(h.remindSaveQuery))),
+		bot.WithCallbackQueryDataHandler(remindJamaatMenuQuery.String(), bot.MatchTypePrefix, h.errorH(h.chatH(h.remindJamaatMenuQuery))),
+		bot.WithCallbackQueryDataHandler(remindJamaatToggleQuery.String(), bot.MatchTypePrefix, h.errorH(h.chatH(h.remindJamaatToggleQuery))),
+		bot.WithCallbackQueryDataHandler(remindJamaatEditQuery.String(), bot.MatchTypePrefix, h.errorH(h.chatH(h.remindJamaatEditQuery))),
+		bot.WithCallbackQueryDataHandler(remindJamaatAdjustQuery.String(), bot.MatchTypePrefix, h.errorH(h.chatH(h.remindJamaatAdjustQuery))),
+		bot.WithCallbackQueryDataHandler(remindJamaatSaveQuery.String(), bot.MatchTypePrefix, h.errorH(h.chatH(h.remindJamaatSaveQuery))),
+		bot.WithCallbackQueryDataHandler(remindBackQuery.String(), bot.MatchTypePrefix, h.errorH(h.chatH(h.remindBackQuery))),
+		bot.WithCallbackQueryDataHandler(remindCloseQuery.String(), bot.MatchTypePrefix, h.errorH(h.chatH(h.remindCloseQuery))),
 	}
 }
 

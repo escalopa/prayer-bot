@@ -189,11 +189,19 @@ func (h *Handler) next(ctx context.Context, b *bot.Bot, _ *models.Update) error 
 
 func (h *Handler) remind(ctx context.Context, b *bot.Bot, _ *models.Update) error {
 	chat := getContextChat(ctx)
+	text := h.lp.GetText(chat.LanguageCode)
+
+	var messageText string
+	if chat.Subscribed {
+		messageText = text.RemindMenu.TitleEnabled
+	} else {
+		messageText = text.RemindMenu.TitleDisabled
+	}
 
 	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID:      chat.ChatID,
-		Text:        h.lp.GetText(chat.LanguageCode).Remind.Start,
-		ReplyMarkup: h.remindKeyboard(),
+		Text:        messageText,
+		ReplyMarkup: h.remindMenuKeyboard(chat),
 	})
 	if err != nil {
 		log.Error("remind: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
@@ -256,50 +264,6 @@ func (h *Handler) language(ctx context.Context, b *bot.Bot, _ *models.Update) er
 	})
 	if err != nil {
 		log.Error("language: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
-		return domain.ErrInternal
-	}
-
-	h.resetState(ctx, chat)
-	return nil
-}
-
-func (h *Handler) subscribe(ctx context.Context, b *bot.Bot, _ *models.Update) error {
-	chat := getContextChat(ctx)
-
-	err := h.db.SetSubscribed(ctx, chat.BotID, chat.ChatID, true)
-	if err != nil {
-		log.Error("subscribe: set subscribed", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
-		return domain.ErrInternal
-	}
-
-	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID: chat.ChatID,
-		Text:   h.lp.GetText(chat.LanguageCode).SubscriptionSuccess,
-	})
-	if err != nil {
-		log.Error("subscribe: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
-		return domain.ErrInternal
-	}
-
-	h.resetState(ctx, chat)
-	return nil
-}
-
-func (h *Handler) unsubscribe(ctx context.Context, b *bot.Bot, _ *models.Update) error {
-	chat := getContextChat(ctx)
-
-	err := h.db.SetSubscribed(ctx, chat.BotID, chat.ChatID, false)
-	if err != nil {
-		log.Error("unsubscribe: set subscribed", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
-		return domain.ErrInternal
-	}
-
-	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID: chat.ChatID,
-		Text:   h.lp.GetText(chat.LanguageCode).UnsubscriptionSuccess,
-	})
-	if err != nil {
-		log.Error("unsubscribe: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 

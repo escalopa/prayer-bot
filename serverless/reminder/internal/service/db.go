@@ -277,9 +277,9 @@ func (db *DB) UpdateReminder(
 		}
 
 		switch reminderType {
-		case domain.ReminderTypeToday:
-			reminder.Today.MessageID = messageID
-			reminder.Today.LastAt = lastAt
+		case domain.ReminderTypeTomorrow:
+			reminder.Tomorrow.MessageID = messageID
+			reminder.Tomorrow.LastAt = lastAt
 		case domain.ReminderTypeSoon:
 			reminder.Soon.MessageID = messageID
 			reminder.Soon.LastAt = lastAt

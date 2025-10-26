@@ -16,22 +16,22 @@ type ReminderType interface {
 	Name() domain.ReminderType
 }
 
-type TodayReminder struct {
+type TomorrowReminder struct {
 	lp              *languagesProvider
 	botConfig       map[int64]*domain.BotConfig
 	formatPrayerDay func(botID int64, prayerDay *domain.PrayerDay, languageCode string) string
 }
 
-func (r *TodayReminder) Check(ctx context.Context, chat *domain.Chat, prayerDay *domain.PrayerDay, now time.Time) (bool, domain.PrayerID) {
-	config := chat.Reminder.Today
+func (r *TomorrowReminder) Check(ctx context.Context, chat *domain.Chat, prayerDay *domain.PrayerDay, now time.Time) (bool, domain.PrayerID) {
+	config := chat.Reminder.Tomorrow
 	// Trigger logic: last_at + 24h - offset < now
 	lastDate := config.LastAt.Truncate(24 * time.Hour)
 	triggerTime := lastDate.Add(24 * time.Hour).Add(-config.Offset)
 	return triggerTime.Before(now) || triggerTime.Equal(now), domain.PrayerIDUnknown
 }
 
-func (r *TodayReminder) Send(ctx context.Context, b *bot.Bot, chat *domain.Chat, prayerID domain.PrayerID, prayerDay *domain.PrayerDay) (int, error) {
-	deleteMessages(ctx, b, chat, chat.Reminder.Today.MessageID)
+func (r *TomorrowReminder) Send(ctx context.Context, b *bot.Bot, chat *domain.Chat, prayerID domain.PrayerID, prayerDay *domain.PrayerDay) (int, error) {
+	deleteMessages(ctx, b, chat, chat.Reminder.Tomorrow.MessageID)
 	res, err := b.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID: chat.ChatID,
 		Text:   r.formatPrayerDay(chat.BotID, prayerDay, chat.LanguageCode),
@@ -43,7 +43,7 @@ func (r *TodayReminder) Send(ctx context.Context, b *bot.Bot, chat *domain.Chat,
 	return res.ID, nil
 }
 
-func (r *TodayReminder) Name() domain.ReminderType { return domain.ReminderTypeToday }
+func (r *TomorrowReminder) Name() domain.ReminderType { return domain.ReminderTypeTomorrow }
 
 type SoonReminder struct {
 	lp *languagesProvider

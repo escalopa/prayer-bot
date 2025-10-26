@@ -43,31 +43,27 @@ language:
   success: "✅ Dil *%s* diýip üýtgedildi"
 
 remind_menu:
-  title_enabled: "⚙️ Duýduryşlary Sazlamak - Açyk"
-  title_disabled: "⚙️ Duýduryşlary Sazlamak - Ýapyk"
+  title_enabled: "⚙️ Duýduryşlar - Açyk ✅"
+  title_disabled: "⚙️ Duýduryşlar - Ýapyk 🔕"
   enable: "🔔 Açmak"
   disable: "🔕 Ýapmak"
-  today: "⏰ Şu gün"
-  soon: "🔜 Tiz wagtda"
-  jamaat_settings: "🕌 Jemgyýet Sazlamalary"
+  tomorrow: "🌅 Ertir Syn"
+  soon: "⏰ Namaz Duýduryşy"
+  jamaat_settings: "🕌 Jemgyýet Wagty"
   close: "❌ Ýapmak"
 
 remind_edit:
-  title_today: "⏰ Şu gün"
-  title_soon: "🔜 Tiz wagtda"
+  title_tomorrow: "🌅 Ertir Syn\n⏰ Ertirki namaz wagtlaryny gijäniň ýary gijeden öň iberiň"
+  title_soon: "⏰ Namaz Duýduryşy\n⏱ Her namaz wagtyndan öň ýatlatma"
 
 jamaat_menu:
-  title_enabled: "🕌 Jemgyýet Sazlamalary - Açyk"
-  title_disabled: "🕌 Jemgyýet Sazlamalary - Ýapyk"
+  title_enabled: "🕌 Jemgyýet Wagty - Açyk ✅\n(Diňe Toparlar)"
+  title_disabled: "🕌 Jemgyýet Wagty - Ýapyk 🔕\n(Diňe Toparlar)"
   enable: "🔔 Açmak"
   disable: "🔕 Ýapmak"
 
 jamaat_edit:
-  title: "%s Jemgyýet Gijikdirmesi"
-
-buttons:
-  save: "💾"
-  back: "🔙"
+  title: "🕌 %s Jemgyýet Wagty\n⏱ Ezandan soňky wagt"
 
 help: |
   Kömek gerekmi? 😊 Men şulary edip bilýärin: 👇

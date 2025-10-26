@@ -87,3 +87,8 @@ func parseAdjustment(adj string) time.Duration {
 	}
 	return 0
 }
+
+// isChatGroup checks if the chat is a group or supergroup.
+func isChatGroup(chatID int64) bool {
+	return chatID < 0
+}

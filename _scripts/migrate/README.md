@@ -35,7 +35,7 @@ go run main.go
 3. Transforms the data:
    - Most fields remain the same (chat_id, bot_id, language_code, state, subscribed, subscribed_at, created_at)
    - Creates new `reminder` JSON object with:
-     - `today`: LastAt set to current time (Moscow timezone)
+     - `tomorrow`: LastAt set to current time (Moscow timezone)
      - `soon`: Offset from old `reminder_offset`, MessageID from old `reminder_message_id`
      - `arrive`: MessageID from old `jamaat_message_id`
      - `jamaat`: Enabled if both `subscribed` and `jamaat` were true, with default delay configs
@@ -50,9 +50,10 @@ The script uses UPSERT statements, making it safe to run multiple times. Subsequ
 ### Reminder Field
 
 The reminder JSON structure:
+
 ```json
 {
-  "today": {
+  "tomorrow": {
     "offset": 0,
     "message_id": 0,
     "last_at": "2025-10-26T12:00:00+03:00"

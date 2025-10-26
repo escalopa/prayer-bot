@@ -22,26 +22,23 @@ const (
 
 	dayQuery      query = "date:day|"
 	monthQuery    query = "date:month|"
-	remindQuery   query = "remind|"
 	languageQuery query = "language|"
 
 	remindMenuQuery         query = "remind:menu|"
 	remindToggleQuery       query = "remind:toggle|"
 	remindEditQuery         query = "remind:edit:"
 	remindAdjustQuery       query = "remind:adjust:"
-	remindSaveQuery         query = "remind:save:"
 	remindJamaatMenuQuery   query = "remind:jamaat:menu|"
 	remindJamaatToggleQuery query = "remind:jamaat:toggle|"
 	remindJamaatEditQuery   query = "remind:jamaat:edit:"
 	remindJamaatAdjustQuery query = "remind:jamaat:adjust:"
-	remindJamaatSaveQuery   query = "remind:jamaat:save:"
 	remindBackQuery         query = "remind:back:"
 	remindCloseQuery        query = "remind:close|"
 )
 
 const (
-	TodayMinOffset = 0 * time.Minute
-	TodayMaxOffset = 6 * time.Hour
+	TomorrowMinOffset = 0 * time.Minute
+	TomorrowMaxOffset = 6 * time.Hour
 
 	SoonMinOffset = 5 * time.Minute
 	SoonMaxOffset = 1 * time.Hour
@@ -122,46 +119,6 @@ func (h *Handler) dayQuery(ctx context.Context, b *bot.Bot, update *models.Updat
 	_, err = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: update.CallbackQuery.ID})
 	if err != nil {
 		log.Error("dayQuery: answer query query", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
-		return domain.ErrInternal
-	}
-
-	h.resetState(ctx, chat)
-	return nil
-}
-
-func (h *Handler) remindQuery(ctx context.Context, b *bot.Bot, update *models.Update) error {
-	chat := getContextChat(ctx)
-
-	reminderOffset, _ := strconv.Atoi(strings.TrimPrefix(update.CallbackQuery.Data, remindQuery.String()))
-
-	offset := time.Duration(reminderOffset) * time.Minute
-	err := h.db.SetReminderOffset(ctx, chat.BotID, chat.ChatID, domain.ReminderTypeSoon, offset)
-	if err != nil {
-		log.Error("remindQuery: set reminder soon offset", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
-		return domain.ErrInternal
-	}
-
-	err = h.db.SetSubscribed(ctx, chat.BotID, chat.ChatID, true)
-	if err != nil {
-		log.Error("remindQuery: set subscribed", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
-		return domain.ErrInternal
-	}
-
-	message := fmt.Sprintf(h.lp.GetText(chat.LanguageCode).Remind.Success, reminderOffset)
-	_, err = b.EditMessageText(ctx, &bot.EditMessageTextParams{
-		ChatID:    chat.ChatID,
-		MessageID: update.CallbackQuery.Message.Message.ID,
-		Text:      message,
-		ParseMode: models.ParseModeMarkdown,
-	})
-	if err != nil {
-		log.Error("remindQuery: edit message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
-		return domain.ErrInternal
-	}
-
-	_, err = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: update.CallbackQuery.ID})
-	if err != nil {
-		log.Error("remindQuery: answer query query", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -272,9 +229,9 @@ func (h *Handler) remindEditQuery(ctx context.Context, b *bot.Bot, update *model
 	var messageText string
 	var offset time.Duration
 	switch reminderType {
-	case domain.ReminderTypeToday:
-		offset = chat.Reminder.Today.Offset
-		messageText = fmt.Sprintf("%s - %s", text.RemindEdit.TitleToday, domain.FormatDuration(offset))
+	case domain.ReminderTypeTomorrow:
+		offset = chat.Reminder.Tomorrow.Offset
+		messageText = fmt.Sprintf("%s - %s", text.RemindEdit.TitleTomorrow, domain.FormatDuration(offset))
 	case domain.ReminderTypeSoon:
 		offset = chat.Reminder.Soon.Offset
 		messageText = fmt.Sprintf("%s - %s", text.RemindEdit.TitleSoon, domain.FormatDuration(offset))
@@ -319,10 +276,10 @@ func (h *Handler) remindAdjustQuery(ctx context.Context, b *bot.Bot, update *mod
 	var minOffset, maxOffset time.Duration
 
 	switch reminderType {
-	case domain.ReminderTypeToday:
-		currentOffset = chat.Reminder.Today.Offset
-		minOffset = TodayMinOffset
-		maxOffset = TodayMaxOffset
+	case domain.ReminderTypeTomorrow:
+		currentOffset = chat.Reminder.Tomorrow.Offset
+		minOffset = TomorrowMinOffset
+		maxOffset = TomorrowMaxOffset
 	case domain.ReminderTypeSoon:
 		currentOffset = chat.Reminder.Soon.Offset
 		minOffset = SoonMinOffset
@@ -347,8 +304,8 @@ func (h *Handler) remindAdjustQuery(ctx context.Context, b *bot.Bot, update *mod
 	}
 
 	switch reminderType {
-	case domain.ReminderTypeToday:
-		chat.Reminder.Today.Offset = newOffset
+	case domain.ReminderTypeTomorrow:
+		chat.Reminder.Tomorrow.Offset = newOffset
 	case domain.ReminderTypeSoon:
 		chat.Reminder.Soon.Offset = newOffset
 	}
@@ -357,39 +314,14 @@ func (h *Handler) remindAdjustQuery(ctx context.Context, b *bot.Bot, update *mod
 	return h.remindEditQuery(ctx, b, update)
 }
 
-func (h *Handler) remindSaveQuery(ctx context.Context, b *bot.Bot, update *models.Update) error {
-	chat := getContextChat(ctx)
-	text := h.lp.GetText(chat.LanguageCode)
-
-	var messageText string
-	if chat.Subscribed {
-		messageText = text.RemindMenu.TitleEnabled
-	} else {
-		messageText = text.RemindMenu.TitleDisabled
-	}
-
-	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
-		ChatID:      chat.ChatID,
-		MessageID:   update.CallbackQuery.Message.Message.ID,
-		Text:        messageText,
-		ReplyMarkup: h.remindMenuKeyboard(chat),
-	})
-	if err != nil {
-		log.Error("remindSaveQuery: edit message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
-		return domain.ErrInternal
-	}
-
-	_, err = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: update.CallbackQuery.ID})
-	if err != nil {
-		log.Error("remindSaveQuery: answer callback", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
-		return domain.ErrInternal
-	}
-
-	return nil
-}
-
 func (h *Handler) remindJamaatMenuQuery(ctx context.Context, b *bot.Bot, update *models.Update) error {
 	chat := getContextChat(ctx)
+
+	if !isChatGroup(chat.ChatID) {
+		_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: update.CallbackQuery.ID})
+		return nil
+	}
+
 	text := h.lp.GetText(chat.LanguageCode)
 
 	var messageText string
@@ -422,6 +354,11 @@ func (h *Handler) remindJamaatMenuQuery(ctx context.Context, b *bot.Bot, update 
 func (h *Handler) remindJamaatToggleQuery(ctx context.Context, b *bot.Bot, update *models.Update) error {
 	chat := getContextChat(ctx)
 
+	if !isChatGroup(chat.ChatID) {
+		_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: update.CallbackQuery.ID})
+		return nil
+	}
+
 	newEnabled := !chat.Reminder.Jamaat.Enabled
 	err := h.db.SetJamaatEnabled(ctx, chat.BotID, chat.ChatID, newEnabled)
 	if err != nil {
@@ -436,6 +373,12 @@ func (h *Handler) remindJamaatToggleQuery(ctx context.Context, b *bot.Bot, updat
 
 func (h *Handler) remindJamaatEditQuery(ctx context.Context, b *bot.Bot, update *models.Update) error {
 	chat := getContextChat(ctx)
+
+	if !isChatGroup(chat.ChatID) {
+		_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: update.CallbackQuery.ID})
+		return nil
+	}
+
 	text := h.lp.GetText(chat.LanguageCode)
 
 	parts := strings.Split(update.CallbackQuery.Data, ":")
@@ -473,6 +416,11 @@ func (h *Handler) remindJamaatEditQuery(ctx context.Context, b *bot.Bot, update 
 func (h *Handler) remindJamaatAdjustQuery(ctx context.Context, b *bot.Bot, update *models.Update) error {
 	chat := getContextChat(ctx)
 
+	if !isChatGroup(chat.ChatID) {
+		_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: update.CallbackQuery.ID})
+		return nil
+	}
+
 	parts := strings.Split(update.CallbackQuery.Data, ":")
 	if len(parts) < 5 {
 		log.Error("remindJamaatAdjustQuery: invalid callback data", log.BotID(chat.BotID), log.ChatID(chat.ChatID))
@@ -501,37 +449,6 @@ func (h *Handler) remindJamaatAdjustQuery(ctx context.Context, b *bot.Bot, updat
 	chat.Reminder.Jamaat.Delay.SetDelayByPrayerID(prayerID, newDelay)
 	ctx = setContextChat(ctx, chat)
 	return h.remindJamaatEditQuery(ctx, b, update)
-}
-
-func (h *Handler) remindJamaatSaveQuery(ctx context.Context, b *bot.Bot, update *models.Update) error {
-	chat := getContextChat(ctx)
-	text := h.lp.GetText(chat.LanguageCode)
-
-	var messageText string
-	if chat.Reminder.Jamaat.Enabled {
-		messageText = text.JamaatMenu.TitleEnabled
-	} else {
-		messageText = text.JamaatMenu.TitleDisabled
-	}
-
-	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
-		ChatID:      chat.ChatID,
-		MessageID:   update.CallbackQuery.Message.Message.ID,
-		Text:        messageText,
-		ReplyMarkup: h.jammatMenuKeyboard(chat),
-	})
-	if err != nil {
-		log.Error("remindJamaatSaveQuery: edit message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
-		return domain.ErrInternal
-	}
-
-	_, err = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: update.CallbackQuery.ID})
-	if err != nil {
-		log.Error("remindJamaatSaveQuery: answer callback", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
-		return domain.ErrInternal
-	}
-
-	return nil
 }
 
 func (h *Handler) remindBackQuery(ctx context.Context, b *bot.Bot, update *models.Update) error {

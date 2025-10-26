@@ -43,31 +43,27 @@ language:
   success: "✅ Idioma cambiado a *%s*"
 
 remind_menu:
-  title_enabled: "⚙️ Configurar Recordatorios - Habilitado"
-  title_disabled: "⚙️ Configurar Recordatorios - Deshabilitado"
+  title_enabled: "⚙️ Recordatorios - Habilitado ✅"
+  title_disabled: "⚙️ Recordatorios - Deshabilitado 🔕"
   enable: "🔔 Habilitar"
   disable: "🔕 Deshabilitar"
-  today: "⏰ Hoy"
-  soon: "🔜 Pronto"
-  jamaat_settings: "🕌 Configuración de Jamaat"
+  tomorrow: "🌅 Vista Previa de Mañana"
+  soon: "⏰ Alerta de Oración"
+  jamaat_settings: "🕌 Horarios de Jamaat"
   close: "❌ Cerrar"
 
 remind_edit:
-  title_today: "⏰ Hoy"
-  title_soon: "🔜 Pronto"
+  title_tomorrow: "🌅 Vista Previa de Mañana\n⏰ Enviar horarios de mañana antes de medianoche"
+  title_soon: "⏰ Alerta de Oración\n⏱ Recordar antes de cada oración"
 
 jamaat_menu:
-  title_enabled: "🕌 Configuración de Jamaat - Habilitado"
-  title_disabled: "🕌 Configuración de Jamaat - Deshabilitado"
+  title_enabled: "🕌 Horarios de Jamaat - Habilitado ✅\n(Solo Grupos)"
+  title_disabled: "🕌 Horarios de Jamaat - Deshabilitado 🔕\n(Solo Grupos)"
   enable: "🔔 Habilitar"
   disable: "🔕 Deshabilitar"
 
 jamaat_edit:
-  title: "Retraso de Jamaat %s"
-
-buttons:
-  save: "💾"
-  back: "🔙"
+  title: "🕌 Horario de Jamaat %s\n⏱ Tiempo después del Adhan"
 
 help: |
   ¿Necesitas ayuda? 😊 Aquí está lo que puedo hacer: 👇

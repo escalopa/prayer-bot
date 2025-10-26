@@ -274,8 +274,8 @@ func (db *DB) SetSubscribed(ctx context.Context, botID int64, chatID int64, subs
 func (db *DB) SetReminderOffset(ctx context.Context, botID int64, chatID int64, reminderType domain.ReminderType, offset time.Duration) error {
 	return db.updateReminder(ctx, botID, chatID, func(reminder *domain.Reminder) {
 		switch reminderType {
-		case domain.ReminderTypeToday:
-			reminder.Today.Offset = offset
+		case domain.ReminderTypeTomorrow:
+			reminder.Tomorrow.Offset = offset
 		case domain.ReminderTypeSoon:
 			reminder.Soon.Offset = offset
 		}

@@ -14,6 +14,8 @@ const (
 	monthsPerRow    = 3
 	remindPerRow    = 4
 	daysPerRow      = 5
+
+	buttonBack = "🔙"
 )
 
 func (h *Handler) languagesKeyboard() *models.InlineKeyboardMarkup {
@@ -93,30 +95,43 @@ func (h *Handler) daysKeyboard(now time.Time, month int) *models.InlineKeyboardM
 func (h *Handler) remindMenuKeyboard(chat *domain.Chat) *models.InlineKeyboardMarkup {
 	text := h.lp.GetText(chat.LanguageCode)
 
-	kb := &models.InlineKeyboardMarkup{InlineKeyboard: make([][]models.InlineKeyboardButton, 4)}
+	// Calculate number of rows based on whether it's a group
+	numRows := 3
+	if isChatGroup(chat.ChatID) {
+		numRows = 4
+	}
+	kb := &models.InlineKeyboardMarkup{InlineKeyboard: make([][]models.InlineKeyboardButton, numRows)}
+
+	rowIndex := 0
 
 	if chat.Subscribed {
-		kb.InlineKeyboard[0] = []models.InlineKeyboardButton{
+		kb.InlineKeyboard[rowIndex] = []models.InlineKeyboardButton{
 			{Text: text.RemindMenu.Disable, CallbackData: "remind:toggle|"},
 		}
 	} else {
-		kb.InlineKeyboard[0] = []models.InlineKeyboardButton{
+		kb.InlineKeyboard[rowIndex] = []models.InlineKeyboardButton{
 			{Text: text.RemindMenu.Enable, CallbackData: "remind:toggle|"},
 		}
 	}
+	rowIndex++
 
-	todayOffset := domain.FormatDuration(chat.Reminder.Today.Offset)
+	tomorrowOffset := domain.FormatDuration(chat.Reminder.Tomorrow.Offset)
 	soonOffset := domain.FormatDuration(chat.Reminder.Soon.Offset)
-	kb.InlineKeyboard[1] = []models.InlineKeyboardButton{
-		{Text: fmt.Sprintf("%s (%s)", text.RemindMenu.Today, todayOffset), CallbackData: "remind:edit:today|"},
+	kb.InlineKeyboard[rowIndex] = []models.InlineKeyboardButton{
+		{Text: fmt.Sprintf("%s (%s)", text.RemindMenu.Tomorrow, tomorrowOffset), CallbackData: "remind:edit:tomorrow|"},
 		{Text: fmt.Sprintf("%s (%s)", text.RemindMenu.Soon, soonOffset), CallbackData: "remind:edit:soon|"},
 	}
+	rowIndex++
 
-	kb.InlineKeyboard[2] = []models.InlineKeyboardButton{
-		{Text: text.RemindMenu.JamaatSettings, CallbackData: "remind:jamaat:menu|"},
+	// Only show Jamaat Settings for group chats
+	if isChatGroup(chat.ChatID) {
+		kb.InlineKeyboard[rowIndex] = []models.InlineKeyboardButton{
+			{Text: text.RemindMenu.JamaatSettings, CallbackData: "remind:jamaat:menu|"},
+		}
+		rowIndex++
 	}
 
-	kb.InlineKeyboard[3] = []models.InlineKeyboardButton{
+	kb.InlineKeyboard[rowIndex] = []models.InlineKeyboardButton{
 		{Text: text.RemindMenu.Close, CallbackData: "remind:close|"},
 	}
 
@@ -124,8 +139,6 @@ func (h *Handler) remindMenuKeyboard(chat *domain.Chat) *models.InlineKeyboardMa
 }
 
 func (h *Handler) remindEditKeyboard(reminderType domain.ReminderType, languageCode string) *models.InlineKeyboardMarkup {
-	text := h.lp.GetText(languageCode)
-
 	kb := &models.InlineKeyboardMarkup{InlineKeyboard: make([][]models.InlineKeyboardButton, 3)}
 
 	kb.InlineKeyboard[0] = []models.InlineKeyboardButton{
@@ -141,8 +154,7 @@ func (h *Handler) remindEditKeyboard(reminderType domain.ReminderType, languageC
 	}
 
 	kb.InlineKeyboard[2] = []models.InlineKeyboardButton{
-		{Text: text.Buttons.Save, CallbackData: fmt.Sprintf("remind:save:%s|", reminderType)},
-		{Text: text.Buttons.Back, CallbackData: "remind:back:menu|"},
+		{Text: buttonBack, CallbackData: "remind:back:menu|"},
 	}
 
 	return kb
@@ -185,15 +197,13 @@ func (h *Handler) jammatMenuKeyboard(chat *domain.Chat) *models.InlineKeyboardMa
 	}
 
 	kb.InlineKeyboard[4] = []models.InlineKeyboardButton{
-		{Text: text.Buttons.Back, CallbackData: "remind:back:menu|"},
+		{Text: buttonBack, CallbackData: "remind:back:menu|"},
 	}
 
 	return kb
 }
 
 func (h *Handler) jammatEditKeyboard(prayerID domain.PrayerID, languageCode string) *models.InlineKeyboardMarkup {
-	text := h.lp.GetText(languageCode)
-
 	kb := &models.InlineKeyboardMarkup{InlineKeyboard: make([][]models.InlineKeyboardButton, 3)}
 
 	prayerName := prayerID.String()
@@ -211,8 +221,7 @@ func (h *Handler) jammatEditKeyboard(prayerID domain.PrayerID, languageCode stri
 	}
 
 	kb.InlineKeyboard[2] = []models.InlineKeyboardButton{
-		{Text: text.Buttons.Save, CallbackData: fmt.Sprintf("remind:jamaat:save:%s|", prayerName)},
-		{Text: text.Buttons.Back, CallbackData: "remind:back:jamaat|"},
+		{Text: buttonBack, CallbackData: "remind:back:jamaat|"},
 	}
 
 	return kb

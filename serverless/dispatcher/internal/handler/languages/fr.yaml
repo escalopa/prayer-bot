@@ -43,31 +43,27 @@ language:
   success: "✅ Langue changée en *%s*"
 
 remind_menu:
-  title_enabled: "⚙️ Configurer les Rappels - Activé"
-  title_disabled: "⚙️ Configurer les Rappels - Désactivé"
+  title_enabled: "⚙️ Rappels - Activé ✅"
+  title_disabled: "⚙️ Rappels - Désactivé 🔕"
   enable: "🔔 Activer"
   disable: "🔕 Désactiver"
-  today: "⏰ Aujourd'hui"
-  soon: "🔜 Bientôt"
-  jamaat_settings: "🕌 Paramètres Jamaat"
+  tomorrow: "🌅 Aperçu de Demain"
+  soon: "⏰ Alerte de Prière"
+  jamaat_settings: "🕌 Horaires Jamaat"
   close: "❌ Fermer"
 
 remind_edit:
-  title_today: "⏰ Aujourd'hui"
-  title_soon: "🔜 Bientôt"
+  title_tomorrow: "🌅 Aperçu de Demain\n⏰ Envoyer les horaires de demain avant minuit"
+  title_soon: "⏰ Alerte de Prière\n⏱ Rappel avant chaque prière"
 
 jamaat_menu:
-  title_enabled: "🕌 Paramètres Jamaat - Activé"
-  title_disabled: "🕌 Paramètres Jamaat - Désactivé"
+  title_enabled: "🕌 Horaires Jamaat - Activé ✅\n(Groupes Seulement)"
+  title_disabled: "🕌 Horaires Jamaat - Désactivé 🔕\n(Groupes Seulement)"
   enable: "🔔 Activer"
   disable: "🔕 Désactiver"
 
 jamaat_edit:
-  title: "Délai Jamaat %s"
-
-buttons:
-  save: "💾"
-  back: "🔙"
+  title: "🕌 Horaire Jamaat %s\n⏱ Temps après l'Adhan"
 
 help: |
   Besoin d'aide ? 😊 Voici ce que je peux faire : 👇

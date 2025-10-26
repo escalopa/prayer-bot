@@ -30,15 +30,15 @@ type (
 		TitleDisabled  string `yaml:"title_disabled"`
 		Enable         string `yaml:"enable"`
 		Disable        string `yaml:"disable"`
-		Today          string `yaml:"today"`
+		Tomorrow       string `yaml:"tomorrow"`
 		Soon           string `yaml:"soon"`
 		JamaatSettings string `yaml:"jamaat_settings"`
 		Close          string `yaml:"close"`
 	}
 
 	RemindEditText struct {
-		TitleToday string `yaml:"title_today"`
-		TitleSoon  string `yaml:"title_soon"`
+		TitleTomorrow string `yaml:"title_tomorrow"`
+		TitleSoon     string `yaml:"title_soon"`
 	}
 
 	JamaatMenuText struct {

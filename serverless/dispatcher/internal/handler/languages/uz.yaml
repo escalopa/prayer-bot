@@ -44,31 +44,27 @@ language:
 
 
 remind_menu:
-  title_enabled: "⚙️ Eslatmalarni Sozlash - Yoqilgan"
-  title_disabled: "⚙️ Eslatmalarni Sozlash - O'chirilgan"
+  title_enabled: "⚙️ Eslatmalar - Yoqilgan ✅"
+  title_disabled: "⚙️ Eslatmalar - O'chirilgan 🔕"
   enable: "🔔 Yoqish"
   disable: "🔕 O'chirish"
-  today: "⏰ Bugun"
-  soon: "🔜 Tez orada"
-  jamaat_settings: "🕌 Jamoat Sozlamalari"
+  tomorrow: "🌅 Ertangi Ko'rinish"
+  soon: "⏰ Namoz Eslatmasi"
+  jamaat_settings: "🕌 Jamoat Vaqtlari"
   close: "❌ Yopish"
 
 remind_edit:
-  title_today: "⏰ Bugun"
-  title_soon: "🔜 Tez orada"
+  title_tomorrow: "🌅 Ertangi Ko'rinish\n⏰ Ertangi namoz vaqtlarini yarim tundan oldin yuborish"
+  title_soon: "⏰ Namoz Eslatmasi\n⏱ Har bir namoz vaqtidan oldin eslatma"
 
 jamaat_menu:
-  title_enabled: "🕌 Jamoat Sozlamalari - Yoqilgan"
-  title_disabled: "🕌 Jamoat Sozlamalari - O'chirilgan"
+  title_enabled: "🕌 Jamoat Vaqtlari - Yoqilgan ✅\n(Faqat Guruhlar)"
+  title_disabled: "🕌 Jamoat Vaqtlari - O'chirilgan 🔕\n(Faqat Guruhlar)"
   enable: "🔔 Yoqish"
   disable: "🔕 O'chirish"
 
 jamaat_edit:
-  title: "%s Jamoat Kechikishi"
-
-buttons:
-  save: "💾"
-  back: "🔙"
+  title: "🕌 %s Jamoat Vaqti\n⏱ Azon vaqtidan keyingi vaqt"
 
 help: |
   Yordam kerakmi? 😊 Men quyidagilarni bajara olaman: 👇

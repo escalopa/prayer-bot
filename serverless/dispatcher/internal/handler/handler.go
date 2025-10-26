@@ -84,12 +84,10 @@ func (h *Handler) opts() []bot.Option {
 		bot.WithCallbackQueryDataHandler(remindToggleQuery.String(), bot.MatchTypePrefix, h.errorH(h.chatH(h.remindToggleQuery))),
 		bot.WithCallbackQueryDataHandler(remindEditQuery.String(), bot.MatchTypePrefix, h.errorH(h.chatH(h.remindEditQuery))),
 		bot.WithCallbackQueryDataHandler(remindAdjustQuery.String(), bot.MatchTypePrefix, h.errorH(h.chatH(h.remindAdjustQuery))),
-		bot.WithCallbackQueryDataHandler(remindSaveQuery.String(), bot.MatchTypePrefix, h.errorH(h.chatH(h.remindSaveQuery))),
 		bot.WithCallbackQueryDataHandler(remindJamaatMenuQuery.String(), bot.MatchTypePrefix, h.errorH(h.chatH(h.remindJamaatMenuQuery))),
 		bot.WithCallbackQueryDataHandler(remindJamaatToggleQuery.String(), bot.MatchTypePrefix, h.errorH(h.chatH(h.remindJamaatToggleQuery))),
 		bot.WithCallbackQueryDataHandler(remindJamaatEditQuery.String(), bot.MatchTypePrefix, h.errorH(h.chatH(h.remindJamaatEditQuery))),
 		bot.WithCallbackQueryDataHandler(remindJamaatAdjustQuery.String(), bot.MatchTypePrefix, h.errorH(h.chatH(h.remindJamaatAdjustQuery))),
-		bot.WithCallbackQueryDataHandler(remindJamaatSaveQuery.String(), bot.MatchTypePrefix, h.errorH(h.chatH(h.remindJamaatSaveQuery))),
 		bot.WithCallbackQueryDataHandler(remindBackQuery.String(), bot.MatchTypePrefix, h.errorH(h.chatH(h.remindBackQuery))),
 		bot.WithCallbackQueryDataHandler(remindCloseQuery.String(), bot.MatchTypePrefix, h.errorH(h.chatH(h.remindCloseQuery))),
 	}
@@ -242,7 +240,7 @@ func (h *Handler) getChat(ctx context.Context, update *models.Update) (*domain.C
 
 	now := h.now(botID)
 	reminder := &domain.Reminder{
-		Today: &domain.ReminderConfig{
+		Tomorrow: &domain.ReminderConfig{
 			LastAt: now,
 			Offset: 3 * time.Hour,
 		},

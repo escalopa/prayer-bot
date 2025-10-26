@@ -43,31 +43,27 @@ language:
   success: "✅ Language changed to *%s*"
 
 remind_menu:
-  title_enabled: "⚙️ Configure Reminders - Enabled"
-  title_disabled: "⚙️ Configure Reminders - Disabled"
+  title_enabled: "⚙️ Reminders - Enabled ✅"
+  title_disabled: "⚙️ Reminders - Disabled 🔕"
   enable: "🔔 Enable"
   disable: "🔕 Disable"
-  today: "⏰ Today"
-  soon: "🔜 Soon"
-  jamaat_settings: "🕌 Jamaat Settings"
+  tomorrow: "🌅 Tomorrow Preview"
+  soon: "⏰ Prayer Alert"
+  jamaat_settings: "🕌 Jamaat Times"
   close: "❌ Close"
 
 remind_edit:
-  title_today: "⏰ Today"
-  title_soon: "🔜 Soon"
+  title_tomorrow: "🌅 Tomorrow Preview\n⏰ Send tomorrow's prayer times before midnight"
+  title_soon: "⏰ Prayer Alert\n⏱ Remind before each prayer time"
 
 jamaat_menu:
-  title_enabled: "🕌 Jamaat Settings - Enabled"
-  title_disabled: "🕌 Jamaat Settings - Disabled"
+  title_enabled: "🕌 Jamaat Times - Enabled ✅\n(Group Only)"
+  title_disabled: "🕌 Jamaat Times - Disabled 🔕\n(Group Only)"
   enable: "🔔 Enable"
   disable: "🔕 Disable"
 
 jamaat_edit:
-  title: "%s Jamaat Delay"
-
-buttons:
-  save: "💾"
-  back: "🔙"
+  title: "🕌 %s Jamaat Time\n⏱ Time after Adhan"
 
 help: |
   Need help? 😊 Here's what I can do: 👇

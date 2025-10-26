@@ -110,7 +110,7 @@ func (h *Handler) Handel(ctx context.Context, botID int64) error {
 	}
 
 	reminders := []ReminderType{
-		&TodayReminder{
+		&TomorrowReminder{
 			lp:              h.lp,
 			botConfig:       h.cfg,
 			formatPrayerDay: h.formatPrayerDay,

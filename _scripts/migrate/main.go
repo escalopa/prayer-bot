@@ -43,10 +43,10 @@ type ReminderConfig struct {
 }
 
 type Reminder struct {
-	Today  *ReminderConfig `json:"today"`
-	Soon   *ReminderConfig `json:"soon"`
-	Arrive *ReminderConfig `json:"arrive"`
-	Jamaat *JamaatConfig   `json:"jamaat"`
+	Tomorrow *ReminderConfig `json:"tomorrow"`
+	Soon     *ReminderConfig `json:"soon"`
+	Arrive   *ReminderConfig `json:"arrive"`
+	Jamaat   *JamaatConfig   `json:"jamaat"`
 }
 
 // Old table row structure
@@ -216,7 +216,7 @@ func transformChat(oldChat OldChat, moscowLocation *time.Location) (NewChat, err
 	}
 
 	reminder := Reminder{
-		Today: &ReminderConfig{
+		Tomorrow: &ReminderConfig{
 			Offset: int64(3 * time.Hour),
 			LastAt: now.Format(time.RFC3339),
 		},

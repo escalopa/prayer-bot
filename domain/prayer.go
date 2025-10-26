@@ -36,6 +36,25 @@ func (p PrayerID) String() string {
 	}
 }
 
+func ParsePrayerID(prayerName string) PrayerID {
+	switch prayerName {
+	case "fajr":
+		return PrayerIDFajr
+	case "shuruq":
+		return PrayerIDShuruq
+	case "dhuhr":
+		return PrayerIDDhuhr
+	case "asr":
+		return PrayerIDAsr
+	case "maghrib":
+		return PrayerIDMaghrib
+	case "isha":
+		return PrayerIDIsha
+	default:
+		return PrayerIDUnknown
+	}
+}
+
 type PrayerDay struct {
 	Date    time.Time  `json:"date"`
 	Fajr    time.Time  `json:"fajr"`

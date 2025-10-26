@@ -122,12 +122,12 @@ jobs:
 
       - name: Authenticate YC CLI
         env:
-          YC_SERVICE_ACCOUNT_KEY: ${{ secrets.YC_SERVICE_ACCOUNT_KEY }}
-          YC_CLOUD_ID: ${{ secrets.YC_CLOUD_ID }}
-          YC_FOLDER_ID: ${{ secrets.YC_FOLDER_ID }}
+          YC_SERVICE_ACCOUNT_KEY: ${{ secrets.SERVICE_ACCOUNT_KEY }}
+          YC_CLOUD_ID: ${{ secrets.CLOUD_ID }}
+          YC_FOLDER_ID: ${{ secrets.FOLDER_ID }}
         run: |
-          echo "$YC_SERVICE_ACCOUNT_KEY" > sa-key.json
-          yc config set service-account-key sa-key.json
+          echo "$YC_SERVICE_ACCOUNT_KEY" > iam.json
+          yc config set service-account-key iam.json
           yc config set cloud-id "$YC_CLOUD_ID"
           yc config set folder-id "$YC_FOLDER_ID"
 

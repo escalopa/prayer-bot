@@ -35,10 +35,10 @@ type (
 	}
 
 	Reminder struct {
-		Today  *ReminderConfig `json:"today"`
-		Soon   *ReminderConfig `json:"soon"`
-		Arrive *ReminderConfig `json:"arrive"`
-		Jamaat *JamaatConfig   `json:"jamaat"`
+		Tomorrow *ReminderConfig `json:"tomorrow"`
+		Soon     *ReminderConfig `json:"soon"`
+		Arrive   *ReminderConfig `json:"arrive"`
+		Jamaat   *JamaatConfig   `json:"jamaat"`
 	}
 )
 

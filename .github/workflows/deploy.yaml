@@ -23,20 +23,16 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
     outputs:
-      workspace: ${{ steps.set-workspace.outputs.workspace }}
       cache_key: ${{ steps.set-cache-key.outputs.cache_key }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Determine workspace and environment
-        id: set-workspace
+      - name: Set workspace
         run: |
-          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            echo "workspace=prod" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
-            echo "workspace=dev" >> $GITHUB_OUTPUT
-          fi
+          WORKSPACE=${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
+          echo "WORKSPACE=$WORKSPACE" >> $GITHUB_ENV
+          echo "::notice::Workspace: $WORKSPACE"
 
       - name: Set cache key
         id: set-cache-key
@@ -52,7 +48,7 @@ jobs:
           service_account_key: ${{ secrets.SERVICE_ACCOUNT_KEY }}
           app_config: ${{ secrets.APP_CONFIG }}
           app_config_path: ${{ env.APP_CONFIG_PATH }}
-          workspace: ${{ steps.set-workspace.outputs.workspace }}
+          workspace: ${{ env.WORKSPACE }}
           aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           cache_key: ${{ steps.set-cache-key.outputs.cache_key }}
@@ -92,6 +88,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Set workspace
+        run: |
+          WORKSPACE=${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
+          echo "WORKSPACE=$WORKSPACE" >> $GITHUB_ENV
+          echo "::notice::Workspace: $WORKSPACE"
 
       - name: Install YC CLI
         run: |
@@ -135,7 +137,6 @@ jobs:
           GOOSE_DBSTRING="${GOOSE_DBSTRING_BASE}&token=${YDB_ACCESS_TOKEN}&go_query_mode=scripting&go_fake_tx=scripting&go_query_bind=declare,numeric"
           export GOOSE_DBSTRING
 
-          WORKSPACE=${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
           echo "::notice::Running Goose migrations for $WORKSPACE environment"
           goose up
           echo "::notice::Migration completed successfully for $WORKSPACE environment"
@@ -150,6 +151,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set workspace
+        run: |
+          WORKSPACE=${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
+          echo "WORKSPACE=$WORKSPACE" >> $GITHUB_ENV
+          echo "::notice::Workspace: $WORKSPACE"
+
       - name: Setup Terraform Environment
         uses: ./.github/actions/setup-terraform
         with:
@@ -157,7 +164,7 @@ jobs:
           service_account_key: ${{ secrets.SERVICE_ACCOUNT_KEY }}
           app_config: ${{ secrets.APP_CONFIG }}
           app_config_path: ${{ env.APP_CONFIG_PATH }}
-          workspace: ${{ needs.setup.outputs.workspace }}
+          workspace: ${{ env.WORKSPACE }}
           aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           cache_key: ${{ needs.setup.outputs.cache_key }}
@@ -180,6 +187,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set workspace
+        run: |
+          WORKSPACE=${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
+          echo "WORKSPACE=$WORKSPACE" >> $GITHUB_ENV
+          echo "::notice::Workspace: $WORKSPACE"
+
       - name: Setup Terraform Environment
         uses: ./.github/actions/setup-terraform
         with:
@@ -187,7 +200,7 @@ jobs:
           service_account_key: ${{ secrets.SERVICE_ACCOUNT_KEY }}
           app_config: ${{ secrets.APP_CONFIG }}
           app_config_path: ${{ env.APP_CONFIG_PATH }}
-          workspace: ${{ needs.setup.outputs.workspace }}
+          workspace: ${{ env.WORKSPACE }}
           aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           cache_key: ${{ needs.setup.outputs.cache_key }}
@@ -220,74 +233,16 @@ jobs:
     if: always() && needs.plan.result == 'success' && (needs.migrate.result == 'success' || needs.migrate.result == 'skipped')
     environment: ${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
     outputs:
-      dispatcher_fn_id: ${{ steps.outputs.outputs.dispatcher_fn_id }}
+      dispatcher_function_id: ${{ steps.outputs.outputs.dispatcher_function_id }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Terraform Environment
-        uses: ./.github/actions/setup-terraform
-        with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
-          terraform_wrapper: 'false'
-          service_account_key: ${{ secrets.SERVICE_ACCOUNT_KEY }}
-          app_config: ${{ secrets.APP_CONFIG }}
-          app_config_path: ${{ env.APP_CONFIG_PATH }}
-          workspace: ${{ needs.setup.outputs.workspace }}
-          aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          cache_key: ${{ needs.setup.outputs.cache_key }}
-
-      - name: Backup current state
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        run: |
-          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-          mkdir -p state-backups
-          terraform state pull > state-backups/terraform-${{ needs.setup.outputs.workspace }}-${TIMESTAMP}-${{ github.run_id }}.tfstate
-
-      - name: Upload state backup
-        uses: actions/upload-artifact@v4
-        with:
-          name: terraform-state-backup-${{ needs.setup.outputs.workspace }}-${{ github.run_id }}
-          path: state-backups/
-          retention-days: 90
-
-      - name: Terraform Apply
-        env:
-          TF_VAR_cloud_id: ${{ secrets.CLOUD_ID }}
-          TF_VAR_folder_id: ${{ secrets.FOLDER_ID }}
-        run: terraform apply -auto-approve
-
-      - name: Export Terraform Outputs
-        id: outputs
-        run: |
-          DISPATCHER_FN_ID=$(terraform output -raw dispatcher_fn_id)
-          echo "dispatcher_fn_id=$DISPATCHER_FN_ID" >> $GITHUB_OUTPUT
-          echo "::notice::Dispatcher Function ID: $DISPATCHER_FN_ID"
-
-  hook:
-    name: Setup Telegram Webhooks
-    runs-on: ubuntu-latest
-    needs: [setup, apply]
-    if: needs.apply.result == 'success'
-    environment: ${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Determine workspace
+      - name: Set workspace
         run: |
           WORKSPACE=${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
           echo "WORKSPACE=$WORKSPACE" >> $GITHUB_ENV
           echo "::notice::Workspace: $WORKSPACE"
-
-      - name: Set cache key
-        id: set-cache-key
-        run: |
-          CACHE_KEY="${{ runner.os }}-${{ github.ref_name }}-terraform-${{ hashFiles('**/.terraform.lock.hcl') }}"
-          echo "cache_key=$CACHE_KEY" >> $GITHUB_OUTPUT
 
       - name: Setup Terraform Environment
         uses: ./.github/actions/setup-terraform
@@ -300,20 +255,68 @@ jobs:
           workspace: ${{ env.WORKSPACE }}
           aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          cache_key: ${{ steps.set-cache-key.outputs.cache_key }}
+          cache_key: ${{ needs.setup.outputs.cache_key }}
+
+      - name: Backup current state
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          mkdir -p state-backups
+          terraform state pull > state-backups/terraform-$WORKSPACE-${TIMESTAMP}-${{ github.run_id }}.tfstate
+
+      - name: Upload state backup
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-state-backup-${{ env.WORKSPACE }}-${{ github.run_id }}
+          path: state-backups/
+          retention-days: 90
+
+      - name: Terraform Apply
+        env:
+          TF_VAR_cloud_id: ${{ secrets.CLOUD_ID }}
+          TF_VAR_folder_id: ${{ secrets.FOLDER_ID }}
+        run: terraform apply -auto-approve
+
+      - name: Export Terraform Outputs
+        id: outputs
+        run: |
+          DISPATCHER_FUNCTION_ID=$(terraform output -raw dispatcher_function_id)
+          echo "dispatcher_function_id=$DISPATCHER_FUNCTION_ID" >> $GITHUB_OUTPUT
+          echo "::notice::Dispatcher Function ID: $DISPATCHER_FUNCTION_ID"
+
+  hook:
+    name: Setup Telegram Webhooks
+    runs-on: ubuntu-latest
+    needs: [apply]
+    if: needs.apply.result == 'success'
+    environment: ${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set workspace
+        run: |
+          WORKSPACE=${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
+          echo "WORKSPACE=$WORKSPACE" >> $GITHUB_ENV
+          echo "::notice::Workspace: $WORKSPACE"
+
+      - name: Load application config
+        uses: ./.github/actions/load-config
+        with:
+          app_config: ${{ secrets.APP_CONFIG }}
+          app_config_path: ${{ env.APP_CONFIG_PATH }}
 
       - name: Get Dispatcher Function ID
-        id: get-fn-id
         run: |
-          DISPATCHER_FN_ID=$(terraform output -raw dispatcher_fn_id)
-          echo "dispatcher_fn_id=$DISPATCHER_FN_ID" >> $GITHUB_OUTPUT
-          echo "::notice::Dispatcher Function ID: $DISPATCHER_FN_ID"
+          DISPATCHER_FUNCTION_ID="${{ needs.apply.outputs.dispatcher_function_id }}"
+          echo "DISPATCHER_FUNCTION_ID=$DISPATCHER_FUNCTION_ID" >> $GITHUB_ENV
+          echo "::notice::Dispatcher Function ID: $DISPATCHER_FUNCTION_ID"
 
       - name: Execute webhook setup script
-        env:
-          DISPATCHER_FUNCTION_ID: ${{ steps.get-fn-id.outputs.dispatcher_fn_id }}
         run: |
-          echo "::notice::Config file: $APP_CONFIG_PATH"
+          echo "::notice::Config file: ${{ env.APP_CONFIG_PATH }}"
           echo "::notice::Dispatcher function ID: $DISPATCHER_FUNCTION_ID"
           
           chmod +x _scripts/hook.sh
@@ -330,9 +333,14 @@ jobs:
     needs: [setup, validate, lint, migrate, plan, apply, hook]
     if: always()
     steps:
+      - name: Set workspace
+        run: |
+          WORKSPACE=${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
+          echo "WORKSPACE=$WORKSPACE" >> $GITHUB_ENV
+
       - name: Generate summary
         run: |
-          echo "## Deployment Summary - ${{ needs.setup.outputs.workspace }} environment" >> $GITHUB_STEP_SUMMARY
+          echo "## Deployment Summary - $WORKSPACE environment" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
@@ -344,12 +352,12 @@ jobs:
           echo "| Webhook Setup | ${{ needs.hook.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Workspace:** ${{ needs.setup.outputs.workspace }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Workspace:** $WORKSPACE" >> $GITHUB_STEP_SUMMARY
           echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
           echo "**Cache Key:** ${{ needs.setup.outputs.cache_key }}" >> $GITHUB_STEP_SUMMARY
           
-          if [ "${{ needs.apply.outputs.dispatcher_fn_id }}" != "" ]; then
-            echo "**Dispatcher Function ID:** ${{ needs.apply.outputs.dispatcher_fn_id }}" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.apply.outputs.dispatcher_function_id }}" != "" ]; then
+            echo "**Dispatcher Function ID:** ${{ needs.apply.outputs.dispatcher_function_id }}" >> $GITHUB_STEP_SUMMARY
           fi
           
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then

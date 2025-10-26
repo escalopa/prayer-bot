@@ -17,6 +17,25 @@ const (
 	PrayerIDIsha    PrayerID = 6
 )
 
+func (p PrayerID) String() string {
+	switch p {
+	case PrayerIDFajr:
+		return "fajr"
+	case PrayerIDShuruq:
+		return "shuruq"
+	case PrayerIDDhuhr:
+		return "dhuhr"
+	case PrayerIDAsr:
+		return "asr"
+	case PrayerIDMaghrib:
+		return "maghrib"
+	case PrayerIDIsha:
+		return "isha"
+	default:
+		return "unknown"
+	}
+}
+
 type PrayerDay struct {
 	Date    time.Time  `json:"date"`
 	Fajr    time.Time  `json:"fajr"`

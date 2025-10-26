@@ -12,10 +12,5 @@ CREATE TABLE chats (
     PRIMARY KEY (bot_id, chat_id)
 );
 
--- +goose StatementBegin
-CREATE INDEX idx_chats_bot_id ON chats (bot_id);
-CREATE INDEX idx_chats_chat_id ON chats (chat_id);
--- +goose StatementEnd
-
 -- +goose Down
 DROP TABLE IF EXISTS chats;

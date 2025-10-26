@@ -115,6 +115,27 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install YC CLI
+        run: |
+          curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
+          echo "${HOME}/yandex-cloud/bin" >> $GITHUB_PATH
+
+      - name: Authenticate YC CLI
+        env:
+          YC_SERVICE_ACCOUNT_KEY: ${{ secrets.YC_SERVICE_ACCOUNT_KEY }}
+          YC_CLOUD_ID: ${{ secrets.YC_CLOUD_ID }}
+          YC_FOLDER_ID: ${{ secrets.YC_FOLDER_ID }}
+        run: |
+          echo "$YC_SERVICE_ACCOUNT_KEY" > sa-key.json
+          yc config set service-account-key sa-key.json
+          yc config set cloud-id "$YC_CLOUD_ID"
+          yc config set folder-id "$YC_FOLDER_ID"
+
+      - name: Generate short-lived IAM token
+        run: |
+          export YDB_ACCESS_TOKEN_CREDENTIALS=$(yc iam create-token)
+          echo "YDB_ACCESS_TOKEN_CREDENTIALS=$YDB_ACCESS_TOKEN_CREDENTIALS" >> $GITHUB_ENV
+
       - name: Install Goose
         run: |
           GOOSE_VERSION="${{ env.GOOSE_VERSION }}"
@@ -124,21 +145,12 @@ jobs:
           mv goose $HOME/.goose/
           echo "$HOME/.goose" >> $GITHUB_PATH
 
-      - name: Verify Goose installation
-        run: |
-          export PATH="$HOME/.goose:$PATH"
-          goose --version
-
-      - name: Configure YDB Credentials
-        run: |
-          echo '${{ secrets.SERVICE_ACCOUNT_KEY }}' > /tmp/ydb-iam.json
-          chmod 600 /tmp/ydb-iam.json
-
       - name: Run Goose migrations
         env:
           GOOSE_DRIVER: ydb
+          # ydb connection string format
+          # grpcs://<endpoint>:<port>/?database=<database>&go_query_mode=scripting&go_fake_tx=scripting&go_query_bind=declare,numeric
           GOOSE_DBSTRING: ${{ secrets.DB_CONNECTION_STRING }}
-          YDB_SERVICE_ACCOUNT_KEY_FILE_CREDENTIALS: /tmp/ydb-iam.json
         run: |
           export PATH="$HOME/.goose:$PATH"
           cd migrations

@@ -21,7 +21,7 @@ env:
   TERRAFORM_VERSION: 1.6.3
   GOOSE_VERSION: 3.16.0
   GO_VERSION: 1.21
-  CONFIG_FILE_PATH: config.json
+  APP_CONFIG_PATH: config.json
 
 jobs:
   setup:
@@ -60,7 +60,7 @@ jobs:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
           service_account_key: ${{ secrets.SERVICE_ACCOUNT_KEY }}
           app_config: ${{ secrets.APP_CONFIG }}
-          config_file_path: ${{ env.CONFIG_FILE_PATH }}
+          app_config_path: ${{ env.APP_CONFIG_PATH }}
           workspace: ${{ steps.set-workspace.outputs.workspace }}
           aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -81,7 +81,7 @@ jobs:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
           service_account_key: ${{ secrets.SERVICE_ACCOUNT_KEY }}
           app_config: ${{ secrets.APP_CONFIG }}
-          config_file_path: ${{ env.CONFIG_FILE_PATH }}
+          app_config_path: ${{ env.APP_CONFIG_PATH }}
           workspace: ${{ needs.setup.outputs.workspace }}
           aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -146,30 +146,39 @@ jobs:
 
       - name: Install Goose
         run: |
-          # Download and install Goose binary directly
           GOOSE_VERSION="${{ env.GOOSE_VERSION }}"
           wget -q "https://github.com/pressly/goose/releases/download/v${GOOSE_VERSION}/goose_linux_x86_64" -O goose
           chmod +x goose
           mkdir -p $HOME/.goose
           mv goose $HOME/.goose/
           echo "$HOME/.goose" >> $GITHUB_PATH
-          
+
       - name: Verify Goose installation
         run: |
           export PATH="$HOME/.goose:$PATH"
           goose --version
 
+      - name: Configure YDB Credentials
+        run: |
+          echo '${{ secrets.SERVICE_ACCOUNT_KEY }}' > /tmp/ydb-iam.json
+          chmod 600 /tmp/ydb-iam.json
+
       - name: Run Goose migrations
         env:
           GOOSE_DRIVER: ydb
           GOOSE_DBSTRING: ${{ secrets.DB_CONNECTION_STRING }}
+          YDB_SERVICE_ACCOUNT_KEY_FILE_CREDENTIALS: /tmp/ydb-iam.json
         run: |
-          if [ -z "$GOOSE_DBSTRING" ]; then
-            echo "::error::DB_CONNECTION_STRING secret is not set for ${{ needs.setup.outputs.environment }} environment"
-            exit 1
-          fi
           export PATH="$HOME/.goose:$PATH"
           cd migrations
+
+          # Ensure DB string uses TLS (grpcs://)
+          if ! echo "$GOOSE_DBSTRING" | grep -q "^grpcs://"; then
+            echo "::error::DB_CONNECTION_STRING must start with grpcs:// (secure)"
+            exit 1
+          fi
+
+          echo "::notice::Running Goose migrations on $GOOSE_DBSTRING"
           goose up
           echo "::notice::Migration completed successfully for ${{ needs.setup.outputs.workspace }} environment"
 
@@ -190,7 +199,7 @@ jobs:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
           service_account_key: ${{ secrets.SERVICE_ACCOUNT_KEY }}
           app_config: ${{ secrets.APP_CONFIG }}
-          config_file_path: ${{ env.CONFIG_FILE_PATH }}
+          app_config_path: ${{ env.APP_CONFIG_PATH }}
           workspace: ${{ needs.setup.outputs.workspace }}
           aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -241,7 +250,7 @@ jobs:
           terraform_wrapper: 'false'
           service_account_key: ${{ secrets.SERVICE_ACCOUNT_KEY }}
           app_config: ${{ secrets.APP_CONFIG }}
-          config_file_path: ${{ env.CONFIG_FILE_PATH }}
+          app_config_path: ${{ env.APP_CONFIG_PATH }}
           workspace: ${{ needs.setup.outputs.workspace }}
           aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -297,24 +306,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Terraform Environment
-        uses: ./.github/actions/setup-terraform
-        with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
-          terraform_wrapper: 'false'
-          service_account_key: ${{ secrets.SERVICE_ACCOUNT_KEY }}
-          app_config: ${{ secrets.APP_CONFIG }}
-          config_file_path: ${{ env.CONFIG_FILE_PATH }}
-          workspace: ${{ needs.setup.outputs.workspace }}
-          aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          cache_key: ${{ needs.setup.outputs.cache_key }}
-
       - name: Execute webhook setup script
         env:
           DISPATCHER_FUNCTION_ID: ${{ needs.apply.outputs.dispatcher_fn_id }}
         run: |
-          echo "::notice::Config file: $CONFIG_FILE_PATH"
+          echo "::notice::Config file: $APP_CONFIG_PATH"
           echo "::notice::Dispatcher function ID: $DISPATCHER_FUNCTION_ID"
           
           chmod +x _scripts/hook.sh

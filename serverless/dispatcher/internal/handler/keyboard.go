@@ -96,9 +96,9 @@ func (h *Handler) remindMenuKeyboard(chat *domain.Chat) *models.InlineKeyboardMa
 	text := h.lp.GetText(chat.LanguageCode)
 
 	// Calculate number of rows based on whether it's a group
-	numRows := 3
+	numRows := 4
 	if isChatGroup(chat.ChatID) {
-		numRows = 4
+		numRows = 5
 	}
 	kb := &models.InlineKeyboardMarkup{InlineKeyboard: make([][]models.InlineKeyboardButton, numRows)}
 
@@ -116,9 +116,13 @@ func (h *Handler) remindMenuKeyboard(chat *domain.Chat) *models.InlineKeyboardMa
 	rowIndex++
 
 	tomorrowOffset := domain.FormatDuration(chat.Reminder.Tomorrow.Offset)
-	soonOffset := domain.FormatDuration(chat.Reminder.Soon.Offset)
 	kb.InlineKeyboard[rowIndex] = []models.InlineKeyboardButton{
 		{Text: fmt.Sprintf("%s (%s)", text.RemindMenu.Tomorrow, tomorrowOffset), CallbackData: "remind:edit:tomorrow|"},
+	}
+	rowIndex++
+
+	soonOffset := domain.FormatDuration(chat.Reminder.Soon.Offset)
+	kb.InlineKeyboard[rowIndex] = []models.InlineKeyboardButton{
 		{Text: fmt.Sprintf("%s (%s)", text.RemindMenu.Soon, soonOffset), CallbackData: "remind:edit:soon|"},
 	}
 	rowIndex++

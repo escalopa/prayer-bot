@@ -236,7 +236,11 @@ func (h *Handler) remindEditQuery(ctx context.Context, b *bot.Bot, update *model
 		offset = chat.Reminder.Soon.Offset
 		messageText = fmt.Sprintf("%s - %s", text.RemindEdit.TitleSoon, domain.FormatDuration(offset))
 	default:
-		log.Error("remindEditQuery: unknown reminder type", log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		log.Error("remindEditQuery: unknown reminder type",
+			log.BotID(chat.BotID),
+			log.ChatID(chat.ChatID),
+			log.String("type", string(reminderType)),
+		)
 		return domain.ErrInternal
 	}
 

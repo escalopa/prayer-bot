@@ -61,10 +61,6 @@ resource "yandex_storage_bucket" "bucket" {
   max_size  = 1073741824 # 1 GB in bytes
 }
 
-output "bucket_name" {
-  value = yandex_storage_bucket.bucket.bucket
-}
-
 ###########################
 ### ydb
 ###########################
@@ -79,11 +75,6 @@ resource "yandex_ydb_database_serverless" "ydb" {
     enable_throttling_rcu_limit = false
     storage_size_limit          = 5
   }
-}
-
-output "ydb_connection_string" {
-  value     = yandex_ydb_database_serverless.ydb.ydb_full_endpoint
-  sensitive = true
 }
 
 ###########################

@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/escalopa/prayer-bot/domain"
@@ -11,7 +12,7 @@ import (
 )
 
 type ReminderType interface {
-	ShouldTrigger(ctx context.Context, chat *domain.Chat, prayerDay *domain.PrayerDay, now time.Time) (shouldSend bool, prayerID domain.PrayerID, nextLastAt time.Time)
+	ShouldTrigger(ctx context.Context, chat *domain.Chat, prayerDay *domain.PrayerDay, now time.Time) (shouldSend bool, prayerID domain.PrayerID)
 	Send(ctx context.Context, b *bot.Bot, chat *domain.Chat, prayerID domain.PrayerID, prayerDay *domain.PrayerDay) (messageID int, err error)
 	Name() domain.ReminderType
 }
@@ -22,18 +23,13 @@ type TomorrowReminder struct {
 	formatPrayerDay func(botID int64, prayerDay *domain.PrayerDay, languageCode string) string
 }
 
-func (r *TomorrowReminder) ShouldTrigger(ctx context.Context, chat *domain.Chat, prayerDay *domain.PrayerDay, now time.Time) (bool, domain.PrayerID, time.Time) {
+func (r *TomorrowReminder) ShouldTrigger(ctx context.Context, chat *domain.Chat, _ *domain.PrayerDay, now time.Time) (bool, domain.PrayerID) {
 	config := chat.Reminder.Tomorrow
 
 	// Trigger logic: last_at + 24h - offset < now
-	lastDate := config.LastAt.Truncate(24 * time.Hour)
-	triggerTime := lastDate.Add(24 * time.Hour).Add(-config.Offset)
-	shouldSend := triggerTime.Before(now) || triggerTime.Equal(now)
-
-	// Next LastAt should be tomorrow's date (midnight) to prevent re-triggering on the same day
-	nextLastAt := now.Truncate(24 * time.Hour).Add(24 * time.Hour)
-
-	return shouldSend, domain.PrayerIDUnknown, nextLastAt
+	triggerTime := config.LastAt.Truncate(24 * time.Hour).Add(24 * time.Hour).Add(-config.Offset)
+	shouldSend := config.LastAt.Before(triggerTime) && (triggerTime.Before(now) || triggerTime.Equal(now))
+	return shouldSend, domain.PrayerIDUnknown
 }
 
 func (r *TomorrowReminder) Send(ctx context.Context, b *bot.Bot, chat *domain.Chat, _ domain.PrayerID, prayerDay *domain.PrayerDay) (int, error) {
@@ -55,7 +51,7 @@ type SoonReminder struct {
 	lp *languagesProvider
 }
 
-func (r *SoonReminder) ShouldTrigger(ctx context.Context, chat *domain.Chat, prayerDay *domain.PrayerDay, now time.Time) (bool, domain.PrayerID, time.Time) {
+func (r *SoonReminder) ShouldTrigger(ctx context.Context, chat *domain.Chat, prayerDay *domain.PrayerDay, now time.Time) (bool, domain.PrayerID) {
 	prayers := []struct {
 		id   domain.PrayerID
 		time time.Time
@@ -77,10 +73,10 @@ func (r *SoonReminder) ShouldTrigger(ctx context.Context, chat *domain.Chat, pra
 		if config.LastAt.Before(trigger) && (trigger.Before(now) || trigger.Equal(now)) {
 			// // Next LastAt should be incremented by 1 minute to avoid re-triggering
 			// nextLastAt := now.Add(1 * time.Minute)
-			return true, p.id, now
+			return true, p.id
 		}
 	}
-	return false, 0, time.Time{}
+	return false, 0
 }
 
 func (r *SoonReminder) Send(ctx context.Context, b *bot.Bot, chat *domain.Chat, prayerID domain.PrayerID, prayerDay *domain.PrayerDay) (int, error) {
@@ -92,8 +88,8 @@ func (r *SoonReminder) Send(ctx context.Context, b *bot.Bot, chat *domain.Chat, 
 	if chat.Reminder.Jamaat.Enabled && prayerID != domain.PrayerIDShuruq {
 		delay := chat.Reminder.Jamaat.Delay.GetDelayByPrayerID(prayerID)
 		message := fmt.Sprintf("%s\n%s",
-			fmt.Sprintf(text.PrayerSoon, prayer, domain.FormatDuration(chat.Reminder.Soon.Offset)),
-			fmt.Sprintf(text.PrayerJamaat, domain.FormatDuration(delay)),
+			fmt.Sprintf(strings.ReplaceAll(text.PrayerSoon, "*", ""), prayer, domain.FormatDuration(chat.Reminder.Soon.Offset)),
+			fmt.Sprintf(strings.ReplaceAll(text.PrayerJamaat, "*", ""), domain.FormatDuration(delay+chat.Reminder.Soon.Offset)),
 		)
 		isAnonymous := false
 
@@ -134,7 +130,7 @@ type ArriveReminder struct {
 	lp *languagesProvider
 }
 
-func (r *ArriveReminder) ShouldTrigger(ctx context.Context, chat *domain.Chat, prayerDay *domain.PrayerDay, now time.Time) (bool, domain.PrayerID, time.Time) {
+func (r *ArriveReminder) ShouldTrigger(ctx context.Context, chat *domain.Chat, prayerDay *domain.PrayerDay, now time.Time) (bool, domain.PrayerID) {
 	config := chat.Reminder.Arrive
 
 	prayers := []struct {
@@ -151,14 +147,11 @@ func (r *ArriveReminder) ShouldTrigger(ctx context.Context, chat *domain.Chat, p
 
 	for _, p := range prayers {
 		// logic: last_at < prayer_time AND prayer_time <= now
-		if config.LastAt.Before(p.time) &&
-			(p.time.Before(now) || p.time.Equal(now)) {
-			// // Next LastAt should be incremented by 1 minute to avoid re-triggering
-			// nextLastAt := now.Add(1 * time.Minute)
-			return true, p.id, now
+		if config.LastAt.Before(p.time) && (p.time.Before(now) || p.time.Equal(now)) {
+			return true, p.id
 		}
 	}
-	return false, 0, time.Time{}
+	return false, 0
 }
 
 func (r *ArriveReminder) Send(ctx context.Context, b *bot.Bot, chat *domain.Chat, prayerID domain.PrayerID, prayerDay *domain.PrayerDay) (int, error) {

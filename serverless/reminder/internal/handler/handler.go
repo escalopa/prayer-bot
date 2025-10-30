@@ -128,7 +128,7 @@ func (h *Handler) Handel(ctx context.Context, botID int64) error {
 			}
 
 			for _, reminder := range reminders {
-				shouldSend, prayerID, nextLastAt := reminder.ShouldTrigger(ctx, chat, prayerDay, now)
+				shouldSend, prayerID := reminder.ShouldTrigger(ctx, chat, prayerDay, now)
 				if !shouldSend {
 					continue
 				}
@@ -148,7 +148,7 @@ func (h *Handler) Handel(ctx context.Context, botID int64) error {
 					continue
 				}
 
-				err = h.db.UpdateReminder(ctx, chat.BotID, chat.ChatID, reminder.Name(), messageID, nextLastAt)
+				err = h.db.UpdateReminder(ctx, chat.BotID, chat.ChatID, reminder.Name(), messageID, now)
 				if err != nil {
 					log.Error("update reminder state",
 						log.Err(err),

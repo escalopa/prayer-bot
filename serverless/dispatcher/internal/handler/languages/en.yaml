@@ -42,29 +42,48 @@ language:
   start: "🌐 Pick your preferred language"
   success: "✅ Language changed to *%s*"
 
-subscription_success: "✅ You’re now subscribed to prayer reminders"
-unsubscription_success: "✅ You’ve unsubscribed from prayer reminders"
+remind_menu:
+  title_enabled: "⚙️ Reminders - Enabled ✅"
+  title_disabled: "⚙️ Reminders - Disabled 🔕"
+  enable: "🔔 Enable"
+  disable: "🔕 Disable"
+  tomorrow: "🌅 Tomorrow Preview"
+  soon: "⏰ Prayer Alert"
+  jamaat_settings: "🕌 Jamaat Times"
+  close: "❌ Close"
+
+remind_edit:
+  title_tomorrow: "🌅 Tomorrow Preview\n⏰ Send tomorrow's prayer times before midnight"
+  title_soon: "⏰ Prayer Alert\n⏱ Remind before each prayer time"
+
+jamaat_menu:
+  title_enabled: "🕌 Jamaat Times - Enabled ✅\n(Group Only)"
+  title_disabled: "🕌 Jamaat Times - Disabled 🔕\n(Group Only)"
+  enable: "🔔 Enable"
+  disable: "🔕 Disable"
+
+jamaat_edit:
+  title: "🕌 %s Jamaat Time\n⏱ Time after Adhan"
 
 help: |
-  Need help? 😊 Here’s what I can do: 👇
-  
+  Need help? 😊 Here's what I can do: 👇
+
   *Prayers:*
 
-  ⏰ /today – Today’s times  
-  📅 /date – Times for a chosen day  
-  ⏳ /next – When’s the next prayer?  
-  📨 /remind – Set a reminder before prayer
-  🔔 /subscribe – Get daily reminders  
-  🔕 /unsubscribe – Stop daily reminders  
+  ⏰ /today – Today's times
+  🌅 /tomorrow – Tomorrow's times
+  📅 /date – Times for a chosen day
+  ⏳ /next – When's the next prayer?
+  📨 /remind – Configure reminders
 
   *Settings:*
 
-  🌐 /language – Change language  
+  🌐 /language – Change language
 
   *Support:*
 
-  📖 /help – Show this guide  
-  🐞 /bug – Report a problem  
+  📖 /help – Show this guide
+  🐞 /bug – Report a problem
   💬 /feedback – Send feedback
 
 feedback:
@@ -76,9 +95,38 @@ bug:
   success: "✅ Thanks! Your report has been received"
 
 help_admin: |
+  📊 /info – View chat info & settings
   📩 /reply – Reply to users
-  📊 /stats – Bot usage stats
+  📈 /stats – Bot usage stats
   📢 /announce – Send message to everyone
+
+info:
+  default: |
+    📊 *Chat Information*
+
+    🆔 *Chat ID:* `%s`
+    💬 *Type:* %s
+    🌐 *Language:* %s
+    📍 *State:* %s
+
+    ⏰ *Reminder Settings:*
+    Status: %s
+    • 🌅 Tomorrow Preview: %s
+    • ⏰ Prayer Alert: %s%s
+  jamaat: |
+
+    🕌 *Jamaat Settings:*
+    Status: %s
+    • Fajr: %s
+    • Dhuhr: %s
+    • Asr: %s
+    • Maghrib: %s
+    • Isha: %s
+  type:
+    private: "Private"
+    group: "Group"
+  enabled: "✅ Enabled"
+  disabled: "❌ Disabled"
 
 reply:
   start: "✍️ Type your reply below (or /cancel to stop)"
@@ -90,13 +138,13 @@ announce:
 
 stats: |
   📊 Bot Stats:
-  
-  • Users: %d  
-  • Subscribed: %d  
-  • Unsubscribed: %d  
+
+  • Users: %d
+  • Subscribed: %d
+  • Unsubscribed: %d
 
   🌍 Languages used:
-  
+
   %s
 
 cancel: "✅ Process cancelled"

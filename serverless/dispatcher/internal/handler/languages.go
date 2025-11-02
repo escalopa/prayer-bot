@@ -25,6 +25,51 @@ type (
 		Success string `yaml:"success"`
 	}
 
+	RemindMenuText struct {
+		TitleEnabled   string `yaml:"title_enabled"`
+		TitleDisabled  string `yaml:"title_disabled"`
+		Enable         string `yaml:"enable"`
+		Disable        string `yaml:"disable"`
+		Tomorrow       string `yaml:"tomorrow"`
+		Soon           string `yaml:"soon"`
+		JamaatSettings string `yaml:"jamaat_settings"`
+		Close          string `yaml:"close"`
+	}
+
+	RemindEditText struct {
+		TitleTomorrow string `yaml:"title_tomorrow"`
+		TitleSoon     string `yaml:"title_soon"`
+	}
+
+	JamaatMenuText struct {
+		TitleEnabled  string `yaml:"title_enabled"`
+		TitleDisabled string `yaml:"title_disabled"`
+		Enable        string `yaml:"enable"`
+		Disable       string `yaml:"disable"`
+	}
+
+	JamaatEditText struct {
+		Title string `yaml:"title"`
+	}
+
+	ButtonsText struct {
+		Save string `yaml:"save"`
+		Back string `yaml:"back"`
+	}
+
+	InfoTypeText struct {
+		Private string `yaml:"private"`
+		Group   string `yaml:"group"`
+	}
+
+	InfoText struct {
+		Default  string       `yaml:"default"`
+		Jamaat   string       `yaml:"jamaat"`
+		Type     InfoTypeText `yaml:"type"`
+		Enabled  string       `yaml:"enabled"`
+		Disabled string       `yaml:"disabled"`
+	}
+
 	Text struct {
 		Name string `yaml:"name"`
 
@@ -37,8 +82,12 @@ type (
 		Remind   InteractiveMessage `yaml:"remind"`
 		Language InteractiveMessage `yaml:"language"`
 
-		SubscriptionSuccess   string `yaml:"subscription_success"`
-		UnsubscriptionSuccess string `yaml:"unsubscription_success"`
+		RemindMenu RemindMenuText `yaml:"remind_menu"`
+		RemindEdit RemindEditText `yaml:"remind_edit"`
+		JamaatMenu JamaatMenuText `yaml:"jamaat_menu"`
+		JamaatEdit JamaatEditText `yaml:"jamaat_edit"`
+		Buttons    ButtonsText    `yaml:"buttons"`
+		Info       InfoText       `yaml:"info"`
 
 		PrayerSoon string `yaml:"prayer_soon"`
 

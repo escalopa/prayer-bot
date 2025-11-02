@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -9,9 +10,15 @@ import (
 )
 
 func Load() (botConfig map[int64]*domain.BotConfig, _ error) {
-	data := os.Getenv("APP_CONFIG")
+	encodedData := os.Getenv("APP_CONFIG")
 
-	err := json.Unmarshal([]byte(data), &botConfig)
+	// Decode base64-encoded config
+	data, err := base64.StdEncoding.DecodeString(encodedData)
+	if err != nil {
+		return nil, fmt.Errorf("decode base64 config: %v", err)
+	}
+
+	err = json.Unmarshal(data, &botConfig)
 	if err != nil {
 		return nil, fmt.Errorf("unmarshal bot config: %v", err)
 	}

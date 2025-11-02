@@ -42,29 +42,48 @@ language:
   start: "🌐 Elige tu idioma preferido"
   success: "✅ Idioma cambiado a *%s*"
 
-subscription_success: "✅ Te has suscrito a los recordatorios de oración"
-unsubscription_success: "✅ Te has dado de baja de los recordatorios de oración"
+remind_menu:
+  title_enabled: "⚙️ Recordatorios - Habilitado ✅"
+  title_disabled: "⚙️ Recordatorios - Deshabilitado 🔕"
+  enable: "🔔 Habilitar"
+  disable: "🔕 Deshabilitar"
+  tomorrow: "🌅 Vista Previa de Mañana"
+  soon: "⏰ Alerta de Oración"
+  jamaat_settings: "🕌 Horarios de Jamaat"
+  close: "❌ Cerrar"
+
+remind_edit:
+  title_tomorrow: "🌅 Vista Previa de Mañana\n⏰ Enviar horarios de mañana antes de medianoche"
+  title_soon: "⏰ Alerta de Oración\n⏱ Recordar antes de cada oración"
+
+jamaat_menu:
+  title_enabled: "🕌 Horarios de Jamaat - Habilitado ✅\n(Solo Grupos)"
+  title_disabled: "🕌 Horarios de Jamaat - Deshabilitado 🔕\n(Solo Grupos)"
+  enable: "🔔 Habilitar"
+  disable: "🔕 Deshabilitar"
+
+jamaat_edit:
+  title: "🕌 Horario de Jamaat %s\n⏱ Tiempo después del Adhan"
 
 help: |
   ¿Necesitas ayuda? 😊 Aquí está lo que puedo hacer: 👇
-  
+
   *Oraciones:*
 
-  ⏰ /today – Horarios de hoy  
-  📅 /date – Horarios de un día específico  
-  ⏳ /next – ¿Cuándo es la próxima oración?  
-  📨 /remind – Configura un recordatorio antes de la oración
-  🔔 /subscribe – Recibir recordatorios diarios  
-  🔕 /unsubscribe – Detener recordatorios diarios  
+  ⏰ /today – Horarios de hoy
+  🌅 /tomorrow – Horarios de mañana
+  📅 /date – Horarios de un día específico
+  ⏳ /next – ¿Cuándo es la próxima oración?
+  📨 /remind – Configurar recordatorios
 
   *Configuraciones:*
 
-  🌐 /language – Cambiar idioma  
+  🌐 /language – Cambiar idioma
 
   *Soporte:*
 
-  📖 /help – Mostrar esta guía  
-  🐞 /bug – Reportar un problema  
+  📖 /help – Mostrar esta guía
+  🐞 /bug – Reportar un problema
   💬 /feedback – Enviar retroalimentación
 
 feedback:
@@ -76,9 +95,38 @@ bug:
   success: "✅ ¡Gracias! Tu reporte ha sido recibido"
 
 help_admin: |
+  📊 /info – Ver información y configuración del chat
   📩 /reply – Responder a los usuarios
-  📊 /stats – Estadísticas del bot
+  📈 /stats – Estadísticas del bot
   📢 /announce – Enviar un mensaje a todos
+
+info:
+  default: |
+    📊 *Información del Chat*
+
+    🆔 *ID del Chat:* `%s`
+    💬 *Tipo:* %s
+    🌐 *Idioma:* %s
+    📍 *Estado:* %s
+
+    ⏰ *Configuración de Recordatorios:*
+    Estado: %s
+    • 🌅 Vista Previa de Mañana: %s
+    • ⏰ Alerta de Oración: %s%s
+  jamaat: |
+
+    🕌 *Configuración de Jamaat:*
+    Estado: %s
+    • Fajr: %s
+    • Dhuhr: %s
+    • Asr: %s
+    • Maghrib: %s
+    • Isha: %s
+  type:
+    private: "Privado"
+    group: "Grupo"
+  enabled: "✅ Habilitado"
+  disabled: "❌ Deshabilitado"
 
 reply:
   start: "✍️ Escribe tu respuesta abajo (o escribe /cancel para cancelar)"
@@ -90,13 +138,13 @@ announce:
 
 stats: |
   📊 Estadísticas del bot:
-  
-  • Usuarios: %d  
-  • Suscritos: %d  
-  • No suscritos: %d  
+
+  • Usuarios: %d
+  • Suscritos: %d
+  • No suscritos: %d
 
   🌍 Idiomas usados:
-  
+
   %s
 
 cancel: "✅ Proceso cancelado"

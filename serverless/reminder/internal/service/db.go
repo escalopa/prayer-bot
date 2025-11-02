@@ -2,16 +2,16 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"time"
 
 	"github.com/escalopa/prayer-bot/domain"
-	"github.com/ydb-platform/ydb-go-genproto/protos/Ydb"
-	"github.com/ydb-platform/ydb-go-sdk/v3/table/result"
-	"github.com/ydb-platform/ydb-go-sdk/v3/table/types"
-
+	"github.com/escalopa/prayer-bot/log"
 	"github.com/ydb-platform/ydb-go-sdk/v3"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table"
+	"github.com/ydb-platform/ydb-go-sdk/v3/table/result"
+	"github.com/ydb-platform/ydb-go-sdk/v3/table/types"
 	yc "github.com/ydb-platform/ydb-go-yc"
 )
 
@@ -39,7 +39,8 @@ func NewDB(ctx context.Context) (*DB, error) {
 		yc.WithInternalCA(),
 	)
 	if err != nil {
-		return nil, err
+		log.Error("failed to open ydb connection", log.Err(err))
+		return nil, domain.ErrInternal
 	}
 
 	return &DB{client: sdk.Table()}, nil
@@ -50,7 +51,7 @@ func (db *DB) GetChatsByIDs(ctx context.Context, botID int64, chatIDs []int64) (
 		DECLARE $bot_id AS Int64;
 		DECLARE $chat_ids AS List<Int64>;
 
-		SELECT bot_id, chat_id, state, language_code, reminder_message_id, jamaat, jamaat_message_id
+		SELECT bot_id, chat_id, state, language_code, reminder
 		FROM chats
 		WHERE bot_id = $bot_id AND chat_id IN $chat_ids;
 	`
@@ -68,25 +69,34 @@ func (db *DB) GetChatsByIDs(ctx context.Context, botID int64, chatIDs []int64) (
 	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
 		_, res, err := s.Execute(ctx, readTx, query, params)
 		if err != nil {
-			return err
+			log.Error("execute get chats by ids query", log.Err(err), log.BotID(botID))
+			return domain.ErrInternal
 		}
 
 		defer func(res result.Result) { _ = res.Close() }(res)
 		if res.NextResultSet(ctx) {
 			for res.NextRow() {
 				chat := &domain.Chat{}
+				var reminderJSON string
 				err = res.ScanWithDefaults(
 					&chat.BotID,
 					&chat.ChatID,
 					&chat.State,
 					&chat.LanguageCode,
-					&chat.ReminderMessageID,
-					&chat.Jamaat,
-					&chat.JamaatMessageID,
+					&reminderJSON,
 				)
 				if err != nil {
-					return err
+					log.Error("scan chat fields", log.Err(err), log.BotID(botID))
+					return domain.ErrInternal
 				}
+
+				var reminder domain.Reminder
+				if err := json.Unmarshal([]byte(reminderJSON), &reminder); err != nil {
+					log.Error("unmarshal reminder json", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+					return domain.ErrUnmarshalJSON
+				}
+				chat.Reminder = &reminder
+
 				chats = append(chats, chat)
 			}
 		}
@@ -114,7 +124,8 @@ func (db *DB) GetSubscribers(ctx context.Context, botID int64) (chatIDs []int64,
 	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
 		_, res, err := s.Execute(ctx, readTx, query, params)
 		if err != nil {
-			return err
+			log.Error("execute get subscribers query", log.Err(err), log.BotID(botID))
+			return domain.ErrInternal
 		}
 
 		defer func(res result.Result) { _ = res.Close() }(res)
@@ -123,50 +134,8 @@ func (db *DB) GetSubscribers(ctx context.Context, botID int64) (chatIDs []int64,
 				var chatID int64
 				err = res.ScanWithDefaults(&chatID)
 				if err != nil {
-					return err
-				}
-				chatIDs = append(chatIDs, chatID)
-			}
-		}
-
-		return nil
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	return chatIDs, nil
-}
-
-func (db *DB) GetSubscribersByOffset(ctx context.Context, botID int64, offset int32) (chatIDs []int64, _ error) {
-	query := `
-		DECLARE $bot_id AS Int64;
-		DECLARE $offset AS Int32;
-
-		SELECT chat_id
-		FROM chats
-		WHERE bot_id = $bot_id AND subscribed = true AND reminder_offset = $offset;
-	`
-
-	params := table.NewQueryParameters(
-		table.ValueParam("$bot_id", types.Int64Value(botID)),
-		table.ValueParam("$offset", types.Int32Value(offset)),
-	)
-
-	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
-		_, res, err := s.Execute(ctx, readTx, query, params)
-		if err != nil {
-			return err
-		}
-
-		defer func(res result.Result) { _ = res.Close() }(res)
-		for res.NextResultSet(ctx) {
-			for res.NextRow() {
-				var chatID int64
-				err = res.ScanWithDefaults(&chatID)
-				if err != nil {
-					return err
+					log.Error("scan subscriber chat id", log.Err(err), log.BotID(botID))
+					return domain.ErrInternal
 				}
 				chatIDs = append(chatIDs, chatID)
 			}
@@ -183,38 +152,67 @@ func (db *DB) GetSubscribersByOffset(ctx context.Context, botID int64, offset in
 }
 
 func (db *DB) GetPrayerDay(ctx context.Context, botID int64, date time.Time) (prayerDay *domain.PrayerDay, _ error) {
+	nextDate := date.Add(24 * time.Hour)
+
 	query := `
 		DECLARE $bot_id AS Int64;
 		DECLARE $date AS Date;
+		DECLARE $next_date AS Date;
 
 		SELECT prayer_date, fajr, shuruq, dhuhr, asr, maghrib, isha
 		FROM prayers
-		WHERE bot_id = $bot_id AND prayer_date = $date;
+		WHERE bot_id = $bot_id AND prayer_date IN ($date, $next_date)
+		ORDER BY prayer_date;
 	`
 
 	params := table.NewQueryParameters(
 		table.ValueParam("$bot_id", types.Int64Value(botID)),
 		table.ValueParam("$date", types.DateValueFromTime(date)),
+		table.ValueParam("$next_date", types.DateValueFromTime(nextDate)),
 	)
 
 	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
 		_, res, err := s.Execute(ctx, readTx, query, params)
 		if err != nil {
-			return err
+			log.Error("execute get prayer day query", log.Err(err), log.BotID(botID))
+			return domain.ErrInternal
 		}
 
 		defer func(res result.Result) { _ = res.Close() }(res)
-		if res.NextResultSet(ctx) && res.NextRow() {
-			prayerDay = &domain.PrayerDay{}
-			err = res.ScanWithDefaults(
-				&prayerDay.Date,
-				&prayerDay.Fajr, &prayerDay.Shuruq,
-				&prayerDay.Dhuhr, &prayerDay.Asr,
-				&prayerDay.Maghrib, &prayerDay.Isha,
-			)
-			if err != nil {
-				return err
+		if res.NextResultSet(ctx) {
+			if res.NextRow() {
+				prayerDay = &domain.PrayerDay{}
+				err = res.ScanWithDefaults(
+					&prayerDay.Date,
+					&prayerDay.Fajr, &prayerDay.Shuruq,
+					&prayerDay.Dhuhr, &prayerDay.Asr,
+					&prayerDay.Maghrib, &prayerDay.Isha,
+				)
+				if err != nil {
+					log.Error("scan prayer day fields", log.Err(err), log.BotID(botID))
+					return domain.ErrInternal
+				}
+			} else {
+				return domain.ErrNotFound
 			}
+
+			if res.NextRow() {
+				nextDay := &domain.PrayerDay{}
+				err = res.ScanWithDefaults(
+					&nextDay.Date,
+					&nextDay.Fajr, &nextDay.Shuruq,
+					&nextDay.Dhuhr, &nextDay.Asr,
+					&nextDay.Maghrib, &nextDay.Isha,
+				)
+				if err != nil {
+					log.Error("scan next prayer day fields", log.Err(err), log.BotID(botID))
+					return domain.ErrInternal
+				}
+				prayerDay.NextDay = nextDay
+			} else {
+				return domain.ErrNotFound // no next day found (cannot happen)
+			}
+
 			return nil
 		}
 
@@ -222,60 +220,103 @@ func (db *DB) GetPrayerDay(ctx context.Context, botID int64, date time.Time) (pr
 	})
 
 	if err != nil {
-		if ydb.IsOperationError(err, Ydb.StatusIds_NOT_FOUND) {
-			return nil, domain.ErrNotFound
-		}
 		return nil, err
 	}
 
 	return prayerDay, nil
 }
 
-func (db *DB) SetReminderMessageID(ctx context.Context, botID int64, chatID int64, reminderMessageID int32) error {
-	query := `
-		DECLARE $bot_id AS Int64;
-		DECLARE $chat_id AS Int64;
-		DECLARE $reminder_message_id AS Int32;
-
-		UPDATE chats
-		SET reminder_message_id = $reminder_message_id
-		WHERE bot_id = $bot_id AND chat_id = $chat_id;
-	`
-
-	params := table.NewQueryParameters(
-		table.ValueParam("$bot_id", types.Int64Value(botID)),
-		table.ValueParam("$chat_id", types.Int64Value(chatID)),
-		table.ValueParam("$reminder_message_id", types.Int32Value(reminderMessageID)),
-	)
-
+func (db *DB) UpdateReminder(
+	ctx context.Context,
+	botID int64,
+	chatID int64,
+	reminderType domain.ReminderType,
+	messageID int,
+	lastAt time.Time,
+) error {
 	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
-		_, _, err := s.Execute(ctx, writeTx, query, params)
-		return err
-	})
+		txBegin := table.TxControl(table.BeginTx(table.WithSerializableReadWrite()))
 
-	return err
-}
+		selectQuery := `
+			DECLARE $bot_id AS Int64;
+			DECLARE $chat_id AS Int64;
 
-func (db *DB) SetJamaatMessageID(ctx context.Context, botID int64, chatID int64, jamaatMessageID int32) error {
-	query := `
-		DECLARE $bot_id AS Int64;
-		DECLARE $chat_id AS Int64;
-		DECLARE $jamaat_message_id AS Int32;
+			SELECT reminder
+			FROM chats
+			WHERE bot_id = $bot_id AND chat_id = $chat_id;
+		`
 
-		UPDATE chats
-		SET jamaat_message_id = $jamaat_message_id
-		WHERE bot_id = $bot_id AND chat_id = $chat_id;
-	`
+		selectParams := table.NewQueryParameters(
+			table.ValueParam("$bot_id", types.Int64Value(botID)),
+			table.ValueParam("$chat_id", types.Int64Value(chatID)),
+		)
 
-	params := table.NewQueryParameters(
-		table.ValueParam("$bot_id", types.Int64Value(botID)),
-		table.ValueParam("$chat_id", types.Int64Value(chatID)),
-		table.ValueParam("$jamaat_message_id", types.Int32Value(jamaatMessageID)),
-	)
+		txID, res, err := s.Execute(ctx, txBegin, selectQuery, selectParams)
+		if err != nil {
+			log.Error("execute select query", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+			return domain.ErrInternal
+		}
 
-	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
-		_, _, err := s.Execute(ctx, writeTx, query, params)
-		return err
+		defer func(res result.Result) { _ = res.Close() }(res)
+
+		var reminderJSON string
+		if res.NextResultSet(ctx) && res.NextRow() {
+			err = res.ScanWithDefaults(&reminderJSON)
+			if err != nil {
+				log.Error("scan reminder json", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+				return domain.ErrInternal
+			}
+		} else {
+			return domain.ErrNotFound
+		}
+
+		var reminder domain.Reminder
+		if err := json.Unmarshal([]byte(reminderJSON), &reminder); err != nil {
+			log.Error("unmarshal reminder json", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+			return domain.ErrUnmarshalJSON
+		}
+
+		switch reminderType {
+		case domain.ReminderTypeTomorrow:
+			reminder.Tomorrow.MessageID = messageID
+			reminder.Tomorrow.LastAt = lastAt
+		case domain.ReminderTypeSoon:
+			reminder.Soon.MessageID = messageID
+			reminder.Soon.LastAt = lastAt
+		case domain.ReminderTypeArrive:
+			reminder.Arrive.MessageID = messageID
+			reminder.Arrive.LastAt = lastAt
+		}
+
+		updatedReminderJSON, err := json.Marshal(&reminder)
+		if err != nil {
+			log.Error("marshal updated reminder json", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+			return domain.ErrInternal
+		}
+
+		updateQuery := `
+			DECLARE $bot_id AS Int64;
+			DECLARE $chat_id AS Int64;
+			DECLARE $reminder AS Json;
+
+			UPDATE chats
+			SET reminder = $reminder
+			WHERE bot_id = $bot_id AND chat_id = $chat_id;
+		`
+
+		updateParams := table.NewQueryParameters(
+			table.ValueParam("$bot_id", types.Int64Value(botID)),
+			table.ValueParam("$chat_id", types.Int64Value(chatID)),
+			table.ValueParam("$reminder", types.JSONValue(string(updatedReminderJSON))),
+		)
+
+		txCommit := table.TxControl(table.WithTx(txID), table.CommitTx())
+		_, _, err = s.Execute(ctx, txCommit, updateQuery, updateParams)
+		if err != nil {
+			log.Error("execute update reminder query", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+			return domain.ErrInternal
+		}
+		return nil
 	})
 
 	return err
@@ -297,7 +338,11 @@ func (db *DB) DeleteChat(ctx context.Context, botID int64, chatID int64) error {
 
 	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
 		_, _, err := s.Execute(ctx, writeTx, query, params)
-		return err
+		if err != nil {
+			log.Error("execute delete chat query", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+			return domain.ErrInternal
+		}
+		return nil
 	})
 
 	return err

@@ -47,8 +47,8 @@ Below is an example of an `APP_CONFIG` value containing all bot information:
 
 - To find your owner ID, use [ID bot](https://t.me/myidbot)
 - Bot ID is the first number before `:` in the bot token
-    - TOKEN: `123456789:ABC-DEF1234ghIkl-zyx57W2v1u123ew11`
-    - Bot ID: `123456789`
+  - TOKEN: `123456789:ABC-DEF1234ghIkl-zyx57W2v1u123ew11`
+  - Bot ID: `123456789`
 
 ---
 
@@ -92,21 +92,25 @@ Below is an example of an `APP_CONFIG` value containing all bot information:
 ### [1] Add a City
 
 You do:
+
 1. Get prayer times for a city in CSV format
 2. Make a pull request (or open an issue) with the new file
 
 I do:
+
 1. Create a new Telegram bot
 2. Upload the city file to storage bucket
 
 ### [2] Add a Language
 
 You do:
+
 1. Create translation text for the following files:
     - [./serverless/reminder/internal/handler/languages/text.yaml](./serverless/reminder/internal/handler/languages/text.yaml)
     - [./serverless/dispatcher/internal/handler/languages/en.yaml](./serverless/dispatcher/internal/handler/languages/en.yaml) (replace `en` with the new language code)
 
 I do:
+
 1. Deploy a new version of the code
 
 ### [3] Code Contributions
@@ -118,16 +122,19 @@ Found a bug? Want to add a new feature? Just open an issue or submit a pull requ
 ## Development Roadmap 🚀
 
 ### V1 ✅
+
 - [x] Support date format for `/prayersdate` command with leading zeros and delimiters (. / -)
 - [x] Implement subscriptions & notifications
 - [x] Update text messages to be more user-friendly
 
 ### V2 ✅
+
 - [x] Store prayer times in memory to reduce database requests
 - [x] Add response endpoint for admin to address feedback & bug messages
 - [x] Add Jumu'ah prayer reminders on Fridays
 
 ### V3 ✅
+
 - [x] Add time keyboard to `/date` command
 - [x] Remove selection message for `/date` & `/lang` after user interaction or timeout
 - [x] Terminate other active channels when user sends new commands
@@ -137,6 +144,7 @@ Found a bug? Want to add a new feature? Just open an issue or submit a pull requ
 - [x] Write more robust tests for core features
 
 ### V4 ✅
+
 - [x] Add multi-language support (AR, RU, TT, TR, UZ)
 - [x] Implement script messages in the bot
 - [x] Set user script before command if not set
@@ -144,11 +152,13 @@ Found a bug? Want to add a new feature? Just open an issue or submit a pull requ
 - [x] Fix prayer timetables for other languages
 
 ### V5 ✅
+
 - [x] Refactor code for better readability and maintainability
 - [x] Enhance logging to be more informative
 - [x] Enable using multiple bots with the same codebase
 
 ### V6 ✅
+
 - [x] Migrate to serverless architecture
 - [x] Automate deployment using Terraform
 - [x] Add support for multiple cities
@@ -156,29 +166,26 @@ Found a bug? Want to add a new feature? Just open an issue or submit a pull requ
 - [x] Add `/stats` command for bot usage statistics
 
 ### V7 ✅
+
 - [x] Add jamaat gathering feature for group chats
 
 ### V8 🔄
+
 - [ ] Add support for all major world cities
 
 ---
 
-## Development Setup 🖥️
-
-Deploy bot on Yandex Cloud:
-
-```bash
-export ENV=dev # or prod
-./_scripts/init.sh $ENV prayer-bot
-terraform workspace select -or-create=true $ENV
-terraform apply # -auto-approve
-./_scripts/hook.sh
-```
-
-Generate Terraform dependencies visualization:
+## Visualization 🖥️
 
 ```bash
 terraform plan -out plan.out
 terraform show -json plan.out > plan.json
 docker run --rm -it -p 9000:9000 -v $(pwd)/plan.json:/src/plan.json im2nguyen/rover:latest -planJSONPath=plan.json
+```
+
+## Useful
+
+```bash
+export AWS_ACCESS_KEY_ID=$(jq -r '.aws_access_key_id' key.json)
+export AWS_SECRET_ACCESS_KEY=$(jq -r '.aws_secret_access_key' key.json)
 ```

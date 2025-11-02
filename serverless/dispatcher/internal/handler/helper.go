@@ -3,10 +3,11 @@ package handler
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/escalopa/prayer-bot/domain"
-	"github.com/go-telegram/bot/models"
 )
 
 type (
@@ -49,15 +50,12 @@ func (h *Handler) formatPrayerDay(botID int64, date *domain.PrayerDay, languageC
 
 // now returns the current time with seconds and nanoseconds set to 0
 func (h *Handler) now(botID int64) time.Time {
-	t := time.Now().In(h.cfg[botID].Location.V())
-	return time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), 0, 0, t.Location())
+	return time.Now().In(h.cfg[botID].Location.V()).Truncate(time.Minute)
 }
 
-// nowUTC returns the current time in UTC with seconds and nanoseconds set to 0
-// Use this function to get prayerDay or current year for a specific botID timezone.
-func (h *Handler) nowUTC(botID int64) time.Time {
-	t := time.Now().In(h.cfg[botID].Location.V())
-	return time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), 0, 0, time.UTC)
+func (h *Handler) nowDateUTC(botID int64) time.Time {
+	now := h.now(botID)
+	return time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
 }
 
 // daysInMonth returns the number of days in a month.
@@ -67,14 +65,29 @@ func daysInMonth(month time.Month, year int) int {
 }
 
 // layoutRowsInfo calculates number of rows needed to display input count and number of empty cells in the last row.
-func layoutRowsInfo(totalItems, itemsPerRow int) (int, int) {
+func layoutRowsInfo(totalItems, itemsPerRow int) (filled int, empty int) {
 	if totalItems%itemsPerRow == 0 {
 		return totalItems / itemsPerRow, 0
 	}
-	empty := itemsPerRow - (totalItems % itemsPerRow)
-	return (totalItems / itemsPerRow) + 1, empty
+	empty = itemsPerRow - (totalItems % itemsPerRow)
+	filled = (totalItems / itemsPerRow) + 1
+	return
 }
 
-func isJamaat(chat models.Chat) bool {
-	return chat.Type == models.ChatTypeGroup || chat.Type == models.ChatTypeSupergroup
+// parseAdjustment parses the adjustment string and returns the time duration.
+func parseAdjustment(adj string) time.Duration {
+	if strings.HasSuffix(adj, "m") {
+		val, _ := strconv.Atoi(strings.TrimSuffix(adj, "m"))
+		return time.Duration(val) * time.Minute
+	}
+	if strings.HasSuffix(adj, "h") {
+		val, _ := strconv.Atoi(strings.TrimSuffix(adj, "h"))
+		return time.Duration(val) * time.Hour
+	}
+	return 0
+}
+
+// isChatGroup checks if the chat is a group or supergroup.
+func isChatGroup(chatID int64) bool {
+	return chatID < 0
 }

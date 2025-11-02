@@ -1,0 +1,118 @@
+# Revive configuration file for Go linting
+# Place this file in the root of your repository
+
+# When set to false, ignores files with "GENERATED" header, similar to golint
+ignoreGeneratedHeader = true
+
+# Sets the default severity to "warning"
+severity = "warning"
+
+# Sets the default confidence to 0.8
+confidence = 0.8
+
+# Sets the error code for failures with severity "error"
+errorCode = 1
+
+# Sets the error code for failures with severity "warning"
+warningCode = 0
+
+# Formatting rules
+[rule.blank-imports]
+[rule.context-as-argument]
+[rule.context-keys-type]
+[rule.dot-imports]
+[rule.error-return]
+[rule.error-strings]
+[rule.error-naming]
+[rule.exported]
+disabled = true
+[rule.if-return]
+[rule.increment-decrement]
+[rule.var-naming]
+[rule.var-declaration]
+[rule.package-comments]
+disabled = true
+[rule.range]
+[rule.receiver-naming]
+[rule.time-naming]
+[rule.unexported-return]
+[rule.indent-error-flow]
+[rule.errorf]
+[rule.empty-block]
+[rule.superfluous-else]
+[rule.unused-parameter]
+[rule.unreachable-code]
+[rule.redefines-builtin-id]
+
+# Code complexity rules
+[rule.function-result-limit]
+arguments = [3]
+
+[rule.argument-limit]
+arguments = [5]
+
+[rule.cyclomatic]
+arguments = [15]
+
+[rule.max-public-structs]
+arguments = [10]
+
+[rule.file-header]
+disabled = true
+
+# Naming conventions
+[rule.confusing-naming]
+severity = "warning"
+
+[rule.confusing-results]
+severity = "warning"
+
+[rule.bool-literal-in-expr]
+[rule.constant-logical-expr]
+
+# Comments and documentation
+[rule.comment-spacings]
+arguments = ["//"]
+
+# Security and best practices
+[rule.defer]
+arguments = [["call-chain", "loop"]]
+
+[rule.string-of-int]
+
+# Code style
+[rule.modifies-parameter]
+[rule.modifies-value-receiver]
+[rule.early-return]
+[rule.unconditional-recursion]
+[rule.identical-branches]
+[rule.struct-tag]
+[rule.range-val-in-closure]
+[rule.range-val-address]
+[rule.waitgroup-by-value]
+[rule.atomic]
+[rule.empty-lines]
+[rule.cognitive-complexity]
+arguments = [20]
+
+# Performance
+[rule.string-format]
+[rule.deep-exit]
+[rule.unnecessary-stmt]
+
+# Optional rules (uncomment to enable)
+# [rule.line-length-limit]
+#   arguments = [120]
+
+# [rule.function-length]
+#   arguments = [50, 0]
+
+# [rule.imports-blacklist]
+#   arguments = ["crypto/md5", "crypto/sha1"]
+
+# [rule.add-constant]
+#   arguments = [{maxLitCount = "3", allowStrs = "\"\"", allowInts = "0,1,2", allowFloats = "0.0,1.0"}]
+
+# Exclude patterns (if needed)
+# [rule.exclude]
+#   arguments = ["^//go:generate"]

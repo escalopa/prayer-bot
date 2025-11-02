@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"os"
+	_ "embed"
 
 	"gopkg.in/yaml.v3"
 )
@@ -21,20 +21,15 @@ type (
 	}
 )
 
-func newLanguageProvider() (*languagesProvider, error) {
-	const filename = "internal/handler/languages/text.yaml" // relative to the `main.go` directory (source root)
+//go:embed languages/text.yaml
+var textData string
 
-	content, err := os.ReadFile(filename)
-	if err != nil {
-		return nil, err
-	}
-
+func newLanguagesProvider() (*languagesProvider, error) {
 	var storage map[string]*Text
-	err = yaml.Unmarshal(content, &storage)
+	err := yaml.Unmarshal([]byte(textData), &storage)
 	if err != nil {
 		return nil, err
 	}
-
 	return &languagesProvider{storage: storage}, nil
 }
 

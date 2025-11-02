@@ -42,29 +42,49 @@ language:
   start: "🌐 O‘zingizga qulay tilni tanlang"
   success: "✅ Til *%s* ga o‘zgartirildi"
 
-subscription_success: "✅ Namoz eslatmalariga obuna bo‘ldingiz"
-unsubscription_success: "✅ Namoz eslatmalaridan obuna bekor qilindi"
+
+remind_menu:
+  title_enabled: "⚙️ Eslatmalar - Yoqilgan ✅"
+  title_disabled: "⚙️ Eslatmalar - O'chirilgan 🔕"
+  enable: "🔔 Yoqish"
+  disable: "🔕 O'chirish"
+  tomorrow: "🌅 Ertangi Ko'rinish"
+  soon: "⏰ Namoz Eslatmasi"
+  jamaat_settings: "🕌 Jamoat Vaqtlari"
+  close: "❌ Yopish"
+
+remind_edit:
+  title_tomorrow: "🌅 Ertangi Ko'rinish\n⏰ Ertangi namoz vaqtlarini yarim tundan oldin yuborish"
+  title_soon: "⏰ Namoz Eslatmasi\n⏱ Har bir namoz vaqtidan oldin eslatma"
+
+jamaat_menu:
+  title_enabled: "🕌 Jamoat Vaqtlari - Yoqilgan ✅\n(Faqat Guruhlar)"
+  title_disabled: "🕌 Jamoat Vaqtlari - O'chirilgan 🔕\n(Faqat Guruhlar)"
+  enable: "🔔 Yoqish"
+  disable: "🔕 O'chirish"
+
+jamaat_edit:
+  title: "🕌 %s Jamoat Vaqti\n⏱ Azon vaqtidan keyingi vaqt"
 
 help: |
   Yordam kerakmi? 😊 Men quyidagilarni bajara olaman: 👇
-  
+
   *Namozlar:*
 
-  ⏰ /today – Bugungi vaqtlar  
-  📅 /date – Tanlangan kun uchun vaqtlar  
-  ⏳ /next – Keyingi namoz qachon?  
-  📨 /remind – Namozdan oldin eslatma o‘rnatish
-  🔔 /subscribe – Har kungi eslatmalarni olish  
-  🔕 /unsubscribe – Eslatmalarni to‘xtatish  
+  ⏰ /today – Bugungi vaqtlar
+  🌅 /tomorrow – Ertangi vaqtlar
+  📅 /date – Tanlangan kun uchun vaqtlar
+  ⏳ /next – Keyingi namoz qachon?
+  📨 /remind – Eslatmalarni sozlash
 
   *Sozlamalar:*
 
-  🌐 /language – Tilni o‘zgartirish  
+  🌐 /language – Tilni o'zgartirish
 
   *Yordam:*
 
-  📖 /help – Ushbu qo‘llanmani ko‘rsatish  
-  🐞 /bug – Xatolik haqida xabar berish  
+  📖 /help – Ushbu qo'llanmani ko'rsatish
+  🐞 /bug – Xatolik haqida xabar berish
   💬 /feedback – Fikr-mulohaza yuborish
 
 feedback:
@@ -76,9 +96,38 @@ bug:
   success: "✅ Rahmat! Xatolik qabul qilindi"
 
 help_admin: |
+  📊 /info – Chat ma'lumotlari va sozlamalarini ko'rish
   📩 /reply – Foydalanuvchilarga javob berish
-  📊 /stats – Bot statistikasi
+  📈 /stats – Bot statistikasi
   📢 /announce – Hamma foydalanuvchilarga xabar yuborish
+
+info:
+  default: |
+    📊 *Chat Ma'lumotlari*
+
+    🆔 *Chat ID:* `%s`
+    💬 *Turi:* %s
+    🌐 *Til:* %s
+    📍 *Holat:* %s
+
+    ⏰ *Eslatma Sozlamalari:*
+    Holat: %s
+    • 🌅 Ertangi Ko'rinish: %s
+    • ⏰ Namoz Eslatmasi: %s%s
+  jamaat: |
+
+    🕌 *Jamoat Sozlamalari:*
+    Holat: %s
+    • Bomdod: %s
+    • Peshin: %s
+    • Asr: %s
+    • Shom: %s
+    • Xufton: %s
+  type:
+    private: "Shaxsiy"
+    group: "Guruh"
+  enabled: "✅ Yoqilgan"
+  disabled: "❌ O'chirilgan"
 
 reply:
   start: "✍️ Javobni quyida yozing (/cancel yozib to‘xtatish mumkin)"
@@ -91,9 +140,9 @@ announce:
 stats: |
   📊 Bot statistikasi:
 
-  • Foydalanuvchilar: %d  
-  • Obuna bo‘lganlar: %d  
-  • Obunani bekor qilganlar: %d  
+  • Foydalanuvchilar: %d
+  • Obuna bo‘lganlar: %d
+  • Obunani bekor qilganlar: %d
 
   🌍 Foydalanilayotgan tillar:
 

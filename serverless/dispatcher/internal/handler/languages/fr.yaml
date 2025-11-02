@@ -42,43 +42,91 @@ language:
   start: "🌐 Choisissez votre langue préférée"
   success: "✅ Langue changée en *%s*"
 
-subscription_success: "✅ Vous êtes maintenant abonné aux rappels de prière"
-unsubscription_success: "✅ Vous vous êtes désabonné des rappels de prière"
+remind_menu:
+  title_enabled: "⚙️ Rappels - Activé ✅"
+  title_disabled: "⚙️ Rappels - Désactivé 🔕"
+  enable: "🔔 Activer"
+  disable: "🔕 Désactiver"
+  tomorrow: "🌅 Aperçu de Demain"
+  soon: "⏰ Alerte de Prière"
+  jamaat_settings: "🕌 Horaires Jamaat"
+  close: "❌ Fermer"
+
+remind_edit:
+  title_tomorrow: "🌅 Aperçu de Demain\n⏰ Envoyer les horaires de demain avant minuit"
+  title_soon: "⏰ Alerte de Prière\n⏱ Rappel avant chaque prière"
+
+jamaat_menu:
+  title_enabled: "🕌 Horaires Jamaat - Activé ✅\n(Groupes Seulement)"
+  title_disabled: "🕌 Horaires Jamaat - Désactivé 🔕\n(Groupes Seulement)"
+  enable: "🔔 Activer"
+  disable: "🔕 Désactiver"
+
+jamaat_edit:
+  title: "🕌 Horaire Jamaat %s\n⏱ Temps après l'Adhan"
 
 help: |
-  Besoin d'aide ? 😊 Voici ce que je peux faire : 👇
-  
+  Besoin d'aide ? 😊 Voici ce que je peux faire : 👇
+
   *Prières:*
 
-  ⏰ /today – Horaires d'aujourd'hui  
-  📅 /date – Horaires pour une date choisie  
-  ⏳ /next – Quand est la prochaine prière ?  
-  📨 /remind – Définir un rappel avant la prière
-  🔔 /subscribe – Recevoir des rappels quotidiens  
-  🔕 /unsubscribe – Arrêter les rappels quotidiens  
+  ⏰ /today – Horaires d'aujourd'hui
+  🌅 /tomorrow – Horaires de demain
+  📅 /date – Horaires pour une date choisie
+  ⏳ /next – Quand est la prochaine prière ?
+  📨 /remind – Configurer les rappels
 
   *Paramètres:*
 
-  🌐 /language – Changer de langue  
+  🌐 /language – Changer de langue
 
   *Support:*
 
-  📖 /help – Afficher ce guide  
-  🐞 /bug – Signaler un problème  
+  📖 /help – Afficher ce guide
+  🐞 /bug – Signaler un problème
   💬 /feedback – Envoyer un retour
 
 feedback:
-  start: "💬 Partagez vos commentaires ! (ou tapez /cancel pour arrêter)"
-  success: "✅ Merci ! Votre commentaire a été envoyé"
+  start: "💬 Partagez vos commentaires ! (ou tapez /cancel pour arrêter)"
+  success: "✅ Merci ! Votre commentaire a été envoyé"
 
 bug:
   start: "🐞 Décrivez le bug rencontré (ou tapez /cancel pour arrêter)"
-  success: "✅ Merci ! Votre rapport a été reçu"
+  success: "✅ Merci ! Votre rapport a été reçu"
 
 help_admin: |
+  📊 /info – Voir les infos et paramètres du chat
   📩 /reply – Répondre aux utilisateurs
-  📊 /stats – Statistiques du bot
+  📈 /stats – Statistiques du bot
   📢 /announce – Envoyer un message à tout le monde
+
+info:
+  default: |
+    📊 *Informations du Chat*
+
+    🆔 *ID du Chat:* `%s`
+    💬 *Type:* %s
+    🌐 *Langue:* %s
+    📍 *État:* %s
+
+    ⏰ *Paramètres de Rappel:*
+    Statut: %s
+    • 🌅 Aperçu de Demain: %s
+    • ⏰ Alerte de Prière: %s%s
+  jamaat: |
+
+    🕌 *Paramètres Jamaat:*
+    Statut: %s
+    • Fajr: %s
+    • Dhuhr: %s
+    • Asr: %s
+    • Maghrib: %s
+    • Icha: %s
+  type:
+    private: "Privé"
+    group: "Groupe"
+  enabled: "✅ Activé"
+  disabled: "❌ Désactivé"
 
 reply:
   start: "✍️ Tapez votre réponse ci-dessous (/cancel pour annuler)"
@@ -91,9 +139,9 @@ announce:
 stats: |
   📊 Statistiques du bot:
 
-  • Utilisateurs: %d  
-  • Abonnés: %d  
-  • Désabonnés: %d  
+  • Utilisateurs: %d
+  • Abonnés: %d
+  • Désabonnés: %d
 
   🌍 Langues utilisées:
 

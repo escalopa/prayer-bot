@@ -17,7 +17,7 @@ import (
 
 type (
 	DB interface {
-		CreateChat(ctx context.Context, botID int64, chatID int64, languageCode string, reminderOffset int32, state string, jamaat bool) error
+		CreateChat(ctx context.Context, botID int64, chatID int64, languageCode string, state string, reminder *domain.Reminder) error
 		GetChat(ctx context.Context, botID int64, chatID int64) (chat *domain.Chat, _ error)
 		GetChats(ctx context.Context, botID int64) (chats []*domain.Chat, _ error)
 		SetState(ctx context.Context, botID int64, chatID int64, state string) error
@@ -27,7 +27,9 @@ type (
 
 		SetSubscribed(ctx context.Context, botID int64, chatID int64, subscribed bool) error
 		SetLanguageCode(ctx context.Context, botID int64, chatID int64, languageCode string) error
-		SetReminderOffset(ctx context.Context, botID int64, chatID int64, reminderOffset int32) error
+		SetReminderOffset(ctx context.Context, botID int64, chatID int64, reminderType domain.ReminderType, offset time.Duration) error
+		SetJamaatEnabled(ctx context.Context, botID int64, chatID int64, enabled bool) error
+		SetJamaatDelay(ctx context.Context, botID int64, chatID int64, prayerID domain.PrayerID, delay time.Duration) error
 	}
 
 	Handler struct {
@@ -61,26 +63,35 @@ func (h *Handler) opts() []bot.Option {
 		bot.WithMessageTextHandler(startCommand.String(), bot.MatchTypeCommandStartOnly, h.errorH(h.chatH(h.start))),
 		bot.WithMessageTextHandler(helpCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.help))),
 		bot.WithMessageTextHandler(todayCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.today))),
+		bot.WithMessageTextHandler(tomorrowCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.tomorrow))),
 		bot.WithMessageTextHandler(dateCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.date))),
 		bot.WithMessageTextHandler(nextCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.next))),
 		bot.WithMessageTextHandler(remindCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.remind))),
 		bot.WithMessageTextHandler(bugCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.bug))),
 		bot.WithMessageTextHandler(feedbackCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.feedback))),
 		bot.WithMessageTextHandler(languageCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.language))),
-		bot.WithMessageTextHandler(subscribeCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.subscribe))),
-		bot.WithMessageTextHandler(unsubscribeCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.unsubscribe))),
 		bot.WithMessageTextHandler(cancelCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.cancel))),
 
 		bot.WithMessageTextHandler(adminCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.authorizeH(h.admin)))),
+		bot.WithMessageTextHandler(infoCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.authorizeH(h.info)))),
 		bot.WithMessageTextHandler(replyCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.authorizeH(h.reply)))),
 		bot.WithMessageTextHandler(statsCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.authorizeH(h.stats)))),
 		bot.WithMessageTextHandler(announceCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.authorizeH(h.announce)))),
 
 		bot.WithCallbackQueryDataHandler(monthQuery.String(), bot.MatchTypePrefix, h.errorH(h.chatH(h.monthQuery))),
 		bot.WithCallbackQueryDataHandler(dayQuery.String(), bot.MatchTypePrefix, h.errorH(h.chatH(h.dayQuery))),
-		bot.WithCallbackQueryDataHandler(remindQuery.String(), bot.MatchTypePrefix, h.errorH(h.chatH(h.remindQuery))),
 		bot.WithCallbackQueryDataHandler(languageQuery.String(), bot.MatchTypePrefix, h.errorH(h.chatH(h.languageQuery))),
 		bot.WithCallbackQueryDataHandler(emptyQuery.String(), bot.MatchTypePrefix, h.errorH(h.chatH(h.emptyQuery))),
+		bot.WithCallbackQueryDataHandler(remindMenuQuery.String(), bot.MatchTypePrefix, h.errorH(h.chatH(h.remindMenuQuery))),
+		bot.WithCallbackQueryDataHandler(remindToggleQuery.String(), bot.MatchTypePrefix, h.errorH(h.chatH(h.remindToggleQuery))),
+		bot.WithCallbackQueryDataHandler(remindEditQuery.String(), bot.MatchTypePrefix, h.errorH(h.chatH(h.remindEditQuery))),
+		bot.WithCallbackQueryDataHandler(remindAdjustQuery.String(), bot.MatchTypePrefix, h.errorH(h.chatH(h.remindAdjustQuery))),
+		bot.WithCallbackQueryDataHandler(remindJamaatMenuQuery.String(), bot.MatchTypePrefix, h.errorH(h.chatH(h.remindJamaatMenuQuery))),
+		bot.WithCallbackQueryDataHandler(remindJamaatToggleQuery.String(), bot.MatchTypePrefix, h.errorH(h.chatH(h.remindJamaatToggleQuery))),
+		bot.WithCallbackQueryDataHandler(remindJamaatEditQuery.String(), bot.MatchTypePrefix, h.errorH(h.chatH(h.remindJamaatEditQuery))),
+		bot.WithCallbackQueryDataHandler(remindJamaatAdjustQuery.String(), bot.MatchTypePrefix, h.errorH(h.chatH(h.remindJamaatAdjustQuery))),
+		bot.WithCallbackQueryDataHandler(remindBackQuery.String(), bot.MatchTypePrefix, h.errorH(h.chatH(h.remindBackQuery))),
+		bot.WithCallbackQueryDataHandler(remindCloseQuery.String(), bot.MatchTypePrefix, h.errorH(h.chatH(h.remindCloseQuery))),
 	}
 }
 
@@ -123,12 +134,8 @@ func (h *Handler) authorizeH(fn func(ctx context.Context, b *bot.Bot, update *mo
 	return func(ctx context.Context, b *bot.Bot, update *models.Update) error {
 		chat := getContextChat(ctx)
 
-		var (
-			isAdminUser = h.cfg[chat.BotID].OwnerID == update.Message.From.ID
-			isAdminChat = h.cfg[chat.BotID].OwnerID == update.Message.Chat.ID
-		)
-
-		if isAdminUser && isAdminChat {
+		isAdminUser := h.cfg[chat.BotID].OwnerID == update.Message.From.ID
+		if isAdminUser {
 			return fn(ctx, b, update)
 		}
 
@@ -200,15 +207,12 @@ func (h *Handler) getBot(botID int64) (*bot.Bot, error) {
 func (h *Handler) getChat(ctx context.Context, update *models.Update) (*domain.Chat, error) {
 	botID := getContextBotID(ctx)
 	chatID := int64(0)
-	jamaat := false
 
 	switch {
 	case update.Message != nil:
 		chatID = update.Message.Chat.ID
-		jamaat = isJamaat(update.Message.Chat)
 	case update.CallbackQuery != nil && update.CallbackQuery.Message.Message != nil:
 		chatID = update.CallbackQuery.Message.Message.Chat.ID
-		jamaat = isJamaat(update.CallbackQuery.Message.Message.Chat)
 	default:
 		bytes, _ := json.Marshal(update)
 		log.Info("ignore message", log.BotID(botID), log.String("update", string(bytes)))
@@ -232,20 +236,40 @@ func (h *Handler) getChat(ctx context.Context, update *models.Update) (*domain.C
 		languageCode = update.Message.From.LanguageCode
 	}
 
-	err = h.db.CreateChat(ctx, botID, chatID, languageCode, int32(0), string(defaultState), jamaat)
+	now := h.now(botID)
+	reminder := &domain.Reminder{
+		Tomorrow: &domain.ReminderConfig{
+			LastAt: now,
+			Offset: domain.Duration(3 * time.Hour),
+		},
+		Soon: &domain.ReminderConfig{
+			LastAt: now,
+			Offset: domain.Duration(20 * time.Minute),
+		},
+		Arrive: &domain.ReminderConfig{LastAt: now},
+		Jamaat: &domain.JamaatConfig{
+			Delay: &domain.JamaatDelayConfig{
+				Fajr:    domain.Duration(10 * time.Minute),
+				Dhuhr:   domain.Duration(10 * time.Minute),
+				Asr:     domain.Duration(10 * time.Minute),
+				Maghrib: domain.Duration(10 * time.Minute),
+				Isha:    domain.Duration(20 * time.Minute),
+			},
+		},
+	}
+
+	err = h.db.CreateChat(ctx, botID, chatID, languageCode, string(defaultState), reminder)
 	if err != nil {
 		log.Error("create chat", log.Err(err), log.BotID(botID), log.ChatID(chatID), "update", update)
 		return nil, domain.ErrInternal
 	}
 
 	chat = &domain.Chat{
-		BotID:             botID,
-		ChatID:            chatID,
-		State:             string(defaultState),
-		LanguageCode:      languageCode,
-		ReminderMessageID: 0,
-		Jamaat:            jamaat,
-		JamaatMessageID:   0,
+		BotID:        botID,
+		ChatID:       chatID,
+		State:        string(defaultState),
+		LanguageCode: languageCode,
+		Reminder:     reminder,
 	}
 
 	return chat, nil

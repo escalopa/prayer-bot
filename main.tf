@@ -4,12 +4,31 @@ terraform {
       source = "yandex-cloud/yandex"
     }
   }
+
+  backend "s3" {
+    endpoints = {
+      s3 = "https://storage.yandexcloud.net"
+    }
+    region = "ru-central1"
+
+    bucket = "escalopa-tfstate"
+    key    = "prayer-bot/terraform.tfstate"
+
+    workspace_key_prefix = ""
+
+    skip_region_validation      = true
+    skip_credentials_validation = true
+    skip_requesting_account_id  = true
+    skip_metadata_api_check     = true
+    skip_s3_checksum            = true
+  }
+
   required_version = ">= 0.13"
 }
 
-variable "access_token" {
-  type      = string
-  sensitive = true
+locals {
+  env               = terraform.workspace
+  app_config_base64 = sensitive(base64encode(file("${path.module}/config.json")))
 }
 
 variable "cloud_id" {
@@ -25,15 +44,11 @@ variable "region" {
   default = "ru-central1-d"
 }
 
-output "region" {
-  value = var.region
-}
-
 provider "yandex" {
-  token     = var.access_token
-  cloud_id  = var.cloud_id
-  folder_id = var.folder_id
-  zone      = var.region
+  service_account_key_file = "iam.json"
+  cloud_id                 = var.cloud_id
+  folder_id                = var.folder_id
+  zone                     = var.region
 }
 
 ###########################
@@ -41,7 +56,7 @@ provider "yandex" {
 ###########################
 
 resource "yandex_storage_bucket" "bucket" {
-  bucket    = "prayer-bot-bucket-${terraform.workspace}"
+  bucket    = "prayer-bot-bucket-${local.env}"
   folder_id = var.folder_id
   max_size  = 1073741824 # 1 GB in bytes
 }
@@ -51,7 +66,7 @@ resource "yandex_storage_bucket" "bucket" {
 ###########################
 
 resource "yandex_ydb_database_serverless" "ydb" {
-  name                = "prayer-bot-ydb-${terraform.workspace}"
+  name                = "prayer-bot-ydb-${local.env}"
   location_id         = "ru-central1"
   folder_id           = var.folder_id
   deletion_protection = true
@@ -59,110 +74,6 @@ resource "yandex_ydb_database_serverless" "ydb" {
   serverless_database {
     enable_throttling_rcu_limit = false
     storage_size_limit          = 5
-  }
-}
-
-resource "yandex_ydb_table" "ydb_table_chats" {
-  connection_string = yandex_ydb_database_serverless.ydb.ydb_full_endpoint
-  path              = "chats"
-
-  primary_key = ["bot_id", "chat_id"]
-
-  column {
-    name = "chat_id"
-    type = "Int64"
-  }
-
-  column {
-    name = "bot_id"
-    type = "Int64"
-  }
-
-  column {
-    name = "language_code"
-    type = "Utf8"
-  }
-
-  column {
-    name = "state"
-    type = "Utf8"
-  }
-
-  column {
-    name = "reminder_offset"
-    type = "Int32"
-  }
-
-  column {
-    name = "reminder_message_id"
-    type = "Int32"
-  }
-
-  column {
-    name = "jamaat"
-    type = "Bool"
-  }
-  
-  column {
-    name = "jamaat_message_id"
-    type = "Int32"
-  }
-
-  column {
-    name = "subscribed"
-    type = "Bool"
-  }
-
-  column {
-    name = "subscribed_at"
-    type = "Datetime"
-  }
-
-  column {
-    name = "created_at"
-    type = "Datetime"
-  } 
-}
-
-resource "yandex_ydb_table" "ydb_table_prayers" {
-  connection_string = yandex_ydb_database_serverless.ydb.ydb_full_endpoint
-  path              = "prayers"
-
-  primary_key = ["bot_id", "prayer_date"]
-
-  column {
-    name = "bot_id"
-    type = "Int64"
-  }
-
-  column {
-    name = "prayer_date"
-    type = "Date"
-  }
-
-  column {
-    name = "fajr"
-    type = "Datetime"
-  }
-  column {
-    name = "shuruq"
-    type = "Datetime"
-  }
-  column {
-    name = "dhuhr"
-    type = "Datetime"
-  }
-  column {
-    name = "asr"
-    type = "Datetime"
-  }
-  column {
-    name = "maghrib"
-    type = "Datetime"
-  }
-  column {
-    name = "isha"
-    type = "Datetime"
   }
 }
 
@@ -222,10 +133,10 @@ resource "yandex_function" "loader_fn" {
   execution_timeout  = 5
   service_account_id = yandex_iam_service_account.loader_sa.id
   folder_id          = var.folder_id
-  user_hash          = "v1"
+  user_hash          = filemd5(data.archive_file.loader_zip.output_path)
 
   environment = {
-    APP_CONFIG = file("${path.module}/_config/${terraform.workspace}/config.json")
+    APP_CONFIG = local.app_config_base64
 
     S3_ENDPOINT  = "https://storage.yandexcloud.net"
     YDB_ENDPOINT = yandex_ydb_database_serverless.ydb.ydb_full_endpoint
@@ -299,10 +210,10 @@ resource "yandex_function" "dispatcher_fn" {
   execution_timeout  = 5
   service_account_id = yandex_iam_service_account.dispatcher_sa.id
   folder_id          = var.folder_id
-  user_hash          = "v3"
+  user_hash          = filemd5(data.archive_file.dispatcher_zip.output_path)
 
   environment = {
-    APP_CONFIG = file("${path.module}/_config/${terraform.workspace}/config.json")
+    APP_CONFIG = local.app_config_base64
 
     YDB_ENDPOINT = yandex_ydb_database_serverless.ydb.ydb_full_endpoint
 
@@ -316,7 +227,7 @@ resource "yandex_function" "dispatcher_fn" {
   }
 }
 
-output "dispatcher_fn_id" {
+output "dispatcher_function_id" {
   value = yandex_function.dispatcher_fn.id // used to set Webhook URL on Telegram
 }
 
@@ -356,10 +267,10 @@ resource "yandex_function" "reminder_fn" {
   execution_timeout  = 5
   service_account_id = yandex_iam_service_account.reminder_sa.id
   folder_id          = var.folder_id
-  user_hash          = "v1"
+  user_hash          = filemd5(data.archive_file.reminder_zip.output_path)
 
   environment = {
-    APP_CONFIG = file("${path.module}/_config/${terraform.workspace}/config.json")
+    APP_CONFIG = local.app_config_base64
 
     YDB_ENDPOINT = yandex_ydb_database_serverless.ydb.ydb_full_endpoint
 

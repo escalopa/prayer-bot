@@ -1,0 +1,123 @@
+name: 'Setup Terraform Environment'
+description: 'Initialize Terraform with workspace, config, and SA key'
+author: 'Your Name'
+
+inputs:
+  terraform_version:
+    description: 'Terraform version to install'
+    required: false
+    default: '1.6.3'
+  terraform_wrapper:
+    description: 'Enable Terraform wrapper'
+    required: false
+    default: 'false'
+  service_account_key:
+    description: 'Yandex Cloud Service Account Key (JSON)'
+    required: true
+  service_account_key_path:
+    description: 'Path where iam.json will be created'
+    required: false
+    default: 'iam.json'
+  app_config:
+    description: 'Application config.json content'
+    required: true
+  app_config_path:
+    description: 'Path where config.json will be created'
+    required: false
+    default: 'config.json'
+  workspace:
+    description: 'Terraform workspace name'
+    required: true
+  aws_access_key_id:
+    description: 'AWS access key for S3 backend'
+    required: true
+  aws_secret_access_key:
+    description: 'AWS secret key for S3 backend'
+    required: true
+  cache_key:
+    description: 'Cache key for Terraform providers'
+    required: true
+
+outputs:
+  cache-hit:
+    description: 'Whether the cache was hit'
+    value: ${{ steps.cache.outputs.cache-hit }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ inputs.terraform_version }}
+        terraform_wrapper: ${{ inputs.terraform_wrapper }}
+
+    - name: Write service account key
+      shell: bash
+      run: |
+        if [ -z "${{ inputs.service_account_key }}" ]; then
+          echo "::error::SERVICE_ACCOUNT_KEY is empty"
+          exit 1
+        fi
+
+        # Write the key and validate it's valid JSON
+        echo '${{ inputs.service_account_key }}' > "${{ inputs.service_account_key_path }}"
+
+        # Validate JSON format
+        if ! jq empty "${{ inputs.service_account_key_path }}" 2>/dev/null; then
+          echo "::error::SERVICE_ACCOUNT_KEY is not valid JSON"
+          exit 1
+        fi
+
+        echo "::notice::Service account key file created and validated"
+
+    - name: Write config.json
+      shell: bash
+      run: |
+        if [ -z "${{ inputs.app_config }}" ]; then
+          echo "::error::APP_CONFIG is empty"
+          exit 1
+        fi
+
+        # Mask the config value to prevent it from appearing in logs
+        echo "::add-mask::${{ inputs.app_config }}"
+
+        # Write the config and validate it's valid JSON
+        echo '${{ inputs.app_config }}' > "${{ inputs.app_config_path }}"
+
+        # Validate JSON format
+        if ! jq empty "${{ inputs.app_config_path }}" 2>/dev/null; then
+          echo "::error::APP_CONFIG is not valid JSON"
+          exit 1
+        fi
+
+        echo "::notice::Application config written to: ${{ inputs.app_config_path }}"
+
+    - name: Cache Terraform plugins
+      id: cache
+      uses: actions/cache@v3
+      with:
+        path: |
+          .terraform
+          .terraform.lock.hcl
+        key: ${{ inputs.cache_key }}
+        restore-keys: |
+          ${{ inputs.cache_key }}
+
+    - name: Terraform Init
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        AWS_ACCESS_KEY_ID: ${{ inputs.aws_access_key_id }}
+        AWS_SECRET_ACCESS_KEY: ${{ inputs.aws_secret_access_key }}
+      run: |
+        terraform init \
+          -backend-config="access_key=$AWS_ACCESS_KEY_ID" \
+          -backend-config="secret_key=$AWS_SECRET_ACCESS_KEY"
+        echo "::notice::Terraform initialized"
+
+    - name: Select or Create Terraform Workspace
+      shell: bash
+      run: |
+        terraform workspace select ${{ inputs.workspace }} || terraform workspace new ${{ inputs.workspace }}
+        echo "::notice::Terraform workspace: ${{ inputs.workspace }}"

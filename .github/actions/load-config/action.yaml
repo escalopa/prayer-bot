@@ -17,11 +17,6 @@ runs:
     - name: Write config.json
       shell: bash
       run: |
-        if [ -z "${{ inputs.app_config }}" ]; then
-          echo "::error::APP_CONFIG is empty"
-          exit 1
-        fi
-
         # Mask the config value to prevent it from appearing in logs
         echo "::add-mask::${{ inputs.app_config }}"
 

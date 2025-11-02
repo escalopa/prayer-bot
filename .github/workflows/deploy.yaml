@@ -287,46 +287,46 @@ jobs:
           echo "dispatcher_function_id=$DISPATCHER_FUNCTION_ID" >> $GITHUB_OUTPUT
           echo "::notice::Dispatcher Function ID: $DISPATCHER_FUNCTION_ID"
 
-  hook:
-    name: Setup Telegram Webhooks
-    runs-on: ubuntu-latest
-    needs: [apply]
-    if: needs.apply.result == 'success'
-    environment: ${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  # hook:
+  #   name: Setup Telegram Webhooks
+  #   runs-on: ubuntu-latest
+  #   needs: [apply]
+  #   if: needs.apply.result == 'success'
+  #   environment: ${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
 
-      - name: Set workspace
-        run: |
-          WORKSPACE=${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
-          echo "WORKSPACE=$WORKSPACE" >> $GITHUB_ENV
-          echo "::notice::Workspace: $WORKSPACE"
+  #     - name: Set workspace
+  #       run: |
+  #         WORKSPACE=${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
+  #         echo "WORKSPACE=$WORKSPACE" >> $GITHUB_ENV
+  #         echo "::notice::Workspace: $WORKSPACE"
 
-      - name: Load application config
-        uses: ./.github/actions/load-config
-        with:
-          app_config: ${{ secrets.APP_CONFIG }}
-          app_config_path: ${{ env.APP_CONFIG_PATH }}
+  #     - name: Load application config
+  #       uses: ./.github/actions/load-config
+  #       with:
+  #         app_config: ${{ secrets.APP_CONFIG }}
+  #         app_config_path: ${{ env.APP_CONFIG_PATH }}
 
-      - name: Get Dispatcher Function ID
-        run: |
-          DISPATCHER_FUNCTION_ID="${{ needs.apply.outputs.dispatcher_function_id }}"
-          echo "DISPATCHER_FUNCTION_ID=$DISPATCHER_FUNCTION_ID" >> $GITHUB_ENV
-          echo "::notice::Dispatcher Function ID: $DISPATCHER_FUNCTION_ID"
+  #     - name: Get Dispatcher Function ID
+  #       run: |
+  #         DISPATCHER_FUNCTION_ID="${{ needs.apply.outputs.dispatcher_function_id }}"
+  #         echo "DISPATCHER_FUNCTION_ID=$DISPATCHER_FUNCTION_ID" >> $GITHUB_ENV
+  #         echo "::notice::Dispatcher Function ID: $DISPATCHER_FUNCTION_ID"
 
-      - name: Execute webhook setup script
-        run: |
-          echo "::notice::Config file: ${{ env.APP_CONFIG_PATH }}"
-          echo "::notice::Dispatcher function ID: $DISPATCHER_FUNCTION_ID"
+  #     - name: Execute webhook setup script
+  #       run: |
+  #         echo "::notice::Config file: ${{ env.APP_CONFIG_PATH }}"
+  #         echo "::notice::Dispatcher function ID: $DISPATCHER_FUNCTION_ID"
 
-          chmod +x _scripts/hook.sh
-          bash _scripts/hook.sh
-        continue-on-error: false
+  #         chmod +x _scripts/hook.sh
+  #         bash _scripts/hook.sh
+  #       continue-on-error: false
 
-      - name: Verify webhook setup
-        run: |
-          echo "::notice::Webhook setup completed successfully for $WORKSPACE environment"
+  #     - name: Verify webhook setup
+  #       run: |
+  #         echo "::notice::Webhook setup completed successfully for $WORKSPACE environment"
 
   summary:
     name: Deployment Summary

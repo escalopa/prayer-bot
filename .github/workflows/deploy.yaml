@@ -211,20 +211,8 @@ jobs:
           TF_VAR_cloud_id: ${{ secrets.CLOUD_ID }}
           TF_VAR_folder_id: ${{ secrets.FOLDER_ID }}
         run: |
-          terraform plan -out=tfplan -detailed-exitcode || EXIT_CODE=$?
-          echo "exitcode=$EXIT_CODE" >> $GITHUB_OUTPUT
-
-          # Print the plan output
+          terraform plan -out=tfplan
           terraform show tfplan
-
-          if [ $EXIT_CODE -eq 2 ]; then
-            echo "::notice::Changes detected in Terraform plan"
-          elif [ $EXIT_CODE -eq 0 ]; then
-            echo "::notice::No changes detected in Terraform plan"
-          else
-            echo "::error::Terraform plan failed"
-            exit 1
-          fi
 
   apply:
     name: Terraform Apply

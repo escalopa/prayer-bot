@@ -276,8 +276,10 @@ func (db *DB) SetReminderOffset(ctx context.Context, botID int64, chatID int64, 
 		switch reminderType {
 		case domain.ReminderTypeTomorrow:
 			reminder.Tomorrow.Offset = offset
+			reminder.Tomorrow.LastAt = time.Now()
 		case domain.ReminderTypeSoon:
 			reminder.Soon.Offset = offset
+			reminder.Soon.LastAt = time.Now()
 		}
 	})
 }

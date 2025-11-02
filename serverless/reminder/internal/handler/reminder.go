@@ -26,8 +26,7 @@ type TomorrowReminder struct {
 func (r *TomorrowReminder) ShouldTrigger(ctx context.Context, chat *domain.Chat, _ *domain.PrayerDay, now time.Time) (bool, domain.PrayerID) {
 	config := chat.Reminder.Tomorrow
 
-	// Trigger logic: last_at + 24h - offset < now
-	triggerTime := config.LastAt.Truncate(24 * time.Hour).Add(24 * time.Hour).Add(-config.Offset)
+	triggerTime := time.Date(now.Year(), now.Month(), now.Day()+1, int(-config.Offset.Hours()), 0, 0, 0, now.Location())
 	shouldSend := config.LastAt.Before(triggerTime) && (triggerTime.Before(now) || triggerTime.Equal(now))
 	return shouldSend, domain.PrayerIDUnknown
 }
@@ -79,7 +78,7 @@ func (r *SoonReminder) ShouldTrigger(ctx context.Context, chat *domain.Chat, pra
 	return false, 0
 }
 
-func (r *SoonReminder) Send(ctx context.Context, b *bot.Bot, chat *domain.Chat, prayerID domain.PrayerID, prayerDay *domain.PrayerDay) (int, error) {
+func (r *SoonReminder) Send(ctx context.Context, b *bot.Bot, chat *domain.Chat, prayerID domain.PrayerID, _ *domain.PrayerDay) (int, error) {
 	text := r.lp.GetText(chat.LanguageCode)
 	prayer := text.Prayer[int(prayerID)]
 
@@ -109,8 +108,7 @@ func (r *SoonReminder) Send(ctx context.Context, b *bot.Bot, chat *domain.Chat, 
 		return res.ID, nil
 	}
 
-	duration := chat.Reminder.Soon.Offset
-	message := fmt.Sprintf(text.PrayerSoon, prayer, domain.FormatDuration(duration))
+	message := fmt.Sprintf(text.PrayerSoon, prayer, domain.FormatDuration(chat.Reminder.Soon.Offset))
 
 	res, err := b.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID:    chat.ChatID,
@@ -154,7 +152,7 @@ func (r *ArriveReminder) ShouldTrigger(ctx context.Context, chat *domain.Chat, p
 	return false, 0
 }
 
-func (r *ArriveReminder) Send(ctx context.Context, b *bot.Bot, chat *domain.Chat, prayerID domain.PrayerID, prayerDay *domain.PrayerDay) (int, error) {
+func (r *ArriveReminder) Send(ctx context.Context, b *bot.Bot, chat *domain.Chat, prayerID domain.PrayerID, _ *domain.PrayerDay) (int, error) {
 	deleteMessages(ctx, b, chat, chat.Reminder.Arrive.MessageID)
 
 	text := r.lp.GetText(chat.LanguageCode)

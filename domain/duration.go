@@ -8,6 +8,14 @@ import (
 
 type Duration time.Duration
 
+func (d Duration) String() string {
+	return d.Duration().String()
+}
+
+func (d Duration) Duration() time.Duration {
+	return time.Duration(d)
+}
+
 func (d Duration) MarshalJSON() ([]byte, error) {
 	return json.Marshal(time.Duration(d).String())
 }

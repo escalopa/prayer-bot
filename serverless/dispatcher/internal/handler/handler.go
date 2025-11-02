@@ -240,20 +240,20 @@ func (h *Handler) getChat(ctx context.Context, update *models.Update) (*domain.C
 	reminder := &domain.Reminder{
 		Tomorrow: &domain.ReminderConfig{
 			LastAt: now,
-			Offset: 3 * time.Hour,
+			Offset: domain.Duration(3 * time.Hour),
 		},
 		Soon: &domain.ReminderConfig{
 			LastAt: now,
-			Offset: 20 * time.Minute,
+			Offset: domain.Duration(20 * time.Minute),
 		},
 		Arrive: &domain.ReminderConfig{LastAt: now},
 		Jamaat: &domain.JamaatConfig{
 			Delay: &domain.JamaatDelayConfig{
-				Fajr:    10 * time.Minute,
-				Dhuhr:   10 * time.Minute,
-				Asr:     10 * time.Minute,
-				Maghrib: 10 * time.Minute,
-				Isha:    20 * time.Minute,
+				Fajr:    domain.Duration(10 * time.Minute),
+				Dhuhr:   domain.Duration(10 * time.Minute),
+				Asr:     domain.Duration(10 * time.Minute),
+				Maghrib: domain.Duration(10 * time.Minute),
+				Isha:    domain.Duration(20 * time.Minute),
 			},
 		},
 	}

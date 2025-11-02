@@ -335,11 +335,11 @@ func (h *Handler) info(ctx context.Context, b *bot.Bot, _ *models.Update) error 
 		}
 		jamaatInfo = fmt.Sprintf(text.Info.Jamaat,
 			jamaatStatus,
-			domain.FormatDuration(chat.Reminder.Jamaat.Delay.Fajr),
-			domain.FormatDuration(chat.Reminder.Jamaat.Delay.Dhuhr),
-			domain.FormatDuration(chat.Reminder.Jamaat.Delay.Asr),
-			domain.FormatDuration(chat.Reminder.Jamaat.Delay.Maghrib),
-			domain.FormatDuration(chat.Reminder.Jamaat.Delay.Isha),
+			domain.FormatDuration(chat.Reminder.Jamaat.Delay.Fajr.Duration()),
+			domain.FormatDuration(chat.Reminder.Jamaat.Delay.Dhuhr.Duration()),
+			domain.FormatDuration(chat.Reminder.Jamaat.Delay.Asr.Duration()),
+			domain.FormatDuration(chat.Reminder.Jamaat.Delay.Maghrib.Duration()),
+			domain.FormatDuration(chat.Reminder.Jamaat.Delay.Isha.Duration()),
 		)
 	}
 
@@ -349,8 +349,8 @@ func (h *Handler) info(ctx context.Context, b *bot.Bot, _ *models.Update) error 
 		chat.LanguageCode,
 		chat.State,
 		subscriptionStatus,
-		domain.FormatDuration(chat.Reminder.Tomorrow.Offset),
-		domain.FormatDuration(chat.Reminder.Soon.Offset),
+		domain.FormatDuration(chat.Reminder.Tomorrow.Offset.Duration()),
+		domain.FormatDuration(chat.Reminder.Soon.Offset.Duration()),
 		jamaatInfo,
 	)
 

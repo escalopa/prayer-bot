@@ -115,13 +115,13 @@ func (h *Handler) remindMenuKeyboard(chat *domain.Chat) *models.InlineKeyboardMa
 	}
 	rowIndex++
 
-	tomorrowOffset := domain.FormatDuration(chat.Reminder.Tomorrow.Offset)
+	tomorrowOffset := domain.FormatDuration(chat.Reminder.Tomorrow.Offset.Duration())
 	kb.InlineKeyboard[rowIndex] = []models.InlineKeyboardButton{
 		{Text: fmt.Sprintf("%s (%s)", text.RemindMenu.Tomorrow, tomorrowOffset), CallbackData: "remind:edit:tomorrow|"},
 	}
 	rowIndex++
 
-	soonOffset := domain.FormatDuration(chat.Reminder.Soon.Offset)
+	soonOffset := domain.FormatDuration(chat.Reminder.Soon.Offset.Duration())
 	kb.InlineKeyboard[rowIndex] = []models.InlineKeyboardButton{
 		{Text: fmt.Sprintf("%s (%s)", text.RemindMenu.Soon, soonOffset), CallbackData: "remind:edit:soon|"},
 	}

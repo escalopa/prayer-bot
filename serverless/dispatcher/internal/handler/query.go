@@ -230,10 +230,10 @@ func (h *Handler) remindEditQuery(ctx context.Context, b *bot.Bot, update *model
 	var offset time.Duration
 	switch reminderType {
 	case domain.ReminderTypeTomorrow:
-		offset = chat.Reminder.Tomorrow.Offset
+		offset = chat.Reminder.Tomorrow.Offset.Duration()
 		messageText = fmt.Sprintf("%s - %s", text.RemindEdit.TitleTomorrow, domain.FormatDuration(offset))
 	case domain.ReminderTypeSoon:
-		offset = chat.Reminder.Soon.Offset
+		offset = chat.Reminder.Soon.Offset.Duration()
 		messageText = fmt.Sprintf("%s - %s", text.RemindEdit.TitleSoon, domain.FormatDuration(offset))
 	default:
 		log.Error("remindEditQuery: unknown reminder type",
@@ -281,11 +281,11 @@ func (h *Handler) remindAdjustQuery(ctx context.Context, b *bot.Bot, update *mod
 
 	switch reminderType {
 	case domain.ReminderTypeTomorrow:
-		currentOffset = chat.Reminder.Tomorrow.Offset
+		currentOffset = chat.Reminder.Tomorrow.Offset.Duration()
 		minOffset = TomorrowMinOffset
 		maxOffset = TomorrowMaxOffset
 	case domain.ReminderTypeSoon:
-		currentOffset = chat.Reminder.Soon.Offset
+		currentOffset = chat.Reminder.Soon.Offset.Duration()
 		minOffset = SoonMinOffset
 		maxOffset = SoonMaxOffset
 	default:
@@ -309,9 +309,9 @@ func (h *Handler) remindAdjustQuery(ctx context.Context, b *bot.Bot, update *mod
 
 	switch reminderType {
 	case domain.ReminderTypeTomorrow:
-		chat.Reminder.Tomorrow.Offset = newOffset
+		chat.Reminder.Tomorrow.Offset = domain.Duration(newOffset)
 	case domain.ReminderTypeSoon:
-		chat.Reminder.Soon.Offset = newOffset
+		chat.Reminder.Soon.Offset = domain.Duration(newOffset)
 	}
 
 	ctx = setContextChat(ctx, chat)

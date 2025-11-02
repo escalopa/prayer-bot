@@ -26,7 +26,16 @@ type TomorrowReminder struct {
 func (r *TomorrowReminder) ShouldTrigger(ctx context.Context, chat *domain.Chat, _ *domain.PrayerDay, now time.Time) (bool, domain.PrayerID) {
 	config := chat.Reminder.Tomorrow
 
-	triggerTime := time.Date(now.Year(), now.Month(), now.Day()+1, int(-config.Offset.Hours()), 0, 0, 0, now.Location())
+	triggerTime := time.Date(
+		now.Year(),
+		now.Month(),
+		now.Day()+1,                            // move to next day
+		int(-config.Offset.Duration().Hours()), // get triggerTime by moving back in time
+		0,
+		0,
+		0,
+		now.Location(),
+	)
 	shouldSend := config.LastAt.Before(triggerTime) && (triggerTime.Before(now) || triggerTime.Equal(now))
 	return shouldSend, domain.PrayerIDUnknown
 }
@@ -68,7 +77,7 @@ func (r *SoonReminder) ShouldTrigger(ctx context.Context, chat *domain.Chat, pra
 	config := chat.Reminder.Soon
 	for _, p := range prayers {
 		// logic: last_at < (prayer_time - offset) AND (prayer_time - offset) <= now
-		trigger := p.time.Add(-config.Offset)
+		trigger := p.time.Add(-config.Offset.Duration())
 		if config.LastAt.Before(trigger) && (trigger.Before(now) || trigger.Equal(now)) {
 			// // Next LastAt should be incremented by 1 minute to avoid re-triggering
 			// nextLastAt := now.Add(1 * time.Minute)
@@ -87,8 +96,8 @@ func (r *SoonReminder) Send(ctx context.Context, b *bot.Bot, chat *domain.Chat, 
 	if chat.Reminder.Jamaat.Enabled && prayerID != domain.PrayerIDShuruq {
 		delay := chat.Reminder.Jamaat.Delay.GetDelayByPrayerID(prayerID)
 		message := fmt.Sprintf("%s\n%s",
-			fmt.Sprintf(strings.ReplaceAll(text.PrayerSoon, "*", ""), prayer, domain.FormatDuration(chat.Reminder.Soon.Offset)),
-			fmt.Sprintf(strings.ReplaceAll(text.PrayerJamaat, "*", ""), domain.FormatDuration(delay+chat.Reminder.Soon.Offset)),
+			fmt.Sprintf(strings.ReplaceAll(text.PrayerSoon, "*", ""), prayer, domain.FormatDuration(chat.Reminder.Soon.Offset.Duration())),
+			fmt.Sprintf(strings.ReplaceAll(text.PrayerJamaat, "*", ""), domain.FormatDuration(delay+chat.Reminder.Soon.Offset.Duration())),
 		)
 		isAnonymous := false
 
@@ -108,7 +117,7 @@ func (r *SoonReminder) Send(ctx context.Context, b *bot.Bot, chat *domain.Chat, 
 		return res.ID, nil
 	}
 
-	message := fmt.Sprintf(text.PrayerSoon, prayer, domain.FormatDuration(chat.Reminder.Soon.Offset))
+	message := fmt.Sprintf(text.PrayerSoon, prayer, domain.FormatDuration(chat.Reminder.Soon.Offset.Duration()))
 
 	res, err := b.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID:    chat.ChatID,

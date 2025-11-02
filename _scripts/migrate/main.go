@@ -21,13 +21,32 @@ import (
 // cd _scripts/migrate
 // go run main.go
 
+type Duration time.Duration
+
+func (d Duration) MarshalJSON() ([]byte, error) {
+	return json.Marshal(time.Duration(d).String())
+}
+
+func (d *Duration) UnmarshalJSON(b []byte) error {
+	var s string
+	if err := json.Unmarshal(b, &s); err == nil {
+		dur, err := time.ParseDuration(s)
+		if err != nil {
+			return fmt.Errorf("invalid duration string %q: %w", s, err)
+		}
+		*d = Duration(dur)
+		return nil
+	}
+	return fmt.Errorf("unexpected duration format: %s", string(b))
+}
+
 // Domain types matching the new schema
 type JamaatDelayConfig struct {
-	Fajr    int64 `json:"fajr"`    // nanoseconds
-	Dhuhr   int64 `json:"dhuhr"`   // nanoseconds
-	Asr     int64 `json:"asr"`     // nanoseconds
-	Maghrib int64 `json:"maghrib"` // nanoseconds
-	Isha    int64 `json:"isha"`    // nanoseconds
+	Fajr    Duration `json:"fajr"`
+	Dhuhr   Duration `json:"dhuhr"`
+	Asr     Duration `json:"asr"`
+	Maghrib Duration `json:"maghrib"`
+	Isha    Duration `json:"isha"`
 }
 
 type JamaatConfig struct {
@@ -36,9 +55,9 @@ type JamaatConfig struct {
 }
 
 type ReminderConfig struct {
-	Offset    int64  `json:"offset"` // nanoseconds
-	MessageID int    `json:"message_id"`
-	LastAt    string `json:"last_at"` // RFC3339 format
+	Offset    Duration `json:"offset"`
+	MessageID int      `json:"message_id"`
+	LastAt    string   `json:"last_at"` // RFC3339 format
 }
 
 type Reminder struct {
@@ -216,11 +235,11 @@ func transformChat(oldChat OldChat, moscowLocation *time.Location) (NewChat, err
 
 	reminder := Reminder{
 		Tomorrow: &ReminderConfig{
-			Offset: int64(3 * time.Hour),
+			Offset: Duration(3 * time.Hour),
 			LastAt: now.Format(time.RFC3339),
 		},
 		Soon: &ReminderConfig{
-			Offset:    int64(reminderOffset) * int64(time.Minute),
+			Offset:    Duration(reminderOffset) * Duration(time.Minute),
 			MessageID: reminderMessageID,
 			LastAt:    now.Format(time.RFC3339),
 		},
@@ -231,11 +250,11 @@ func transformChat(oldChat OldChat, moscowLocation *time.Location) (NewChat, err
 		Jamaat: &JamaatConfig{
 			Enabled: subscribed && jamaat,
 			Delay: &JamaatDelayConfig{
-				Fajr:    int64(10 * time.Minute),
-				Dhuhr:   int64(10 * time.Minute),
-				Asr:     int64(10 * time.Minute),
-				Maghrib: int64(10 * time.Minute),
-				Isha:    int64(20 * time.Minute),
+				Fajr:    Duration(10 * time.Minute),
+				Dhuhr:   Duration(10 * time.Minute),
+				Asr:     Duration(10 * time.Minute),
+				Maghrib: Duration(10 * time.Minute),
+				Isha:    Duration(20 * time.Minute),
 			},
 		},
 	}

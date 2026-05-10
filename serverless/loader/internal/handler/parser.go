@@ -75,9 +75,6 @@ func parseRecord(record []string, loc *time.Location) (*domain.PrayerDay, error)
 		return nil, err
 	}
 
-	// add 20 min since `shuruq` is 20 min after sunrise
-	prayers[1] = prayers[1].Add(20 * time.Minute)
-
 	prayerDay := domain.NewPrayerDay(
 		date,
 		prayers[0], // fajr

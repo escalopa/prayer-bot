@@ -134,7 +134,7 @@ func (h *Handler) Handel(ctx context.Context, botID int64) error {
 					continue
 				}
 
-				messageID, err := reminder.Send(ctx, b, chat, prayerID, prayerDay)
+				messageID, err := reminder.Send(ctx, b, chat, prayerID, prayerDay, now)
 				if err != nil {
 					if isBlockedErr(err) {
 						h.deleteChat(ctx, chat)

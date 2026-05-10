@@ -56,7 +56,8 @@ func (r *TomorrowReminder) Send(ctx context.Context, b *bot.Bot, chat *domain.Ch
 func (r *TomorrowReminder) Name() domain.ReminderType { return domain.ReminderTypeTomorrow }
 
 type SoonReminder struct {
-	lp *languagesProvider
+	lp        *languagesProvider
+	botConfig map[int64]*domain.BotConfig
 }
 
 func escapeTelegramMarkdownParentheses(s string) string {
@@ -130,14 +131,20 @@ func (r *SoonReminder) ShouldTrigger(ctx context.Context, chat *domain.Chat, pra
 func (r *SoonReminder) Send(ctx context.Context, b *bot.Bot, chat *domain.Chat, prayerID domain.PrayerID, prayerDay *domain.PrayerDay) (int, error) {
 	text := r.lp.GetText(chat.LanguageCode)
 	prayer := text.Prayer[int(prayerID)]
-	now := time.Now()
-	prayerTime := prayerTimeByID(prayerDay, prayerID, now).Format(prayerTimeFormat)
+
+	loc := time.Local
+	if cfg, ok := r.botConfig[chat.BotID]; ok && cfg != nil {
+		loc = cfg.Location.V()
+	}
+
+	now := time.Now().In(loc)
+	prayerTime := prayerTimeByID(prayerDay, prayerID, now).In(loc).Format(prayerTimeFormat)
 
 	deleteMessages(ctx, b, chat, chat.Reminder.Soon.MessageID, chat.Reminder.Arrive.MessageID)
 
 	if chat.Reminder.Jamaat.Enabled && prayerID != domain.PrayerIDShuruq {
 		delay := chat.Reminder.Jamaat.Delay.GetDelayByPrayerID(prayerID)
-		jamaatTime := prayerTimeByID(prayerDay, prayerID, now).Add(delay).Format(prayerTimeFormat)
+		jamaatTime := prayerTimeByID(prayerDay, prayerID, now).Add(delay).In(loc).Format(prayerTimeFormat)
 		message := fmt.Sprintf("%s\n%s",
 			fmt.Sprintf(strings.ReplaceAll(text.PrayerSoon, "*", ""), prayer, domain.FormatDuration(chat.Reminder.Soon.Offset.Duration()), prayerTime),
 			fmt.Sprintf(strings.ReplaceAll(text.PrayerJamaat, "*", ""), domain.FormatDuration(delay+chat.Reminder.Soon.Offset.Duration()), jamaatTime),

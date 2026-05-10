@@ -59,6 +59,13 @@ type SoonReminder struct {
 	lp *languagesProvider
 }
 
+func escapeTelegramMarkdownParentheses(s string) string {
+	s = strings.ReplaceAll(s, "(", "\\(")
+	s = strings.ReplaceAll(s, ")", "\\)")
+
+	return s
+}
+
 func prayerTimeByID(prayerDay *domain.PrayerDay, prayerID domain.PrayerID, now time.Time) time.Time {
 	var current time.Time
 	var next time.Time
@@ -154,6 +161,7 @@ func (r *SoonReminder) Send(ctx context.Context, b *bot.Bot, chat *domain.Chat, 
 	}
 
 	message := fmt.Sprintf(text.PrayerSoon, prayer, domain.FormatDuration(chat.Reminder.Soon.Offset.Duration()), prayerTime)
+	message = escapeTelegramMarkdownParentheses(message)
 
 	res, err := b.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID:    chat.ChatID,

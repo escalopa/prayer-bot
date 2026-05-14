@@ -14,7 +14,13 @@ import (
 )
 
 var (
-	dayFormat   = "2/1/2006"
+	dayFormats = []string{
+		"2/1/2006",
+		"2/01/2006",
+		"02/1/2006",
+		"02/01/2006",
+	}
+
 	clockFormat = "15:04"
 )
 
@@ -90,11 +96,16 @@ func parseRecord(record []string, loc *time.Location) (*domain.PrayerDay, error)
 
 // parseDate get day date from string
 func parseDate(line string) (time.Time, error) {
-	t, err := time.Parse(dayFormat, line)
-	if err != nil {
-		return time.Time{}, fmt.Errorf("parseDate: %v", err)
+	var lastErr error
+	for _, layout := range dayFormats {
+		t, err := time.Parse(layout, line)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		return domain.DateUTC(t.Day(), t.Month(), t.Year()), nil
 	}
-	return domain.DateUTC(t.Day(), t.Month(), t.Year()), nil
+	return time.Time{}, fmt.Errorf("parseDate %q: %v", line, lastErr)
 }
 
 // parsePrayer parses prayerDay's times

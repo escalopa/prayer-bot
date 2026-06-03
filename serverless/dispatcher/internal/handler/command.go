@@ -194,8 +194,12 @@ func (h *Handler) next(ctx context.Context, b *bot.Bot, _ *models.Update) error 
 
 	text := h.lp.GetText(chat.LanguageCode)
 	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID:    chat.ChatID,
-		Text:      fmt.Sprintf(text.PrayerSoon, text.Prayer[int(prayerID)], domain.FormatDuration(duration), prayerTime.In(h.cfg[chat.BotID].Location.V()).Format(prayerTimeFormat)),
+		ChatID: chat.ChatID,
+		Text: fmt.Sprintf(text.PrayerSoon,
+			text.Prayer[int(prayerID)],
+			domain.FormatDuration(duration),
+			prayerTime.In(h.cfg[chat.BotID].Location.V()).Format(prayerTimeFormat),
+		),
 		ParseMode: models.ParseModeMarkdown,
 	})
 	if err != nil {

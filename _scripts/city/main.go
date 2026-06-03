@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	endpointURL = "https://5namaz.com/russia/respublika_tatarstan/%s/%d-%s/"
-	city        = "innopolis"
+	endpointURL = "https://5namaz.com/russia/%s/%d-%s/"
+	city        = "moskva"
 )
 
 const (
@@ -71,13 +71,12 @@ func main() {
 }
 
 func parseHTML(url string) (*html.Node, error) {
-	const XPATH_1 = `/html/body/div[1]/div/div/div/div[2]/div/div/div/div[2]/div/div/table/tbody`
-	const XPATH_2 = `/html/body/div/div/div/div/div[2]/div/div/div/div[4]/div/div/table/tbody`
+	const XPATH = `/html/body/div/div/div/div/div[2]/div/div/div[1]/div[3]/div/div/table/tbody`
 
 	doc, err := htmlquery.LoadURL(url)
 	checkErr(err)
 
-	node, err := htmlquery.Query(doc, XPATH_1)
+	node, err := htmlquery.Query(doc, XPATH)
 	checkErr(err)
 
 	return node, nil

@@ -32,7 +32,7 @@ prayer:
   6: "Isha"
 
 prayer_date: "📅 Choose a date to view prayers"
-prayer_soon: "⏳ *%s* after *%s* \\(*%s*\\)"
+prayer_soon: "⏳ *%s* after *%s* \(*%s*\)"
 
 remind:
   start: "⏰ Pick how early you want to be reminded (in minutes)"

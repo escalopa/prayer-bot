@@ -32,7 +32,7 @@ prayer:
   6: "Xufton"
 
 prayer_date: "📅 Namoz vaqtlarini ko‘rish uchun sana tanlang"
-prayer_soon: "⏳ *%s* keyin *%s* \\(*%s*\\)"
+prayer_soon: "⏳ *%s* keyin *%s* \(*%s*\)"
 
 remind:
   start: "⏰ Necha daqiqa oldin eslatma olishni xohlaysiz?"

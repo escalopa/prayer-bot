@@ -130,7 +130,7 @@ resource "yandex_function" "loader_fn" {
   runtime            = "golang121"
   entrypoint         = "main.Handler"
   memory             = 128
-  execution_timeout  = 5
+  execution_timeout  = 60
   service_account_id = yandex_iam_service_account.loader_sa.id
   folder_id          = var.folder_id
   user_hash          = filemd5(data.archive_file.loader_zip.output_path)
@@ -207,7 +207,7 @@ resource "yandex_function" "dispatcher_fn" {
   runtime            = "golang121"
   entrypoint         = "main.Handler"
   memory             = 128
-  execution_timeout  = 5
+  execution_timeout  = 10
   service_account_id = yandex_iam_service_account.dispatcher_sa.id
   folder_id          = var.folder_id
   user_hash          = filemd5(data.archive_file.dispatcher_zip.output_path)
@@ -264,7 +264,7 @@ resource "yandex_function" "reminder_fn" {
   runtime            = "golang121"
   entrypoint         = "main.Handler"
   memory             = 128
-  execution_timeout  = 5
+  execution_timeout  = 10
   service_account_id = yandex_iam_service_account.reminder_sa.id
   folder_id          = var.folder_id
   user_hash          = filemd5(data.archive_file.reminder_zip.output_path)

@@ -32,7 +32,7 @@ prayer:
   6: "Gije"
 
 prayer_date: "📅 Namaz wagtyny görmek üçin senäni saýlaň"
-prayer_soon: "⏳ *%s* soň *%s*"
+prayer_soon: '⏳ *%s* soň *%s* \(*%s*\)'
 
 remind:
   start: "⏰ Näçe minut öň duýduryş isleýärsiňiz?"

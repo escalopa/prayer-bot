@@ -162,24 +162,25 @@ func (h *Handler) next(ctx context.Context, b *bot.Bot, _ *models.Update) error 
 		return domain.ErrInternal
 	}
 
+	var prayerTime time.Time
 	prayerID, duration := domain.PrayerIDUnknown, time.Duration(0)
 	switch {
 	case prayerDay.Fajr.After(now):
-		prayerID, duration = domain.PrayerIDFajr, prayerDay.Fajr.Sub(now)
+		prayerID, duration, prayerTime = domain.PrayerIDFajr, prayerDay.Fajr.Sub(now), prayerDay.Fajr
 	case prayerDay.Shuruq.After(now):
-		prayerID, duration = domain.PrayerIDShuruq, prayerDay.Shuruq.Sub(now)
+		prayerID, duration, prayerTime = domain.PrayerIDShuruq, prayerDay.Shuruq.Sub(now), prayerDay.Shuruq
 	case prayerDay.Dhuhr.After(now):
-		prayerID, duration = domain.PrayerIDDhuhr, prayerDay.Dhuhr.Sub(now)
+		prayerID, duration, prayerTime = domain.PrayerIDDhuhr, prayerDay.Dhuhr.Sub(now), prayerDay.Dhuhr
 	case prayerDay.Asr.After(now):
-		prayerID, duration = domain.PrayerIDAsr, prayerDay.Asr.Sub(now)
+		prayerID, duration, prayerTime = domain.PrayerIDAsr, prayerDay.Asr.Sub(now), prayerDay.Asr
 	case prayerDay.Maghrib.After(now):
-		prayerID, duration = domain.PrayerIDMaghrib, prayerDay.Maghrib.Sub(now)
+		prayerID, duration, prayerTime = domain.PrayerIDMaghrib, prayerDay.Maghrib.Sub(now), prayerDay.Maghrib
 	case prayerDay.Isha.After(now):
-		prayerID, duration = domain.PrayerIDIsha, prayerDay.Isha.Sub(now)
+		prayerID, duration, prayerTime = domain.PrayerIDIsha, prayerDay.Isha.Sub(now), prayerDay.Isha
 	case prayerDay.NextDay.Fajr.After(now):
-		prayerID, duration = domain.PrayerIDFajr, prayerDay.NextDay.Fajr.Sub(now)
+		prayerID, duration, prayerTime = domain.PrayerIDFajr, prayerDay.NextDay.Fajr.Sub(now), prayerDay.NextDay.Fajr
 	case prayerDay.NextDay.Shuruq.After(now):
-		prayerID, duration = domain.PrayerIDShuruq, prayerDay.NextDay.Shuruq.Sub(now)
+		prayerID, duration, prayerTime = domain.PrayerIDShuruq, prayerDay.NextDay.Shuruq.Sub(now), prayerDay.NextDay.Shuruq
 	default:
 		log.Error("next: no prayer time found",
 			log.BotID(chat.BotID),
@@ -193,8 +194,12 @@ func (h *Handler) next(ctx context.Context, b *bot.Bot, _ *models.Update) error 
 
 	text := h.lp.GetText(chat.LanguageCode)
 	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID:    chat.ChatID,
-		Text:      fmt.Sprintf(text.PrayerSoon, text.Prayer[int(prayerID)], domain.FormatDuration(duration)),
+		ChatID: chat.ChatID,
+		Text: fmt.Sprintf(text.PrayerSoon,
+			text.Prayer[int(prayerID)],
+			domain.FormatDuration(duration),
+			prayerTime.In(h.cfg[chat.BotID].Location.V()).Format(prayerTimeFormat),
+		),
 		ParseMode: models.ParseModeMarkdown,
 	})
 	if err != nil {

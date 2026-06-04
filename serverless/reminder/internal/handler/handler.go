@@ -118,6 +118,7 @@ func (h *Handler) Handel(ctx context.Context, botID int64) error {
 		},
 		&SoonReminder{lp: h.lp},
 		&ArriveReminder{lp: h.lp},
+		&JamaatReminder{lp: h.lp},
 	}
 
 	errG := &errgroup.Group{}

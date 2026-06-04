@@ -290,6 +290,15 @@ func (db *DB) UpdateReminder(
 		case domain.ReminderTypeArrive:
 			reminder.Arrive.MessageID = messageID
 			reminder.Arrive.LastAt = lastAt
+		case domain.ReminderTypeJamaat:
+			if reminder.Jamaat == nil {
+				reminder.Jamaat = &domain.JamaatConfig{}
+			}
+			if reminder.Jamaat.State == nil {
+				reminder.Jamaat.State = &domain.ReminderConfig{}
+			}
+			reminder.Jamaat.State.MessageID = messageID
+			reminder.Jamaat.State.LastAt = lastAt
 		}
 
 		updatedReminderJSON, err := json.Marshal(&reminder)

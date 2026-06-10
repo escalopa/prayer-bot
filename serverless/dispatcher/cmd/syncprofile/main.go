@@ -52,7 +52,7 @@ func main() {
 			exit = 1
 			continue
 		}
-		if err := botprofile.Sync(ctx, b); err != nil {
+		if err := botprofile.Sync(ctx, b, botCfg.OwnerID); err != nil {
 			fmt.Fprintf(os.Stderr, "botprofile.Sync bot_id %d: %v\n", id, err)
 			exit = 1
 			continue

@@ -20,3 +20,4 @@ iam.json
 key.json
 config.json
 graphify-out/
+_scripts/city/*.csv

@@ -116,7 +116,7 @@ func (h *Handler) Handel(ctx context.Context, botID int64) error {
 			botConfig:       h.cfg,
 			formatPrayerDay: h.formatPrayerDay,
 		},
-		&SoonReminder{lp: h.lp},
+		&SoonReminder{lp: h.lp, botConfig: h.cfg},
 		&ArriveReminder{lp: h.lp},
 	}
 

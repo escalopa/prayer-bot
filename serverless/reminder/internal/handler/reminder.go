@@ -56,7 +56,36 @@ func (r *TomorrowReminder) Send(ctx context.Context, b *bot.Bot, chat *domain.Ch
 func (r *TomorrowReminder) Name() domain.ReminderType { return domain.ReminderTypeTomorrow }
 
 type SoonReminder struct {
-	lp *languagesProvider
+	lp        *languagesProvider
+	botConfig map[int64]*domain.BotConfig
+}
+
+func prayerTimeByID(prayerDay *domain.PrayerDay, prayerID domain.PrayerID, now time.Time) time.Time {
+	var current time.Time
+	var next time.Time
+
+	switch prayerID {
+	case domain.PrayerIDFajr:
+		current = prayerDay.Fajr
+		next = prayerDay.NextDay.Fajr
+	case domain.PrayerIDShuruq:
+		current = prayerDay.Shuruq
+		next = prayerDay.NextDay.Shuruq
+	case domain.PrayerIDDhuhr:
+		current = prayerDay.Dhuhr
+	case domain.PrayerIDAsr:
+		current = prayerDay.Asr
+	case domain.PrayerIDMaghrib:
+		current = prayerDay.Maghrib
+	case domain.PrayerIDIsha:
+		current = prayerDay.Isha
+	}
+
+	if current.Before(now) && !next.IsZero() {
+		return next
+	}
+
+	return current
 }
 
 func (r *SoonReminder) ShouldTrigger(ctx context.Context, chat *domain.Chat, prayerDay *domain.PrayerDay, now time.Time) (bool, domain.PrayerID) {
@@ -75,29 +104,43 @@ func (r *SoonReminder) ShouldTrigger(ctx context.Context, chat *domain.Chat, pra
 	}
 
 	config := chat.Reminder.Soon
+	var (
+		found   = false
+		foundID domain.PrayerID
+	)
 	for _, p := range prayers {
 		// logic: last_at < (prayer_time - offset) AND (prayer_time - offset) <= now
+		// keep updating to get the most recent match, so after downtime we skip
+		// stale prayers and send only the latest one
 		trigger := p.time.Add(-config.Offset.Duration())
 		if config.LastAt.Before(trigger) && (trigger.Before(now) || trigger.Equal(now)) {
-			// // Next LastAt should be incremented by 1 minute to avoid re-triggering
-			// nextLastAt := now.Add(1 * time.Minute)
-			return true, p.id
+			found = true
+			foundID = p.id
 		}
 	}
-	return false, 0
+	return found, foundID
 }
 
-func (r *SoonReminder) Send(ctx context.Context, b *bot.Bot, chat *domain.Chat, prayerID domain.PrayerID, _ *domain.PrayerDay) (int, error) {
+func (r *SoonReminder) Send(ctx context.Context, b *bot.Bot, chat *domain.Chat, prayerID domain.PrayerID, prayerDay *domain.PrayerDay) (int, error) {
 	text := r.lp.GetText(chat.LanguageCode)
 	prayer := text.Prayer[int(prayerID)]
+
+	loc := time.Local
+	if cfg, ok := r.botConfig[chat.BotID]; ok && cfg != nil {
+		loc = cfg.Location.V()
+	}
+
+	now := time.Now().In(loc)
+	prayerTime := prayerTimeByID(prayerDay, prayerID, now).In(loc).Format(prayerTimeFormat)
 
 	deleteMessages(ctx, b, chat, chat.Reminder.Soon.MessageID, chat.Reminder.Arrive.MessageID)
 
 	if chat.Reminder.Jamaat.Enabled && prayerID != domain.PrayerIDShuruq {
 		delay := chat.Reminder.Jamaat.Delay.GetDelayByPrayerID(prayerID)
+		jamaatTime := prayerTimeByID(prayerDay, prayerID, now).Add(delay).In(loc).Format(prayerTimeFormat)
 		message := fmt.Sprintf("%s\n%s",
-			fmt.Sprintf(strings.ReplaceAll(text.PrayerSoon, "*", ""), prayer, domain.FormatDuration(chat.Reminder.Soon.Offset.Duration())),
-			fmt.Sprintf(strings.ReplaceAll(text.PrayerJamaat, "*", ""), domain.FormatDuration(delay+chat.Reminder.Soon.Offset.Duration())),
+			fmt.Sprintf(strings.ReplaceAll(text.PrayerSoon, "*", ""), prayer, domain.FormatDuration(chat.Reminder.Soon.Offset.Duration()), prayerTime),
+			fmt.Sprintf(strings.ReplaceAll(text.PrayerJamaat, "*", ""), domain.FormatDuration(delay+chat.Reminder.Soon.Offset.Duration()), jamaatTime),
 		)
 		isAnonymous := false
 
@@ -117,11 +160,13 @@ func (r *SoonReminder) Send(ctx context.Context, b *bot.Bot, chat *domain.Chat, 
 		return res.ID, nil
 	}
 
-	message := fmt.Sprintf(text.PrayerSoon, prayer, domain.FormatDuration(chat.Reminder.Soon.Offset.Duration()))
-
 	res, err := b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID:    chat.ChatID,
-		Text:      message,
+		ChatID: chat.ChatID,
+		Text: fmt.Sprintf(text.PrayerSoon,
+			prayer,
+			domain.FormatDuration(chat.Reminder.Soon.Offset.Duration()),
+			prayerTime,
+		),
 		ParseMode: models.ParseModeMarkdown,
 	})
 	if err != nil {
@@ -152,13 +197,20 @@ func (r *ArriveReminder) ShouldTrigger(ctx context.Context, chat *domain.Chat, p
 		{domain.PrayerIDIsha, prayerDay.Isha},
 	}
 
+	var (
+		found   = false
+		foundID domain.PrayerID
+	)
 	for _, p := range prayers {
 		// logic: last_at < prayer_time AND prayer_time <= now
+		// keep updating to get the most recent match, so after downtime we skip
+		// stale prayers and send only the latest one
 		if config.LastAt.Before(p.time) && (p.time.Before(now) || p.time.Equal(now)) {
-			return true, p.id
+			found = true
+			foundID = p.id
 		}
 	}
-	return false, 0
+	return found, foundID
 }
 
 func (r *ArriveReminder) Send(ctx context.Context, b *bot.Bot, chat *domain.Chat, prayerID domain.PrayerID, _ *domain.PrayerDay) (int, error) {

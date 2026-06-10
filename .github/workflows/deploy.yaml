@@ -26,6 +26,10 @@ env:
   GOOSE_VERSION: 3.26.0
   GO_VERSION: 1.21
   APP_CONFIG_PATH: config.json
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+  GCP_TFSTATE_BUCKET: ${{ secrets.GCP_TFSTATE_BUCKET }}
+  GCP_REGION: europe-west1
 
 jobs:
   setup:
@@ -279,10 +283,60 @@ jobs:
           echo "dispatcher_function_id=$DISPATCHER_FUNCTION_ID" >> $GITHUB_OUTPUT
           echo "::notice::Dispatcher Function ID: $DISPATCHER_FUNCTION_ID"
 
+  proxy:
+    name: Terraform Proxy Apply
+    runs-on: ubuntu-latest
+    needs: [setup, apply]
+    if: env.GCP_PROJECT_ID != '' && env.GCP_SA_KEY != '' && env.GCP_TFSTATE_BUCKET != ''
+    environment: ${{ needs.setup.outputs.workspace }}
+    outputs:
+      webhook_url: ${{ steps.outputs.outputs.webhook_url }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Write GCP credentials
+        run: |
+          echo '${{ env.GCP_SA_KEY }}' > gcp-sa.json
+
+      - name: Terraform Init
+        working-directory: proxy/gcp
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-sa.json
+        run: |
+          terraform init \
+            -backend-config="bucket=${GCP_TFSTATE_BUCKET}" \
+            -backend-config="prefix=prayer-bot/proxy"
+
+      - name: Terraform Apply
+        working-directory: proxy/gcp
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-sa.json
+          TF_VAR_project_id: ${{ env.GCP_PROJECT_ID }}
+          TF_VAR_region: ${{ env.GCP_REGION }}
+          TF_VAR_environment: ${{ needs.setup.outputs.workspace }}
+          TF_VAR_yc_dispatcher_url: https://functions.yandexcloud.net/${{ needs.apply.outputs.dispatcher_function_id }}
+        run: terraform apply -auto-approve
+
+      - name: Export Terraform Outputs
+        id: outputs
+        working-directory: proxy/gcp
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-sa.json
+        run: |
+          WEBHOOK_URL=$(terraform output -raw webhook_url)
+          echo "webhook_url=$WEBHOOK_URL" >> $GITHUB_OUTPUT
+          echo "::notice::Webhook URL: $WEBHOOK_URL"
+
   hook:
     name: Setup Telegram Webhooks
     runs-on: ubuntu-latest
-    needs: [setup, apply]
+    needs: [setup, apply, proxy]
     if: needs.apply.result == 'success'
     environment: ${{ needs.setup.outputs.workspace }}
     steps:
@@ -301,16 +355,59 @@ jobs:
           echo "DISPATCHER_FUNCTION_ID=$DISPATCHER_FUNCTION_ID" >> $GITHUB_ENV
           echo "::notice::Dispatcher Function ID: $DISPATCHER_FUNCTION_ID"
 
+      - name: Get webhook URL
+        run: |
+          WEBHOOK_URL="${{ needs.proxy.outputs.webhook_url }}"
+          echo "WEBHOOK_URL=$WEBHOOK_URL" >> $GITHUB_ENV
+          if [ -n "$WEBHOOK_URL" ]; then
+            echo "::notice::Webhook URL: $WEBHOOK_URL"
+          fi
+
       - name: Execute webhook setup script
         run: |
           chmod +x _scripts/hook.sh
           bash _scripts/hook.sh
         continue-on-error: false
 
+  profile:
+    name: Sync Telegram Profiles
+    runs-on: ubuntu-latest
+    needs: [setup, apply]
+    if: needs.apply.result == 'success'
+    environment: ${{ needs.setup.outputs.workspace }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Cache Go modules
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-${{ github.ref_name }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ github.ref_name }}-go-
+
+      - name: Load application config
+        uses: ./.github/actions/load-config
+        with:
+          app_config: ${{ secrets.APP_CONFIG }}
+          app_config_path: ${{ env.APP_CONFIG_PATH }}
+
+      - name: Sync Telegram bot profiles
+        working-directory: serverless/dispatcher
+        run: go run ./cmd/syncprofile -config "${{ github.workspace }}/config.json"
+
   summary:
     name: Deployment Summary
     runs-on: ubuntu-latest
-    needs: [setup, lint, migrate, validate, plan, apply, hook]
+    needs: [setup, lint, migrate, validate, plan, apply, proxy, hook, profile]
     if: always()
     steps:
       - name: Generate summary
@@ -324,12 +421,18 @@ jobs:
           echo "| Terraform Validate | ${{ needs.validate.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Terraform Plan | ${{ needs.plan.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Terraform Apply | ${{ needs.apply.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Terraform Proxy Apply | ${{ needs.proxy.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Webhook Setup | ${{ needs.hook.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Telegram Profiles | ${{ needs.profile.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Event:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
           echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
           echo "**Workspace:** ${{ needs.setup.outputs.workspace }}" >> $GITHUB_STEP_SUMMARY
           echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.proxy.outputs.webhook_url }}" != "" ]; then
+            echo "**Webhook URL:** ${{ needs.proxy.outputs.webhook_url }}" >> $GITHUB_STEP_SUMMARY
+          fi
 
           if [ "${{ needs.apply.outputs.dispatcher_function_id }}" != "" ]; then
             echo "**Dispatcher Function ID:** ${{ needs.apply.outputs.dispatcher_function_id }}" >> $GITHUB_STEP_SUMMARY

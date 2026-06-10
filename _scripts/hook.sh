@@ -5,17 +5,25 @@ if [[ -z "$APP_CONFIG_PATH" ]]; then
   exit 1
 fi
 
-if [[ -z "$DISPATCHER_FUNCTION_ID" ]]; then
-  echo "[ERROR] DISPATCHER_FUNCTION_ID is not set"
+if [[ -z "$WEBHOOK_URL" && -z "$DISPATCHER_FUNCTION_ID" ]]; then
+  echo "[ERROR] WEBHOOK_URL or DISPATCHER_FUNCTION_ID must be set"
   exit 1
 fi
 
-export DISPATCHER_ENDPOINT="https://functions.yandexcloud.net/${DISPATCHER_FUNCTION_ID}"
+if [[ -n "$WEBHOOK_URL" ]]; then
+  export DISPATCHER_ENDPOINT="$WEBHOOK_URL"
+else
+  export DISPATCHER_ENDPOINT="https://functions.yandexcloud.net/${DISPATCHER_FUNCTION_ID}"
+fi
 
 CONFIG_FILE="$APP_CONFIG_PATH"
 
 echo "[INFO] using config file: \"$CONFIG_FILE\""
-echo "[INFO] using dispatcher function ID: \"$DISPATCHER_FUNCTION_ID\""
+if [[ -n "$WEBHOOK_URL" ]]; then
+  echo "[INFO] using webhook url: \"$WEBHOOK_URL\""
+else
+  echo "[INFO] using dispatcher function ID: \"$DISPATCHER_FUNCTION_ID\""
+fi
 
 jq -c 'to_entries[]' "$CONFIG_FILE" | while read -r entry; do
     BOT_ID=$(echo "$entry" | jq -r '.value.bot_id')

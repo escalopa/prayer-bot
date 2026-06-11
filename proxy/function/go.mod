@@ -4,7 +4,7 @@ go 1.25
 
 require (
 	github.com/GoogleCloudPlatform/functions-framework-go v1.9.2
-	github.com/escalopa/prayer-bot v0.0.0-20251102114226-e7cacf22daf1
+	github.com/escalopa/prayer-bot v0.0.0-20260611111645-7dcf1f176a94
 )
 
 require (
@@ -18,5 +18,3 @@ require (
 	go.uber.org/multierr v1.1.0 // indirect
 	go.uber.org/zap v1.10.0 // indirect
 )
-
-replace github.com/escalopa/prayer-bot => ../..

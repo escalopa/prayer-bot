@@ -32,7 +32,7 @@ prayer:
   6: "Icha"
 
 prayer_date: "📅 Choisissez une date pour voir les horaires de prière"
-prayer_soon: '⏳ *%s* après *%s* \(*%s*\)'
+prayer_soon: '⏳ *%s* après *%s* (%s)'
 
 remind:
   start: "⏰ Choisissez combien de minutes à l'avance vous souhaitez être rappelé"

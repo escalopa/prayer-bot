@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/escalopa/prayer-bot/domain"
+	"github.com/go-telegram/bot"
+	"github.com/go-telegram/bot/models"
 )
 
 type (
@@ -37,7 +39,7 @@ func getContextChat(ctx context.Context) *domain.Chat {
 func (h *Handler) formatPrayerDay(botID int64, date *domain.PrayerDay, languageCode string) string {
 	loc := h.cfg[botID].Location.V()
 	text := h.lp.GetText(languageCode)
-	return fmt.Sprintf(prayerText,
+	return domain.FormatMarkdown(prayerText,
 		text.Weekday[int(date.Date.Weekday())], date.Date.Format(prayerDayFormat),
 		text.Prayer[int(domain.PrayerIDFajr)], date.Fajr.In(loc).Format(prayerTimeFormat),
 		text.Prayer[int(domain.PrayerIDShuruq)], date.Shuruq.In(loc).Format(prayerTimeFormat),
@@ -90,4 +92,33 @@ func parseAdjustment(adj string) time.Duration {
 // isChatGroup checks if the chat is a group or supergroup.
 func isChatGroup(chatID int64) bool {
 	return chatID < 0
+}
+
+func markdownMessage(chatID int64, text string) *bot.SendMessageParams {
+	return &bot.SendMessageParams{
+		ChatID:    chatID,
+		Text:      text,
+		ParseMode: models.ParseModeMarkdown,
+	}
+}
+
+func markdownMessageWithMarkup(chatID int64, text string, replyMarkup models.ReplyMarkup) *bot.SendMessageParams {
+	params := markdownMessage(chatID, text)
+	params.ReplyMarkup = replyMarkup
+	return params
+}
+
+func markdownEditMessage(chatID int64, messageID int, text string) *bot.EditMessageTextParams {
+	return &bot.EditMessageTextParams{
+		ChatID:    chatID,
+		MessageID: messageID,
+		Text:      text,
+		ParseMode: models.ParseModeMarkdown,
+	}
+}
+
+func markdownEditMessageWithMarkup(chatID int64, messageID int, text string, replyMarkup models.ReplyMarkup) *bot.EditMessageTextParams {
+	params := markdownEditMessage(chatID, messageID, text)
+	params.ReplyMarkup = replyMarkup
+	return params
 }

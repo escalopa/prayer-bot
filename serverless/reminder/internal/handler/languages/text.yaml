@@ -6,11 +6,11 @@ ar:
     4: "العصر"
     5: "المغرب"
     6: "العشاء"
-  prayer_soon: '⏳ *%s* بعد *%s* \(*%s*\)'
+  prayer_soon: '⏳ *%s* بعد *%s* (%s)'
   prayer_arrived: "⏰ حان وقت *%s*"
   prayer_join: "سأنضم إلى الصلاة"
   prayer_join_delay: "قد أتأخر"
-  prayer_jamaat: '🕌 جماعة بعد *%s* \(*%s*\)'
+  prayer_jamaat: '🕌 جماعة بعد *%s* (%s)'
 
 en:
   prayer:
@@ -20,11 +20,11 @@ en:
     4: "Asr"
     5: "Maghrib"
     6: "Isha"
-  prayer_soon: '⏳ *%s* after *%s* \(*%s*\)'
+  prayer_soon: '⏳ *%s* after *%s* (%s)'
   prayer_arrived: "⏰ It’s time for *%s*"
   prayer_join: "I'll join prayer"
   prayer_join_delay: "I might be late"
-  prayer_jamaat: '🕌 Jama''at after *%s* \(*%s*\)'
+  prayer_jamaat: '🕌 Jama''at after *%s* (%s)'
 
 es:
   prayer:
@@ -34,11 +34,11 @@ es:
     4: "Asr"
     5: "Maghrib"
     6: "Isha"
-  prayer_soon: '⏳ *%s* después de *%s* \(*%s*\)'
+  prayer_soon: '⏳ *%s* después de *%s* (%s)'
   prayer_arrived: "⏰ Es hora de *%s*"
   prayer_join: "Me uniré a la oración"
   prayer_join_delay: "Podría llegar tarde"
-  prayer_jamaat: '🕌 Oración en grupo después de *%s* \(*%s*\)'
+  prayer_jamaat: '🕌 Oración en grupo después de *%s* (%s)'
 
 fr:
   prayer:
@@ -48,11 +48,11 @@ fr:
     4: "Asr"
     5: "Maghrib"
     6: "Icha"
-  prayer_soon: '⏳ *%s* après *%s* \(*%s*\)'
+  prayer_soon: '⏳ *%s* après *%s* (%s)'
   prayer_arrived: "⏰ C’est l’heure de *%s*"
   prayer_join: "Je rejoindrai la prière"
   prayer_join_delay: "Je pourrais être en retard"
-  prayer_jamaat: '🕌 Prière en groupe après *%s* \(*%s*\)'
+  prayer_jamaat: '🕌 Prière en groupe après *%s* (%s)'
 
 ru:
   prayer:
@@ -62,11 +62,11 @@ ru:
     4: "Аср"
     5: "Магриб"
     6: "Иша"
-  prayer_soon: '⏳ *%s* через *%s* \(*%s*\)'
+  prayer_soon: '⏳ *%s* через *%s* (%s)'
   prayer_arrived: "⏰ Время для *%s*"
   prayer_join: "Я присоединюсь к молитве"
   prayer_join_delay: "Я могу опоздать"
-  prayer_jamaat: '🕌 Джамаат после *%s* \(*%s*\)'
+  prayer_jamaat: '🕌 Джамаат после *%s* (%s)'
 
 tr:
   prayer:
@@ -76,11 +76,11 @@ tr:
     4: "Ikindi"
     5: "Agşam"
     6: "Gije"
-  prayer_soon: '⏳ *%s* soň *%s* \(*%s*\)'
+  prayer_soon: '⏳ *%s* soň *%s* (%s)'
   prayer_arrived: "⏰ *%s* wagty geldi"
   prayer_join: "Men doga gatnaşaryn"
   prayer_join_delay: "Belki giç bolar"
-  prayer_jamaat: '🕌 Jama''at *%s* soň \(*%s*\)'
+  prayer_jamaat: '🕌 Jama''at *%s* soň (%s)'
 
 tt:
   prayer:
@@ -90,11 +90,11 @@ tt:
     4: "Әср"
     5: "Мәгъриб"
     6: "Иша"
-  prayer_soon: '⏳ *%s* соң *%s* \(*%s*\)'
+  prayer_soon: '⏳ *%s* соң *%s* (%s)'
   prayer_arrived: "⏰ *%s* вакыты җитте"
   prayer_join: "Мин догага кушылам"
   prayer_join_delay: "Мин соңга калуым мөмкин"
-  prayer_jamaat: '🕌 Җамагать намазы *%s* соң \(*%s*\)'
+  prayer_jamaat: '🕌 Җамагать намазы *%s* соң (%s)'
 
 uz:
   prayer:
@@ -104,8 +104,8 @@ uz:
     4: "Asr"
     5: "Shom"
     6: "Xufton"
-  prayer_soon: '⏳ *%s* keyin *%s* \(*%s*\)'
+  prayer_soon: '⏳ *%s* keyin *%s* (%s)'
   prayer_arrived: "⏰ *%s* vaqti keldi"
   prayer_join: "Men duoga qo‘shilaman"
   prayer_join_delay: "Kechikishim mumkin"
-  prayer_jamaat: '🕌 Jamoat *%s* dan keyin \(*%s*\)'
+  prayer_jamaat: '🕌 Jamoat *%s* dan keyin (%s)'

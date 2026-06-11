@@ -35,7 +35,7 @@ func (h *Handler) formatPrayerDay(botID int64, prayerDay *domain.PrayerDay, lang
 	loc := h.cfg[botID].Location.V()
 	text := h.lp.GetText(languageCode)
 
-	return fmt.Sprintf(prayerText,
+	return domain.FormatMarkdown(prayerText,
 		prayerDay.Date.Format(prayerDayFormat),
 		text.Prayer[int(domain.PrayerIDFajr)], prayerDay.Fajr.In(loc).Format(prayerTimeFormat),
 		text.Prayer[int(domain.PrayerIDShuruq)], prayerDay.Shuruq.In(loc).Format(prayerTimeFormat),

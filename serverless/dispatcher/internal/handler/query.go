@@ -72,12 +72,12 @@ func (h *Handler) monthQuery(ctx context.Context, b *bot.Bot, update *models.Upd
 	chat := getContextChat(ctx)
 
 	month, _ := strconv.Atoi(strings.TrimPrefix(update.CallbackQuery.Data, monthQuery.String()))
-	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
-		ChatID:      chat.ChatID,
-		MessageID:   update.CallbackQuery.Message.Message.ID,
-		Text:        h.lp.GetText(chat.LanguageCode).PrayerDate,
-		ReplyMarkup: h.daysKeyboard(h.nowDateUTC(chat.BotID), month),
-	})
+	_, err := b.EditMessageText(ctx, markdownEditMessageWithMarkup(
+		chat.ChatID,
+		update.CallbackQuery.Message.Message.ID,
+		h.lp.GetText(chat.LanguageCode).PrayerDate,
+		h.daysKeyboard(h.nowDateUTC(chat.BotID), month),
+	))
 	if err != nil {
 		log.Error("monthQuery: edit message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
@@ -106,11 +106,11 @@ func (h *Handler) dayQuery(ctx context.Context, b *bot.Bot, update *models.Updat
 		return domain.ErrInternal
 	}
 
-	_, err = b.EditMessageText(ctx, &bot.EditMessageTextParams{
-		ChatID:    chat.ChatID,
-		MessageID: update.CallbackQuery.Message.Message.ID,
-		Text:      h.formatPrayerDay(chat.BotID, prayerDay, chat.LanguageCode),
-	})
+	_, err = b.EditMessageText(ctx, markdownEditMessage(
+		chat.ChatID,
+		update.CallbackQuery.Message.Message.ID,
+		h.formatPrayerDay(chat.BotID, prayerDay, chat.LanguageCode),
+	))
 	if err != nil {
 		log.Error("dayQuery: edit message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
@@ -145,12 +145,11 @@ func (h *Handler) languageQuery(ctx context.Context, b *bot.Bot, update *models.
 		return domain.ErrInternal
 	}
 
-	_, err = b.EditMessageText(ctx, &bot.EditMessageTextParams{
-		ChatID:    chat.ChatID,
-		MessageID: update.CallbackQuery.Message.Message.ID,
-		Text:      fmt.Sprintf(h.lp.GetText(languageCode).Language.Success, languageCode),
-		ParseMode: models.ParseModeMarkdown,
-	})
+	_, err = b.EditMessageText(ctx, markdownEditMessage(
+		chat.ChatID,
+		update.CallbackQuery.Message.Message.ID,
+		domain.FormatMarkdown(h.lp.GetText(languageCode).Language.Success, languageCode),
+	))
 	if err != nil {
 		log.Error("languageQuery: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
@@ -177,12 +176,12 @@ func (h *Handler) remindMenuQuery(ctx context.Context, b *bot.Bot, update *model
 		messageText = text.RemindMenu.TitleDisabled
 	}
 
-	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
-		ChatID:      chat.ChatID,
-		MessageID:   update.CallbackQuery.Message.Message.ID,
-		Text:        messageText,
-		ReplyMarkup: h.remindMenuKeyboard(chat),
-	})
+	_, err := b.EditMessageText(ctx, markdownEditMessageWithMarkup(
+		chat.ChatID,
+		update.CallbackQuery.Message.Message.ID,
+		messageText,
+		h.remindMenuKeyboard(chat),
+	))
 	if err != nil {
 		log.Error("remindMenuQuery: edit message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
@@ -244,12 +243,12 @@ func (h *Handler) remindEditQuery(ctx context.Context, b *bot.Bot, update *model
 		return domain.ErrInternal
 	}
 
-	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
-		ChatID:      chat.ChatID,
-		MessageID:   update.CallbackQuery.Message.Message.ID,
-		Text:        messageText,
-		ReplyMarkup: h.remindEditKeyboard(reminderType, chat.LanguageCode),
-	})
+	_, err := b.EditMessageText(ctx, markdownEditMessageWithMarkup(
+		chat.ChatID,
+		update.CallbackQuery.Message.Message.ID,
+		messageText,
+		h.remindEditKeyboard(reminderType, chat.LanguageCode),
+	))
 	if err != nil {
 		log.Error("remindEditQuery: edit message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
@@ -335,12 +334,12 @@ func (h *Handler) remindJamaatMenuQuery(ctx context.Context, b *bot.Bot, update 
 		messageText = text.JamaatMenu.TitleDisabled
 	}
 
-	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
-		ChatID:      chat.ChatID,
-		MessageID:   update.CallbackQuery.Message.Message.ID,
-		Text:        messageText,
-		ReplyMarkup: h.jammatMenuKeyboard(chat),
-	})
+	_, err := b.EditMessageText(ctx, markdownEditMessageWithMarkup(
+		chat.ChatID,
+		update.CallbackQuery.Message.Message.ID,
+		messageText,
+		h.jammatMenuKeyboard(chat),
+	))
 	if err != nil {
 		log.Error("remindJamaatMenuQuery: edit message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
@@ -395,14 +394,14 @@ func (h *Handler) remindJamaatEditQuery(ctx context.Context, b *bot.Bot, update 
 	prayerID := domain.ParsePrayerID(prayerName)
 
 	delay := chat.Reminder.Jamaat.Delay.GetDelayByPrayerID(prayerID)
-	messageText := fmt.Sprintf(text.JamaatEdit.Title, text.Prayer[int(prayerID)]) + " - " + domain.FormatDuration(delay)
+	messageText := domain.FormatMarkdown(text.JamaatEdit.Title, text.Prayer[int(prayerID)]) + " - " + domain.FormatDuration(delay)
 
-	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
-		ChatID:      chat.ChatID,
-		MessageID:   update.CallbackQuery.Message.Message.ID,
-		Text:        messageText,
-		ReplyMarkup: h.jammatEditKeyboard(prayerID, chat.LanguageCode),
-	})
+	_, err := b.EditMessageText(ctx, markdownEditMessageWithMarkup(
+		chat.ChatID,
+		update.CallbackQuery.Message.Message.ID,
+		messageText,
+		h.jammatEditKeyboard(prayerID, chat.LanguageCode),
+	))
 	if err != nil {
 		log.Error("remindJamaatEditQuery: edit message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
@@ -490,12 +489,12 @@ func (h *Handler) remindBackQuery(ctx context.Context, b *bot.Bot, update *model
 		return domain.ErrInternal
 	}
 
-	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
-		ChatID:      chat.ChatID,
-		MessageID:   update.CallbackQuery.Message.Message.ID,
-		Text:        messageText,
-		ReplyMarkup: keyboard,
-	})
+	_, err := b.EditMessageText(ctx, markdownEditMessageWithMarkup(
+		chat.ChatID,
+		update.CallbackQuery.Message.Message.ID,
+		messageText,
+		keyboard,
+	))
 	if err != nil {
 		log.Error("remindBackQuery: edit message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal

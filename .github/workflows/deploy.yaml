@@ -97,6 +97,10 @@ jobs:
       - name: Run revive
         run: revive -config revive.toml -formatter friendly ./...
 
+      - name: Test proxy function
+        run: go test ./...
+        working-directory: proxy/function
+
   migrate:
     name: Database Migration
     runs-on: ubuntu-latest

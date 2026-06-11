@@ -3,7 +3,10 @@ locals {
     "artifactregistry.googleapis.com",
     "cloudbuild.googleapis.com",
     "cloudfunctions.googleapis.com",
+    "cloudresourcemanager.googleapis.com",
+    "iam.googleapis.com",
     "run.googleapis.com",
+    "serviceusage.googleapis.com",
     "storage.googleapis.com",
   ])
 
@@ -38,6 +41,8 @@ resource "google_storage_bucket" "source" {
   labels = {
     app = "prayer-bot"
   }
+
+  depends_on = [google_project_service.required]
 }
 
 resource "google_storage_bucket_object" "proxy_zip" {
@@ -49,12 +54,16 @@ resource "google_storage_bucket_object" "proxy_zip" {
 resource "google_service_account" "runtime" {
   account_id   = "prayer-bot-proxy-${var.environment}"
   display_name = "Prayer bot proxy runtime (${var.environment})"
+
+  depends_on = [google_project_service.required]
 }
 
 resource "google_project_iam_member" "runtime_logging" {
   project = var.project_id
   role    = "roles/logging.logWriter"
   member  = "serviceAccount:${google_service_account.runtime.email}"
+
+  depends_on = [google_project_service.required]
 }
 
 resource "google_cloudfunctions2_function" "webhook_proxy" {
@@ -97,4 +106,9 @@ resource "google_cloudfunctions2_function_iam_member" "public_invoker" {
 
   role   = "roles/run.invoker"
   member = "allUsers"
+
+  depends_on = [
+    google_project_service.required,
+    google_cloudfunctions2_function.webhook_proxy,
+  ]
 }

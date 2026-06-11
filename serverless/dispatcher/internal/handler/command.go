@@ -71,11 +71,7 @@ func (h *Handler) start(ctx context.Context, b *bot.Bot, update *models.Update) 
 func (h *Handler) help(ctx context.Context, b *bot.Bot, _ *models.Update) error {
 	chat := getContextChat(ctx)
 
-	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID:    chat.ChatID,
-		Text:      h.lp.GetText(chat.LanguageCode).Help,
-		ParseMode: models.ParseModeMarkdown,
-	})
+	_, err := b.SendMessage(ctx, markdownMessage(chat.ChatID, h.lp.GetText(chat.LanguageCode).Help))
 
 	if err != nil {
 		log.Error("help: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
@@ -95,10 +91,7 @@ func (h *Handler) today(ctx context.Context, b *bot.Bot, _ *models.Update) error
 		return domain.ErrInternal
 	}
 
-	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID: chat.ChatID,
-		Text:   h.formatPrayerDay(chat.BotID, prayerDay, chat.LanguageCode),
-	})
+	_, err = b.SendMessage(ctx, markdownMessage(chat.ChatID, h.formatPrayerDay(chat.BotID, prayerDay, chat.LanguageCode)))
 	if err != nil {
 		log.Error("today: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
@@ -118,10 +111,7 @@ func (h *Handler) tomorrow(ctx context.Context, b *bot.Bot, _ *models.Update) er
 		return domain.ErrInternal
 	}
 
-	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID: chat.ChatID,
-		Text:   h.formatPrayerDay(chat.BotID, prayerDay, chat.LanguageCode),
-	})
+	_, err = b.SendMessage(ctx, markdownMessage(chat.ChatID, h.formatPrayerDay(chat.BotID, prayerDay, chat.LanguageCode)))
 	if err != nil {
 		log.Error("tomorrow: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
@@ -134,11 +124,11 @@ func (h *Handler) tomorrow(ctx context.Context, b *bot.Bot, _ *models.Update) er
 func (h *Handler) date(ctx context.Context, b *bot.Bot, _ *models.Update) error {
 	chat := getContextChat(ctx)
 
-	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID:      chat.ChatID,
-		Text:        h.lp.GetText(chat.LanguageCode).PrayerDate,
-		ReplyMarkup: h.monthsKeyboard(chat.LanguageCode),
-	})
+	_, err := b.SendMessage(ctx, markdownMessageWithMarkup(
+		chat.ChatID,
+		h.lp.GetText(chat.LanguageCode).PrayerDate,
+		h.monthsKeyboard(chat.LanguageCode),
+	))
 	if err != nil {
 		log.Error("date: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
@@ -193,15 +183,11 @@ func (h *Handler) next(ctx context.Context, b *bot.Bot, _ *models.Update) error 
 	}
 
 	text := h.lp.GetText(chat.LanguageCode)
-	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID: chat.ChatID,
-		Text: fmt.Sprintf(text.PrayerSoon,
-			text.Prayer[int(prayerID)],
-			domain.FormatDuration(duration),
-			prayerTime.In(h.cfg[chat.BotID].Location.V()).Format(prayerTimeFormat),
-		),
-		ParseMode: models.ParseModeMarkdown,
-	})
+	_, err = b.SendMessage(ctx, markdownMessage(chat.ChatID, domain.FormatMarkdown(text.PrayerSoon,
+		text.Prayer[int(prayerID)],
+		domain.FormatDuration(duration),
+		prayerTime.In(h.cfg[chat.BotID].Location.V()).Format(prayerTimeFormat),
+	)))
 	if err != nil {
 		log.Error("next: send message",
 			log.Err(err),
@@ -228,11 +214,7 @@ func (h *Handler) remind(ctx context.Context, b *bot.Bot, _ *models.Update) erro
 		messageText = text.RemindMenu.TitleDisabled
 	}
 
-	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID:      chat.ChatID,
-		Text:        messageText,
-		ReplyMarkup: h.remindMenuKeyboard(chat),
-	})
+	_, err := b.SendMessage(ctx, markdownMessageWithMarkup(chat.ChatID, messageText, h.remindMenuKeyboard(chat)))
 	if err != nil {
 		log.Error("remind: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
@@ -245,10 +227,7 @@ func (h *Handler) remind(ctx context.Context, b *bot.Bot, _ *models.Update) erro
 func (h *Handler) bug(ctx context.Context, b *bot.Bot, _ *models.Update) error {
 	chat := getContextChat(ctx)
 
-	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID: chat.ChatID,
-		Text:   h.lp.GetText(chat.LanguageCode).Bug.Start,
-	})
+	_, err := b.SendMessage(ctx, markdownMessage(chat.ChatID, h.lp.GetText(chat.LanguageCode).Bug.Start))
 	if err != nil {
 		log.Error("bug: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
@@ -266,10 +245,7 @@ func (h *Handler) bug(ctx context.Context, b *bot.Bot, _ *models.Update) error {
 func (h *Handler) feedback(ctx context.Context, b *bot.Bot, _ *models.Update) error {
 	chat := getContextChat(ctx)
 
-	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID: chat.ChatID,
-		Text:   h.lp.GetText(chat.LanguageCode).Feedback.Start,
-	})
+	_, err := b.SendMessage(ctx, markdownMessage(chat.ChatID, h.lp.GetText(chat.LanguageCode).Feedback.Start))
 	if err != nil {
 		log.Error("feedback: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
@@ -287,11 +263,11 @@ func (h *Handler) feedback(ctx context.Context, b *bot.Bot, _ *models.Update) er
 func (h *Handler) language(ctx context.Context, b *bot.Bot, _ *models.Update) error {
 	chat := getContextChat(ctx)
 
-	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID:      chat.ChatID,
-		Text:        h.lp.GetText(chat.LanguageCode).Language.Start,
-		ReplyMarkup: h.languagesKeyboard(),
-	})
+	_, err := b.SendMessage(ctx, markdownMessageWithMarkup(
+		chat.ChatID,
+		h.lp.GetText(chat.LanguageCode).Language.Start,
+		h.languagesKeyboard(),
+	))
 	if err != nil {
 		log.Error("language: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
@@ -304,11 +280,7 @@ func (h *Handler) language(ctx context.Context, b *bot.Bot, _ *models.Update) er
 func (h *Handler) admin(ctx context.Context, b *bot.Bot, _ *models.Update) error {
 	chat := getContextChat(ctx)
 
-	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID:    chat.ChatID,
-		Text:      h.lp.GetText(chat.LanguageCode).HelpAdmin,
-		ParseMode: models.ParseModeMarkdown,
-	})
+	_, err := b.SendMessage(ctx, markdownMessage(chat.ChatID, h.lp.GetText(chat.LanguageCode).HelpAdmin))
 	if err != nil {
 		log.Error("admin: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
@@ -338,7 +310,7 @@ func (h *Handler) info(ctx context.Context, b *bot.Bot, _ *models.Update) error 
 		if chat.Reminder.Jamaat.Enabled {
 			jamaatStatus = text.Info.Enabled
 		}
-		jamaatInfo = fmt.Sprintf(text.Info.Jamaat,
+		jamaatInfo = domain.FormatMarkdown(text.Info.Jamaat,
 			jamaatStatus,
 			domain.FormatDuration(chat.Reminder.Jamaat.Delay.Fajr.Duration()),
 			domain.FormatDuration(chat.Reminder.Jamaat.Delay.Dhuhr.Duration()),
@@ -348,7 +320,7 @@ func (h *Handler) info(ctx context.Context, b *bot.Bot, _ *models.Update) error 
 		)
 	}
 
-	message := fmt.Sprintf(text.Info.Default,
+	message := domain.FormatMarkdown(text.Info.Default,
 		fmt.Sprintf("%d", chat.ChatID),
 		chatType,
 		chat.LanguageCode,
@@ -356,14 +328,10 @@ func (h *Handler) info(ctx context.Context, b *bot.Bot, _ *models.Update) error 
 		subscriptionStatus,
 		domain.FormatDuration(chat.Reminder.Tomorrow.Offset.Duration()),
 		domain.FormatDuration(chat.Reminder.Soon.Offset.Duration()),
-		jamaatInfo,
+		domain.MarkdownRaw(jamaatInfo),
 	)
 
-	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID:    chat.ChatID,
-		Text:      message,
-		ParseMode: models.ParseModeMarkdown,
-	})
+	_, err := b.SendMessage(ctx, markdownMessage(chat.ChatID, message))
 	if err != nil {
 		log.Error("info: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
@@ -382,10 +350,7 @@ func (h *Handler) reply(ctx context.Context, b *bot.Bot, _ *models.Update) error
 		return domain.ErrInternal
 	}
 
-	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID: chat.ChatID,
-		Text:   h.lp.GetText(chat.LanguageCode).Reply.Start,
-	})
+	_, err = b.SendMessage(ctx, markdownMessage(chat.ChatID, h.lp.GetText(chat.LanguageCode).Reply.Start))
 	if err != nil {
 		log.Error("reply: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
@@ -406,20 +371,16 @@ func (h *Handler) stats(ctx context.Context, b *bot.Bot, _ *models.Update) error
 
 	languagesStats := &strings.Builder{}
 	for _, lang := range h.lp.GetLanguages() {
-		row := fmt.Sprintf("%s: %d\n", lang.Code, stats.LanguagesGrouped[lang.Code])
-		languagesStats.WriteString(row)
+		languagesStats.WriteString(domain.FormatMarkdown("%s: %d\n", lang.Code, stats.LanguagesGrouped[lang.Code]))
 	}
 
-	message := fmt.Sprintf(h.lp.GetText(chat.LanguageCode).Stats,
+	message := domain.FormatMarkdown(h.lp.GetText(chat.LanguageCode).Stats,
 		stats.Users,
 		stats.Subscribed,
 		stats.Unsubscribed,
 		languagesStats.String(),
 	)
-	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID: chat.ChatID,
-		Text:   message,
-	})
+	_, err = b.SendMessage(ctx, markdownMessage(chat.ChatID, message))
 	if err != nil {
 		log.Error("stats: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
@@ -438,10 +399,7 @@ func (h *Handler) announce(ctx context.Context, b *bot.Bot, _ *models.Update) er
 		return domain.ErrInternal
 	}
 
-	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID: chat.ChatID,
-		Text:   h.lp.GetText(chat.LanguageCode).Announce.Start,
-	})
+	_, err = b.SendMessage(ctx, markdownMessage(chat.ChatID, h.lp.GetText(chat.LanguageCode).Announce.Start))
 	if err != nil {
 		log.Error("announce: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
@@ -455,10 +413,7 @@ func (h *Handler) cancel(ctx context.Context, b *bot.Bot, _ *models.Update) erro
 	chat := getContextChat(ctx)
 
 	if chat.State == string(defaultState) {
-		_, err := b.SendMessage(ctx, &bot.SendMessageParams{
-			ChatID: chat.ChatID,
-			Text:   h.lp.GetText(chat.LanguageCode).Noop,
-		})
+		_, err := b.SendMessage(ctx, markdownMessage(chat.ChatID, h.lp.GetText(chat.LanguageCode).Noop))
 		if err != nil {
 			log.Error("cancel: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 			return domain.ErrInternal
@@ -472,10 +427,7 @@ func (h *Handler) cancel(ctx context.Context, b *bot.Bot, _ *models.Update) erro
 		return domain.ErrInternal
 	}
 
-	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID: chat.ChatID,
-		Text:   h.lp.GetText(chat.LanguageCode).Cancel,
-	})
+	_, err = b.SendMessage(ctx, markdownMessage(chat.ChatID, h.lp.GetText(chat.LanguageCode).Cancel))
 	if err != nil {
 		log.Error("cancel: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal

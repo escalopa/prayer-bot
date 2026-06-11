@@ -99,16 +99,13 @@ resource "google_cloudfunctions2_function" "webhook_proxy" {
   ]
 }
 
-resource "google_cloudfunctions2_function_iam_member" "public_invoker" {
-  project        = var.project_id
-  location       = var.region
-  cloud_function = google_cloudfunctions2_function.webhook_proxy.name
+# Gen2 functions run on Cloud Run; roles/run.invoker must be on the Run service, not the function.
+resource "google_cloud_run_v2_service_iam_member" "public_invoker" {
+  project  = var.project_id
+  location = var.region
+  name     = google_cloudfunctions2_function.webhook_proxy.name
+  role     = "roles/run.invoker"
+  member   = "allUsers"
 
-  role   = "roles/run.invoker"
-  member = "allUsers"
-
-  depends_on = [
-    google_project_service.required,
-    google_cloudfunctions2_function.webhook_proxy,
-  ]
+  depends_on = [google_cloudfunctions2_function.webhook_proxy]
 }

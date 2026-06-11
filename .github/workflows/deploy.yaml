@@ -39,7 +39,6 @@ jobs:
     outputs:
       cache_key: ${{ steps.set-cache-key.outputs.cache_key }}
       workspace: ${{ steps.set-workspace.outputs.workspace }}
-      gcp_enabled: ${{ steps.set-gcp-enabled.outputs.gcp_enabled }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -57,15 +56,6 @@ jobs:
           CACHE_KEY="${{ runner.os }}-${{ steps.set-workspace.outputs.workspace }}-terraform-${{ hashFiles('**/.terraform.lock.hcl') }}"
           echo "cache_key=$CACHE_KEY" >> $GITHUB_OUTPUT
           echo "::notice::Cache key: $CACHE_KEY"
-
-      - name: Set GCP enablement flag
-        id: set-gcp-enabled
-        run: |
-          if [ -n "${{ secrets.GCP_PROJECT_ID }}" ] && [ -n "${{ secrets.GCP_SA_KEY }}" ] && [ -n "${{ secrets.GCP_TFSTATE_BUCKET }}" ]; then
-            echo "gcp_enabled=true" >> $GITHUB_OUTPUT
-          else
-            echo "gcp_enabled=false" >> $GITHUB_OUTPUT
-          fi
 
       - name: Setup Terraform Environment
         uses: ./.github/actions/setup-terraform
@@ -297,7 +287,6 @@ jobs:
     name: Terraform Proxy Apply
     runs-on: ubuntu-latest
     needs: [setup, apply]
-    if: needs.setup.outputs.gcp_enabled == 'true'
     environment: ${{ needs.setup.outputs.workspace }}
     outputs:
       webhook_url: ${{ steps.outputs.outputs.webhook_url }}

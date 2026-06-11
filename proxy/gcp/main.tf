@@ -71,7 +71,7 @@ resource "google_cloudfunctions2_function" "webhook_proxy" {
   location = var.region
 
   build_config {
-    runtime     = "go121"
+    runtime     = "go125"
     entry_point = "WebhookProxy"
 
     source {

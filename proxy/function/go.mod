@@ -1,6 +1,6 @@
 module github.com/escalopa/prayer-bot/proxy/function
 
-go 1.21
+go 1.25
 
 require (
 	github.com/GoogleCloudPlatform/functions-framework-go v1.9.2

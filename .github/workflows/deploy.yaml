@@ -177,6 +177,8 @@ jobs:
           app_config: ${{ secrets.APP_CONFIG }}
           aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          cloud_id: ${{ secrets.CLOUD_ID }}
+          folder_id: ${{ secrets.FOLDER_ID }}
 
       - name: Run Goose migrations
         env:
@@ -290,6 +292,8 @@ jobs:
           app_config: ${{ secrets.APP_CONFIG }}
           aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          cloud_id: ${{ secrets.CLOUD_ID }}
+          folder_id: ${{ secrets.FOLDER_ID }}
 
       - name: Run full database migration
         env:
@@ -445,6 +449,8 @@ jobs:
           app_config: ${{ secrets.APP_CONFIG }}
           aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          cloud_id: ${{ secrets.CLOUD_ID }}
+          folder_id: ${{ secrets.FOLDER_ID }}
 
       - name: Copy objects to GCS
         env:
@@ -555,6 +561,8 @@ jobs:
           app_config: ${{ secrets.APP_CONFIG }}
           aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          cloud_id: ${{ secrets.CLOUD_ID }}
+          folder_id: ${{ secrets.FOLDER_ID }}
 
       - name: Run incremental database migration
         env:

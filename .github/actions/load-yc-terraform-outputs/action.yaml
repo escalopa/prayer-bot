@@ -8,6 +8,13 @@ inputs:
   service_account_key:
     description: Yandex Cloud service account key JSON
     required: true
+  app_config:
+    description: Application config.json content (required for terraform apply when outputs are missing)
+    required: true
+  app_config_path:
+    description: Path where config.json will be created
+    required: false
+    default: config.json
   aws_access_key_id:
     description: AWS access key for YC tfstate S3 backend
     required: true
@@ -32,6 +39,16 @@ runs:
           exit 1
         fi
 
+    - name: Write config.json
+      shell: bash
+      run: |
+        echo "::add-mask::${{ inputs.app_config }}"
+        echo '${{ inputs.app_config }}' > "${{ inputs.app_config_path }}"
+        if ! jq empty "${{ inputs.app_config_path }}" 2>/dev/null; then
+          echo "::error::APP_CONFIG is not valid JSON"
+          exit 1
+        fi
+
     - name: Init Terraform and export outputs
       shell: bash
       env:
@@ -45,6 +62,14 @@ runs:
           -backend-config="secret_key=$AWS_SECRET_ACCESS_KEY"
 
         terraform workspace select "${{ inputs.workspace }}" || terraform workspace new "${{ inputs.workspace }}"
+
+        if ! terraform output -raw ydb_endpoint >/dev/null 2>&1; then
+          echo "::notice::YC outputs missing from state; running terraform apply to register them"
+          if ! terraform apply -auto-approve -input=false; then
+            echo "::error::Root YC Terraform apply failed. Ensure SERVICE_ACCOUNT_KEY and tfstate access are valid, then retry."
+            exit 1
+          fi
+        fi
 
         echo "YDB_ENDPOINT=$(terraform output -raw ydb_endpoint)" >> "$GITHUB_ENV"
         echo "GOOSE_DBSTRING_BASE=$(terraform output -raw ydb_endpoint)" >> "$GITHUB_ENV"

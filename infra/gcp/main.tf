@@ -15,15 +15,13 @@ locals {
   ])
 
   source_bucket_name = "${var.project_id}-prayer-bot-src-${var.environment}"
-  data_bucket_name = "prayer-bot-data-${var.environment}"
-  runtime_sa_id    = "prayer-bot-${var.environment}"
+  data_bucket_name   = "prayer-bot-data-${var.environment}"
+  runtime_sa_id      = "prayer-bot-${var.environment}"
 
   app_config_file = coalesce(var.app_config_path, "${path.module}/../../config.json")
   app_config_b64  = base64encode(file(local.app_config_file))
 
-  ydb_endpoint = var.dual_write ? (
-    var.ydb_endpoint != "" ? var.ydb_endpoint : try(data.terraform_remote_state.yc[0].outputs.ydb_endpoint, "")
-  ) : ""
+  ydb_endpoint = var.dual_write ? (var.ydb_endpoint != "" ? var.ydb_endpoint : try(data.terraform_remote_state.yc[0].outputs.ydb_endpoint, "")) : ""
 
   common_env = {
     DB_PRIMARY   = "postgres"

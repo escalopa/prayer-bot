@@ -257,7 +257,9 @@ func (s *Store) mutate(
 		if err := primaryFn(ctx, s.postgres, s.ydb); err != nil {
 			return err
 		}
-		s.mirrorWrite(ctx, mirrorFn)
+		s.mirrorWrite(ctx, func(y *YDB) error {
+			return mirrorFn(ctx, y)
+		})
 		return nil
 	}
 

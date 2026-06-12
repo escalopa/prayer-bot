@@ -24,6 +24,30 @@ This bot is completely serverless, utilizing Yandex Cloud Functions for operatio
 
 For infrastructure configuration details, check the [terraform file](./main.tf).
 
+### GCP migration (Supabase + Cloud Functions)
+
+The bot can run on GCP with Supabase Postgres while keeping Yandex Cloud available for rollback.
+
+**GitHub secrets (per environment):**
+
+| Secret | Purpose |
+|--------|---------|
+| `SUPABASE_DB_URL` | Postgres connection URL (stored in GCP Secret Manager by Terraform) |
+| `YDB_TOKEN_FOR_GCP` | Long-lived YDB token for dual-write from GCP |
+| `GCP_*` | GCP project / SA / tfstate secrets |
+
+Runtime env vars (`YDB_ENDPOINT`, `APP_CONFIG`, `S3_*`, loader keys, etc.) come from **Terraform outputs** and `infra/gcp` function config — not manual env configuration. During cutover, GCP Terraform reads the Yandex endpoint from YC Terraform remote state.
+
+**Deployment 1 — cutover (`deploy_mode=gcp-cutover`):**
+
+1. Actions → Deploy → Run workflow → choose `dev` or `prod`, mode `gcp-cutover`.
+2. Pipeline order: freeze YC reminder cron → Goose on Supabase → full YDB→Postgres copy → GCP infra (no scheduler/loader trigger) → bucket copy → enable scheduler + Eventarc + dual-write → incremental DB sync → Telegram webhook to GCP dispatcher URL.
+3. YC functions and proxy stay deployed for rollback.
+
+**Deployment 2 — Postgres-only (`deploy_mode=gcp-only`):**
+
+After validating dev and prod on GCP, run workflow with `gcp-only`. Functions use Postgres only (`DUAL_WRITE=false`); scheduler and loader trigger are enabled. Yandex code remains in the repo until you manually decommission YC infra.
+
 ---
 
 ## Configuration 🛠️

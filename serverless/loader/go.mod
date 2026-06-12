@@ -2,8 +2,15 @@ module github.com/escalopa/prayer-bot/loader
 
 go 1.21
 
+replace github.com/escalopa/prayer-bot => ../..
+
 require (
-	github.com/aws/aws-sdk-go v1.55.7
+	cloud.google.com/go/storage v1.49.0
+	github.com/GoogleCloudPlatform/functions-framework-go v1.9.2
+	github.com/aws/aws-sdk-go-v2 v1.32.6
+	github.com/aws/aws-sdk-go-v2/credentials v1.17.47
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.71.0
+	github.com/cloudevents/sdk-go/v2 v2.15.4
 	github.com/escalopa/prayer-bot v0.0.0-20260611111645-7dcf1f176a94
 	github.com/ydb-platform/ydb-go-sdk/v3 v3.108.0
 	github.com/ydb-platform/ydb-go-yc v0.12.3

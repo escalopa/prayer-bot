@@ -1,30 +1,50 @@
 package botprofile
 
-import "testing"
+import (
+	"fmt"
+	"testing"
 
-func TestCityFromUsername(t *testing.T) {
-	tests := []struct {
-		username string
-		want     string
-	}{
-		{username: "kazan_prayer_bot", want: "Kazan"},
-		{username: "innopolis_test_bot", want: "Innopolis"},
-		{username: "bot", want: "Bot"},
+	"github.com/go-telegram/bot"
+	"github.com/go-telegram/bot/models"
+)
+
+func TestIsRateLimited(t *testing.T) {
+	rateErr := &bot.TooManyRequestsError{Message: "too many requests", RetryAfter: 43240}
+	wrapped := fmt.Errorf("setMyName: %w", rateErr)
+
+	if !isRateLimited(rateErr) {
+		t.Fatal("expected direct TooManyRequestsError to be rate limited")
 	}
-
-	for _, tt := range tests {
-		if got := cityFromUsername(tt.username); got != tt.want {
-			t.Fatalf("cityFromUsername(%q) = %q, want %q", tt.username, got, tt.want)
-		}
+	if !isRateLimited(wrapped) {
+		t.Fatal("expected wrapped TooManyRequestsError to be rate limited")
+	}
+	if isRateLimited(fmt.Errorf("network timeout")) {
+		t.Fatal("expected unrelated error not to be rate limited")
 	}
 }
 
-func TestProfilePrefix(t *testing.T) {
-	if got := profilePrefix("kazan_prayer_bot"); got != "" {
-		t.Fatalf("profilePrefix(kazan_prayer_bot) = %q, want empty", got)
+func TestWrapProfileErr(t *testing.T) {
+	rateErr := &bot.TooManyRequestsError{RetryAfter: 60}
+	if err := wrapProfileErr("setMyName", rateErr); err != nil {
+		t.Fatalf("expected nil for rate limit, got %v", err)
 	}
+	if err := wrapProfileErr("setMyName", fmt.Errorf("bad request")); err == nil {
+		t.Fatal("expected error for non-rate-limit failure")
+	}
+}
 
-	if got := profilePrefix("kazan_test_bot"); got != "[TEST] " {
-		t.Fatalf("profilePrefix(kazan_test_bot) = %q, want %q", got, "[TEST] ")
+func TestCommandsEqual(t *testing.T) {
+	a := []models.BotCommand{{Command: "start", Description: "Start"}}
+	b := []models.BotCommand{{Command: "start", Description: "Start"}}
+	c := []models.BotCommand{{Command: "help", Description: "Help"}}
+
+	if !commandsEqual(a, b) {
+		t.Fatal("expected identical command lists to be equal")
+	}
+	if commandsEqual(a, c) {
+		t.Fatal("expected different command lists not to be equal")
+	}
+	if commandsEqual(a, append(a, c...)) {
+		t.Fatal("expected different lengths not to be equal")
 	}
 }

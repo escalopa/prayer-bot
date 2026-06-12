@@ -16,6 +16,15 @@ on:
         options:
           - prod
           - dev
+      deploy_mode:
+        description: 'legacy (YC) | gcp-cutover (migration) | gcp-only (Postgres-only)'
+        required: true
+        type: choice
+        options:
+          - legacy
+          - gcp-cutover
+          - gcp-only
+        default: legacy
 
 concurrency:
   group: deploy-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || (github.event_name == 'workflow_dispatch' && inputs.environment || 'prod') }}
@@ -39,6 +48,7 @@ jobs:
     outputs:
       cache_key: ${{ steps.set-cache-key.outputs.cache_key }}
       workspace: ${{ steps.set-workspace.outputs.workspace }}
+      deploy_mode: ${{ steps.set-workspace.outputs.deploy_mode }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -47,8 +57,11 @@ jobs:
         id: set-workspace
         run: |
           WORKSPACE=${{ github.event_name == 'pull_request' && 'dev' || (github.event_name == 'workflow_dispatch' && inputs.environment || 'prod') }}
+          DEPLOY_MODE=${{ github.event_name == 'workflow_dispatch' && inputs.deploy_mode || 'legacy' }}
           echo "workspace=$WORKSPACE" >> $GITHUB_OUTPUT
+          echo "deploy_mode=$DEPLOY_MODE" >> $GITHUB_OUTPUT
           echo "::notice::Workspace: $WORKSPACE"
+          echo "::notice::Deploy mode: $DEPLOY_MODE"
 
       - name: Set cache key
         id: set-cache-key
@@ -97,14 +110,30 @@ jobs:
       - name: Run revive
         run: revive -config revive.toml -formatter friendly ./...
 
+      - name: Test shared db package
+        run: go test ./internal/db/...
+
       - name: Test proxy function
         run: go test ./...
         working-directory: proxy/function
+
+      - name: Test dispatcher
+        run: go test ./...
+        working-directory: serverless/dispatcher
+
+      - name: Test reminder
+        run: go test ./...
+        working-directory: serverless/reminder
+
+      - name: Test loader
+        run: go test ./...
+        working-directory: serverless/loader
 
   migrate:
     name: Database Migration
     runs-on: ubuntu-latest
     needs: setup
+    if: needs.setup.outputs.deploy_mode == 'legacy'
     environment: ${{ needs.setup.outputs.workspace }}
     steps:
       - name: Checkout code
@@ -140,10 +169,17 @@ jobs:
           mv goose $HOME/.goose/
           echo "$HOME/.goose" >> $GITHUB_PATH
 
+      - name: Load YC Terraform outputs
+        uses: ./.github/actions/load-yc-terraform-outputs
+        with:
+          workspace: ${{ needs.setup.outputs.workspace }}
+          service_account_key: ${{ secrets.SERVICE_ACCOUNT_KEY }}
+          aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
       - name: Run Goose migrations
         env:
           GOOSE_DRIVER: ydb
-          GOOSE_DBSTRING_BASE: ${{ secrets.DB_CONNECTION_STRING }}
         run: |
           export PATH="$HOME/.goose:$PATH"
           cd migrations
@@ -152,6 +188,377 @@ jobs:
           echo "::notice::Running Goose migrations for ${{ needs.setup.outputs.workspace }} environment"
           goose up
         continue-on-error: false
+
+  freeze-yc-cron:
+    name: Freeze YC Reminder Cron
+    runs-on: ubuntu-latest
+    needs: setup
+    if: needs.setup.outputs.deploy_mode == 'gcp-cutover'
+    environment: ${{ needs.setup.outputs.workspace }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install YC CLI
+        run: |
+          curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
+          echo "${HOME}/yandex-cloud/bin" >> $GITHUB_PATH
+
+      - name: Authenticate YC CLI
+        env:
+          YC_SERVICE_ACCOUNT_KEY: ${{ secrets.SERVICE_ACCOUNT_KEY }}
+          YC_CLOUD_ID: ${{ secrets.CLOUD_ID }}
+          YC_FOLDER_ID: ${{ secrets.FOLDER_ID }}
+        run: |
+          echo "$YC_SERVICE_ACCOUNT_KEY" > iam.json
+          yc config set service-account-key iam.json
+          yc config set cloud-id "$YC_CLOUD_ID"
+          yc config set folder-id "$YC_FOLDER_ID"
+
+      - name: Disable YC reminder trigger
+        run: |
+          chmod +x _scripts/freeze-yc-cron.sh
+          WORKSPACE=${{ needs.setup.outputs.workspace }} bash _scripts/freeze-yc-cron.sh
+
+  migrate-schema-postgres:
+    name: Postgres Schema Migration
+    runs-on: ubuntu-latest
+    needs: setup
+    if: contains(fromJSON('["gcp-cutover","gcp-only"]'), needs.setup.outputs.deploy_mode)
+    environment: ${{ needs.setup.outputs.workspace }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Goose
+        run: |
+          GOOSE_VERSION="${{ env.GOOSE_VERSION }}"
+          wget -q "https://github.com/pressly/goose/releases/download/v${GOOSE_VERSION}/goose_linux_x86_64" -O goose
+          chmod +x goose
+          mkdir -p $HOME/.goose
+          mv goose $HOME/.goose/
+          echo "$HOME/.goose" >> $GITHUB_PATH
+
+      - name: Run Postgres Goose migrations
+        env:
+          GOOSE_DRIVER: postgres
+          GOOSE_DBSTRING: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          export PATH="$HOME/.goose:$PATH"
+          cd migrations/postgres
+          goose up
+
+  migrate-db-full:
+    name: Migrate YDB to Supabase (full)
+    runs-on: ubuntu-latest
+    needs: [setup, migrate-schema-postgres]
+    if: needs.setup.outputs.deploy_mode == 'gcp-cutover'
+    environment: ${{ needs.setup.outputs.workspace }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Install YC CLI
+        run: |
+          curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
+          echo "${HOME}/yandex-cloud/bin" >> $GITHUB_PATH
+
+      - name: Authenticate YC CLI
+        env:
+          YC_SERVICE_ACCOUNT_KEY: ${{ secrets.SERVICE_ACCOUNT_KEY }}
+          YC_CLOUD_ID: ${{ secrets.CLOUD_ID }}
+          YC_FOLDER_ID: ${{ secrets.FOLDER_ID }}
+        run: |
+          echo "$YC_SERVICE_ACCOUNT_KEY" > iam.json
+          yc config set service-account-key iam.json
+          yc config set cloud-id "$YC_CLOUD_ID"
+          yc config set folder-id "$YC_FOLDER_ID"
+
+      - name: Generate short-lived IAM token
+        run: |
+          export YDB_ACCESS_TOKEN=$(yc iam create-token)
+          echo "YDB_ACCESS_TOKEN=$YDB_ACCESS_TOKEN" >> $GITHUB_ENV
+
+      - name: Load YC Terraform outputs
+        uses: ./.github/actions/load-yc-terraform-outputs
+        with:
+          workspace: ${{ needs.setup.outputs.workspace }}
+          service_account_key: ${{ secrets.SERVICE_ACCOUNT_KEY }}
+          aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Run full database migration
+        env:
+          YDB_ENDPOINT: ${{ env.YDB_ENDPOINT }}
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+          YDB_TOKEN: ${{ env.YDB_ACCESS_TOKEN }}
+        working-directory: _scripts/migrate-ydb-to-supabase
+        run: go run . --mode=full
+
+  deploy-gcp-infra:
+    name: Deploy GCP Infrastructure (phase 1)
+    runs-on: ubuntu-latest
+    needs: [setup, migrate-schema-postgres, migrate-db-full]
+    if: |
+      needs.setup.outputs.deploy_mode == 'gcp-cutover' &&
+      needs.migrate-schema-postgres.result == 'success' &&
+      needs.migrate-db-full.result == 'success'
+    environment: ${{ needs.setup.outputs.workspace }}
+    outputs:
+      data_bucket_name: ${{ steps.outputs.outputs.data_bucket_name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Load application config
+        uses: ./.github/actions/load-config
+        with:
+          app_config: ${{ secrets.APP_CONFIG }}
+          app_config_path: ${{ env.APP_CONFIG_PATH }}
+
+      - name: Write GCP credentials
+        run: echo '${{ env.GCP_SA_KEY }}' > gcp-sa.json
+
+      - name: Terraform Init
+        working-directory: infra/gcp
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-sa.json
+        run: |
+          terraform init \
+            -backend-config="bucket=${GCP_TFSTATE_BUCKET}" \
+            -backend-config="prefix=prayer-bot/infra-${{ needs.setup.outputs.workspace }}"
+
+      - name: Terraform Apply (loader trigger disabled)
+        working-directory: infra/gcp
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-sa.json
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          TF_VAR_project_id: ${{ env.GCP_PROJECT_ID }}
+          TF_VAR_region: ${{ env.GCP_REGION }}
+          TF_VAR_environment: ${{ needs.setup.outputs.workspace }}
+          TF_VAR_enable_loader_trigger: false
+          TF_VAR_enable_scheduler: false
+          TF_VAR_dual_write: true
+          TF_VAR_supabase_db_url: ${{ secrets.SUPABASE_DB_URL }}
+          TF_VAR_ydb_token: ${{ secrets.YDB_TOKEN_FOR_GCP }}
+        run: terraform apply -auto-approve
+
+      - name: Export outputs
+        id: outputs
+        working-directory: infra/gcp
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-sa.json
+        run: |
+          echo "data_bucket_name=$(terraform output -raw data_bucket_name)" >> $GITHUB_OUTPUT
+
+  deploy-gcp-infra-only:
+    name: Deploy GCP Infrastructure (gcp-only)
+    runs-on: ubuntu-latest
+    needs: [setup, migrate-schema-postgres]
+    if: needs.setup.outputs.deploy_mode == 'gcp-only'
+    environment: ${{ needs.setup.outputs.workspace }}
+    outputs:
+      dispatcher_url: ${{ steps.outputs.outputs.dispatcher_url }}
+      data_bucket_name: ${{ steps.outputs.outputs.data_bucket_name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Load application config
+        uses: ./.github/actions/load-config
+        with:
+          app_config: ${{ secrets.APP_CONFIG }}
+          app_config_path: ${{ env.APP_CONFIG_PATH }}
+
+      - name: Write GCP credentials
+        run: echo '${{ env.GCP_SA_KEY }}' > gcp-sa.json
+
+      - name: Terraform Init
+        working-directory: infra/gcp
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-sa.json
+        run: |
+          terraform init \
+            -backend-config="bucket=${GCP_TFSTATE_BUCKET}" \
+            -backend-config="prefix=prayer-bot/infra-${{ needs.setup.outputs.workspace }}"
+
+      - name: Terraform Apply
+        working-directory: infra/gcp
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-sa.json
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          TF_VAR_project_id: ${{ env.GCP_PROJECT_ID }}
+          TF_VAR_region: ${{ env.GCP_REGION }}
+          TF_VAR_environment: ${{ needs.setup.outputs.workspace }}
+          TF_VAR_enable_loader_trigger: true
+          TF_VAR_enable_scheduler: true
+          TF_VAR_dual_write: false
+          TF_VAR_supabase_db_url: ${{ secrets.SUPABASE_DB_URL }}
+          TF_VAR_ydb_token: ""
+        run: terraform apply -auto-approve
+
+      - name: Export outputs
+        id: outputs
+        working-directory: infra/gcp
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-sa.json
+        run: |
+          echo "dispatcher_url=$(terraform output -raw dispatcher_url)" >> $GITHUB_OUTPUT
+          echo "data_bucket_name=$(terraform output -raw data_bucket_name)" >> $GITHUB_OUTPUT
+
+  migrate-storage:
+    name: Migrate YC Bucket to GCS
+    runs-on: ubuntu-latest
+    needs: [setup, deploy-gcp-infra]
+    if: needs.setup.outputs.deploy_mode == 'gcp-cutover' && needs.deploy-gcp-infra.result == 'success'
+    environment: ${{ needs.setup.outputs.workspace }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Write GCP credentials
+        run: echo '${{ env.GCP_SA_KEY }}' > gcp-sa.json
+
+      - name: Load YC Terraform outputs
+        uses: ./.github/actions/load-yc-terraform-outputs
+        with:
+          workspace: ${{ needs.setup.outputs.workspace }}
+          service_account_key: ${{ secrets.SERVICE_ACCOUNT_KEY }}
+          aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Copy objects to GCS
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-sa.json
+          ENVIRONMENT: ${{ needs.setup.outputs.workspace }}
+          GCS_BUCKET: ${{ needs.deploy-gcp-infra.outputs.data_bucket_name }}
+        working-directory: _scripts/migrate-bucket-to-gcs
+        run: go run .
+
+  deploy-gcp-functions:
+    name: Deploy GCP Functions (phase 2)
+    runs-on: ubuntu-latest
+    needs: [setup, deploy-gcp-infra, migrate-storage]
+    if: needs.setup.outputs.deploy_mode == 'gcp-cutover' && needs.migrate-storage.result == 'success'
+    environment: ${{ needs.setup.outputs.workspace }}
+    outputs:
+      dispatcher_url: ${{ steps.outputs.outputs.dispatcher_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Load application config
+        uses: ./.github/actions/load-config
+        with:
+          app_config: ${{ secrets.APP_CONFIG }}
+          app_config_path: ${{ env.APP_CONFIG_PATH }}
+
+      - name: Write GCP credentials
+        run: echo '${{ env.GCP_SA_KEY }}' > gcp-sa.json
+
+      - name: Terraform Init
+        working-directory: infra/gcp
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-sa.json
+        run: |
+          terraform init \
+            -backend-config="bucket=${GCP_TFSTATE_BUCKET}" \
+            -backend-config="prefix=prayer-bot/infra-${{ needs.setup.outputs.workspace }}"
+
+      - name: Terraform Apply (enable loader trigger)
+        working-directory: infra/gcp
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-sa.json
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          TF_VAR_project_id: ${{ env.GCP_PROJECT_ID }}
+          TF_VAR_region: ${{ env.GCP_REGION }}
+          TF_VAR_environment: ${{ needs.setup.outputs.workspace }}
+          TF_VAR_enable_loader_trigger: true
+          TF_VAR_enable_scheduler: true
+          TF_VAR_dual_write: true
+          TF_VAR_supabase_db_url: ${{ secrets.SUPABASE_DB_URL }}
+          TF_VAR_ydb_token: ${{ secrets.YDB_TOKEN_FOR_GCP }}
+        run: terraform apply -auto-approve
+
+      - name: Export outputs
+        id: outputs
+        working-directory: infra/gcp
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-sa.json
+        run: |
+          echo "dispatcher_url=$(terraform output -raw dispatcher_url)" >> $GITHUB_OUTPUT
+
+  migrate-db-incremental:
+    name: Migrate YDB to Supabase (incremental)
+    runs-on: ubuntu-latest
+    needs: [setup, deploy-gcp-functions]
+    if: needs.setup.outputs.deploy_mode == 'gcp-cutover' && needs.deploy-gcp-functions.result == 'success'
+    environment: ${{ needs.setup.outputs.workspace }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Install YC CLI
+        run: |
+          curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
+          echo "${HOME}/yandex-cloud/bin" >> $GITHUB_PATH
+
+      - name: Authenticate YC CLI
+        env:
+          YC_SERVICE_ACCOUNT_KEY: ${{ secrets.SERVICE_ACCOUNT_KEY }}
+          YC_CLOUD_ID: ${{ secrets.CLOUD_ID }}
+          YC_FOLDER_ID: ${{ secrets.FOLDER_ID }}
+        run: |
+          echo "$YC_SERVICE_ACCOUNT_KEY" > iam.json
+          yc config set service-account-key iam.json
+          yc config set cloud-id "$YC_CLOUD_ID"
+          yc config set folder-id "$YC_FOLDER_ID"
+
+      - name: Generate short-lived IAM token
+        run: |
+          export YDB_ACCESS_TOKEN=$(yc iam create-token)
+          echo "YDB_ACCESS_TOKEN=$YDB_ACCESS_TOKEN" >> $GITHUB_ENV
+
+      - name: Load YC Terraform outputs
+        uses: ./.github/actions/load-yc-terraform-outputs
+        with:
+          workspace: ${{ needs.setup.outputs.workspace }}
+          service_account_key: ${{ secrets.SERVICE_ACCOUNT_KEY }}
+          aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Run incremental database migration
+        env:
+          YDB_ENDPOINT: ${{ env.YDB_ENDPOINT }}
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+          YDB_TOKEN: ${{ env.YDB_ACCESS_TOKEN }}
+        working-directory: _scripts/migrate-ydb-to-supabase
+        run: go run . --mode=incremental
 
   validate:
     name: Terraform Validate
@@ -236,7 +643,7 @@ jobs:
     name: Terraform Apply
     runs-on: ubuntu-latest
     needs: [setup, plan, migrate]
-    if: needs.plan.result == 'success' && needs.migrate.result == 'success'
+    if: needs.setup.outputs.deploy_mode == 'legacy' && needs.plan.result == 'success' && needs.migrate.result == 'success'
     environment: ${{ needs.setup.outputs.workspace }}
     outputs:
       dispatcher_function_id: ${{ steps.outputs.outputs.dispatcher_function_id }}
@@ -291,6 +698,7 @@ jobs:
     name: Terraform Proxy Apply
     runs-on: ubuntu-latest
     needs: [setup, apply]
+    if: needs.setup.outputs.deploy_mode == 'legacy' && needs.apply.result == 'success'
     environment: ${{ needs.setup.outputs.workspace }}
     outputs:
       webhook_url: ${{ steps.outputs.outputs.webhook_url }}
@@ -339,8 +747,17 @@ jobs:
   hook:
     name: Setup Telegram Webhooks
     runs-on: ubuntu-latest
-    needs: [setup, apply, proxy]
-    if: needs.apply.result == 'success'
+    needs:
+      - setup
+      - apply
+      - proxy
+      - deploy-gcp-functions
+      - migrate-db-incremental
+      - deploy-gcp-infra-only
+    if: |
+      (needs.setup.outputs.deploy_mode == 'legacy' && needs.apply.result == 'success') ||
+      (needs.setup.outputs.deploy_mode == 'gcp-cutover' && needs.deploy-gcp-functions.result == 'success' && needs.migrate-db-incremental.result == 'success') ||
+      (needs.setup.outputs.deploy_mode == 'gcp-only' && needs.deploy-gcp-infra-only.result == 'success')
     environment: ${{ needs.setup.outputs.workspace }}
     steps:
       - name: Checkout code
@@ -353,6 +770,7 @@ jobs:
           app_config_path: ${{ env.APP_CONFIG_PATH }}
 
       - name: Get Dispatcher Function ID
+        if: needs.setup.outputs.deploy_mode == 'legacy'
         run: |
           DISPATCHER_FUNCTION_ID="${{ needs.apply.outputs.dispatcher_function_id }}"
           echo "DISPATCHER_FUNCTION_ID=$DISPATCHER_FUNCTION_ID" >> $GITHUB_ENV
@@ -360,7 +778,14 @@ jobs:
 
       - name: Get webhook URL
         run: |
-          WEBHOOK_URL="${{ needs.proxy.outputs.webhook_url }}"
+          DEPLOY_MODE="${{ needs.setup.outputs.deploy_mode }}"
+          if [ "$DEPLOY_MODE" = "legacy" ]; then
+            WEBHOOK_URL="${{ needs.proxy.outputs.webhook_url }}"
+          elif [ "$DEPLOY_MODE" = "gcp-only" ]; then
+            WEBHOOK_URL="${{ needs.deploy-gcp-infra-only.outputs.dispatcher_url }}"
+          else
+            WEBHOOK_URL="${{ needs.deploy-gcp-functions.outputs.dispatcher_url }}"
+          fi
           echo "WEBHOOK_URL=$WEBHOOK_URL" >> $GITHUB_ENV
           if [ -n "$WEBHOOK_URL" ]; then
             echo "::notice::Webhook URL: $WEBHOOK_URL"
@@ -375,8 +800,11 @@ jobs:
   profile:
     name: Sync Telegram Profiles
     runs-on: ubuntu-latest
-    needs: [setup, apply]
-    if: needs.apply.result == 'success'
+    needs: [setup, apply, deploy-gcp-functions, deploy-gcp-infra-only]
+    if: |
+      (needs.setup.outputs.deploy_mode == 'legacy' && needs.apply.result == 'success') ||
+      (needs.setup.outputs.deploy_mode == 'gcp-cutover' && needs.deploy-gcp-functions.result == 'success') ||
+      (needs.setup.outputs.deploy_mode == 'gcp-only' && needs.deploy-gcp-infra-only.result == 'success')
     environment: ${{ needs.setup.outputs.workspace }}
     steps:
       - name: Checkout code
@@ -410,21 +838,48 @@ jobs:
   summary:
     name: Deployment Summary
     runs-on: ubuntu-latest
-    needs: [setup, lint, migrate, validate, plan, apply, proxy, hook, profile]
+    needs:
+      - setup
+      - lint
+      - migrate
+      - validate
+      - plan
+      - apply
+      - proxy
+      - hook
+      - profile
+      - freeze-yc-cron
+      - migrate-schema-postgres
+      - migrate-db-full
+      - deploy-gcp-infra
+      - migrate-storage
+      - deploy-gcp-functions
+      - migrate-db-incremental
+      - deploy-gcp-infra-only
     if: always()
     steps:
       - name: Generate summary
         run: |
           echo "## Deployment Summary — \`${{ needs.setup.outputs.workspace }}\` environment" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Deploy mode:** \`${{ needs.setup.outputs.deploy_mode }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
           echo "| Code Linting | ${{ needs.lint.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Database Migration | ${{ needs.migrate.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Database Migration (legacy) | ${{ needs.migrate.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Terraform Validate | ${{ needs.validate.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Terraform Plan | ${{ needs.plan.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Terraform Apply | ${{ needs.apply.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Terraform Apply (YC) | ${{ needs.apply.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Terraform Proxy Apply | ${{ needs.proxy.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Freeze YC Cron | ${{ needs.freeze-yc-cron.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Postgres Schema (Goose) | ${{ needs.migrate-schema-postgres.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| YDB → Supabase (full) | ${{ needs.migrate-db-full.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| GCP Infra (phase 1) | ${{ needs.deploy-gcp-infra.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Bucket → GCS | ${{ needs.migrate-storage.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| GCP Functions (phase 2) | ${{ needs.deploy-gcp-functions.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| YDB → Supabase (incremental) | ${{ needs.migrate-db-incremental.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| GCP Infra (gcp-only) | ${{ needs.deploy-gcp-infra-only.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Webhook Setup | ${{ needs.hook.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Telegram Profiles | ${{ needs.profile.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -434,9 +889,17 @@ jobs:
           echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
 
           if [ "${{ needs.proxy.outputs.webhook_url }}" != "" ]; then
-            echo "**Webhook URL:** ${{ needs.proxy.outputs.webhook_url }}" >> $GITHUB_STEP_SUMMARY
+            echo "**Webhook URL (proxy):** ${{ needs.proxy.outputs.webhook_url }}" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "${{ needs.deploy-gcp-functions.outputs.dispatcher_url }}" != "" ]; then
+            echo "**Webhook URL (GCP):** ${{ needs.deploy-gcp-functions.outputs.dispatcher_url }}" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "${{ needs.deploy-gcp-infra-only.outputs.dispatcher_url }}" != "" ]; then
+            echo "**Webhook URL (GCP gcp-only):** ${{ needs.deploy-gcp-infra-only.outputs.dispatcher_url }}" >> $GITHUB_STEP_SUMMARY
           fi
 
           if [ "${{ needs.apply.outputs.dispatcher_function_id }}" != "" ]; then
-            echo "**Dispatcher Function ID:** ${{ needs.apply.outputs.dispatcher_function_id }}" >> $GITHUB_STEP_SUMMARY
+            echo "**Dispatcher Function ID (YC):** ${{ needs.apply.outputs.dispatcher_function_id }}" >> $GITHUB_STEP_SUMMARY
           fi

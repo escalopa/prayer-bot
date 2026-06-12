@@ -4,6 +4,7 @@ package botprofile
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"unicode"
@@ -11,6 +12,95 @@ import (
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
 )
+
+func isRateLimited(err error) bool {
+	if err == nil {
+		return false
+	}
+	if bot.IsTooManyRequestsError(err) {
+		return true
+	}
+	var rateErr *bot.TooManyRequestsError
+	return errors.As(err, &rateErr)
+}
+
+func wrapProfileErr(step string, err error) error {
+	if err == nil || isRateLimited(err) {
+		return nil
+	}
+	return fmt.Errorf("%s: %w", step, err)
+}
+
+func commandsEqual(a, b []models.BotCommand) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i].Command != b[i].Command || a[i].Description != b[i].Description {
+			return false
+		}
+	}
+	return true
+}
+
+func syncMyName(ctx context.Context, b *bot.Bot, desired string) error {
+	current, err := b.GetMyName(ctx, &bot.GetMyNameParams{})
+	if err != nil {
+		return wrapProfileErr("getMyName", err)
+	}
+	if current.Name == desired {
+		return nil
+	}
+	if _, err := b.SetMyName(ctx, &bot.SetMyNameParams{Name: desired}); err != nil {
+		return wrapProfileErr("setMyName", err)
+	}
+	return nil
+}
+
+func syncMyShortDescription(ctx context.Context, b *bot.Bot, desired string) error {
+	current, err := b.GetMyShortDescription(ctx, &bot.GetMyShortDescriptionParams{})
+	if err != nil {
+		return wrapProfileErr("getMyShortDescription", err)
+	}
+	if current.ShortDescription == desired {
+		return nil
+	}
+	if _, err := b.SetMyShortDescription(ctx, &bot.SetMyShortDescriptionParams{ShortDescription: desired}); err != nil {
+		return wrapProfileErr("setMyShortDescription", err)
+	}
+	return nil
+}
+
+func syncMyDescription(ctx context.Context, b *bot.Bot, desired string) error {
+	current, err := b.GetMyDescription(ctx, &bot.GetMyDescriptionParams{})
+	if err != nil {
+		return wrapProfileErr("getMyDescription", err)
+	}
+	if current.Description == desired {
+		return nil
+	}
+	if _, err := b.SetMyDescription(ctx, &bot.SetMyDescriptionParams{Description: desired}); err != nil {
+		return wrapProfileErr("setMyDescription", err)
+	}
+	return nil
+}
+
+func syncMyCommands(ctx context.Context, b *bot.Bot, desired []models.BotCommand, scope models.BotCommandScope, label string) error {
+	current, err := b.GetMyCommands(ctx, &bot.GetMyCommandsParams{Scope: scope})
+	if err != nil {
+		return wrapProfileErr("getMyCommands ("+label+")", err)
+	}
+	if commandsEqual(current, desired) {
+		return nil
+	}
+	if _, err := b.SetMyCommands(ctx, &bot.SetMyCommandsParams{
+		Commands: desired,
+		Scope:    scope,
+	}); err != nil {
+		return wrapProfileErr("setMyCommands ("+label+")", err)
+	}
+	return nil
+}
 
 // PublicAbout is prepended to /help in the dispatcher handler; keep in sync with Telegram descriptions.
 const PublicAbout = "🕌 Daily prayer times\n⏰ Prayer notifications\n🌍 Multiple languages supported"
@@ -36,7 +126,7 @@ func profilePrefix(username string) string {
 	return ""
 }
 
-// Sync calls setMyName, setMyShortDescription, setMyDescription, and setMyCommands.
+// Sync updates Telegram profile fields only when they differ from the desired values.
 // Command strings must match serverless/dispatcher/internal/handler/command.go.
 func Sync(ctx context.Context, b *bot.Bot, ownerID int64) error {
 	me, err := b.GetMe(ctx)
@@ -51,16 +141,17 @@ func Sync(ctx context.Context, b *bot.Bot, ownerID int64) error {
 		return fmt.Errorf("owner id is required")
 	}
 
-	if _, err := b.SetMyName(ctx, &bot.SetMyNameParams{Name: fmt.Sprintf("%s%s Prayer Times", prefix, city)}); err != nil {
-		return fmt.Errorf("setMyName: %w", err)
+	desiredName := fmt.Sprintf("%s%s Prayer Times", prefix, city)
+	if err := syncMyName(ctx, b, desiredName); err != nil {
+		return err
 	}
-	about := fmt.Sprintf("%s\n📍 %s", PublicAbout, city)
 
-	if _, err := b.SetMyShortDescription(ctx, &bot.SetMyShortDescriptionParams{ShortDescription: about}); err != nil {
-		return fmt.Errorf("setMyShortDescription: %w", err)
+	about := fmt.Sprintf("%s\n📍 %s", PublicAbout, city)
+	if err := syncMyShortDescription(ctx, b, about); err != nil {
+		return err
 	}
-	if _, err := b.SetMyDescription(ctx, &bot.SetMyDescriptionParams{Description: about}); err != nil {
-		return fmt.Errorf("setMyDescription: %w", err)
+	if err := syncMyDescription(ctx, b, about); err != nil {
+		return err
 	}
 
 	userCommands := []models.BotCommand{
@@ -85,18 +176,11 @@ func Sync(ctx context.Context, b *bot.Bot, ownerID int64) error {
 	}
 	allCommands := append(append([]models.BotCommand{}, userCommands...), adminCommands...)
 
-	if _, err := b.SetMyCommands(ctx, &bot.SetMyCommandsParams{
-		Commands: userCommands,
-		Scope:    &models.BotCommandScopeDefault{},
-	}); err != nil {
-		return fmt.Errorf("setMyCommands: %w", err)
+	if err := syncMyCommands(ctx, b, userCommands, &models.BotCommandScopeDefault{}, "default"); err != nil {
+		return err
 	}
-
-	if _, err := b.SetMyCommands(ctx, &bot.SetMyCommandsParams{
-		Commands: allCommands,
-		Scope:    &models.BotCommandScopeChat{ChatID: ownerID},
-	}); err != nil {
-		return fmt.Errorf("setMyCommands (owner chat): %w", err)
+	if err := syncMyCommands(ctx, b, allCommands, &models.BotCommandScopeChat{ChatID: ownerID}, "owner chat"); err != nil {
+		return err
 	}
 
 	return nil

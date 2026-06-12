@@ -1,10 +1,10 @@
 module github.com/escalopa/prayer-bot/proxy/function
 
-go 1.25
+go 1.25.0
 
 require (
 	github.com/GoogleCloudPlatform/functions-framework-go v1.9.2
-	github.com/escalopa/prayer-bot v0.0.0-20260611111645-7dcf1f176a94
+	github.com/escalopa/prayer-bot v0.0.0-20260612144957-d087f96ed7d4
 )
 
 require (

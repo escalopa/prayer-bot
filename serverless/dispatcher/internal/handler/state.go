@@ -83,10 +83,7 @@ func (h *Handler) bugState(ctx context.Context, b *bot.Bot, update *models.Updat
 		return domain.ErrInternal
 	}
 
-	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID: chat.ChatID,
-		Text:   h.lp.GetText(chat.LanguageCode).Bug.Success,
-	})
+	_, err = b.SendMessage(ctx, markdownMessage(chat.ChatID, h.lp.GetText(chat.LanguageCode).Bug.Success))
 	if err != nil {
 		log.Error("bugState: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
@@ -118,10 +115,7 @@ func (h *Handler) feedbackState(ctx context.Context, b *bot.Bot, update *models.
 		return domain.ErrInternal
 	}
 
-	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID: chat.ChatID,
-		Text:   h.lp.GetText(chat.LanguageCode).Feedback.Success,
-	})
+	_, err = b.SendMessage(ctx, markdownMessage(chat.ChatID, h.lp.GetText(chat.LanguageCode).Feedback.Success))
 	if err != nil {
 		log.Error("feedbackState: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
@@ -158,10 +152,7 @@ func (h *Handler) replyState(ctx context.Context, b *bot.Bot, update *models.Upd
 		return domain.ErrInternal
 	}
 
-	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID: chat.ChatID,
-		Text:   h.lp.GetText(chat.LanguageCode).Reply.Success,
-	})
+	_, err = b.SendMessage(ctx, markdownMessage(chat.ChatID, h.lp.GetText(chat.LanguageCode).Reply.Success))
 	if err != nil {
 		log.Error("replyState: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
@@ -200,10 +191,7 @@ func (h *Handler) announceState(ctx context.Context, b *bot.Bot, update *models.
 
 	_ = g.Wait()
 
-	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID: chat.ChatID,
-		Text:   h.lp.GetText(chat.LanguageCode).Announce.Success,
-	})
+	_, err = b.SendMessage(ctx, markdownMessage(chat.ChatID, h.lp.GetText(chat.LanguageCode).Announce.Success))
 	if err != nil {
 		log.Error("announceState: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal

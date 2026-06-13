@@ -7,8 +7,10 @@ github.com/cloudevents/sdk-go/v2 v2.15.2/go.mod h1:lL7kSWAE/V8VI4Wh0jbL2v/jvqsm6
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/escalopa/prayer-bot v0.0.0-20251102114226-e7cacf22daf1 h1:s9sqt4CtdExFGlZz1k2SDB2rA2elyMHR7I59MJ9c1lg=
-github.com/escalopa/prayer-bot v0.0.0-20251102114226-e7cacf22daf1/go.mod h1:HOpIxziLKMTC/a+Q6z40Rn5tJDEZsFyzhniLA4iB2i0=
+github.com/escalopa/prayer-bot v0.0.0-20260612144957-d087f96ed7d4 h1:B0Xh8KAEVNCAUAFuukB+5QUlxjZ+L784We9ZyoE8m/s=
+github.com/escalopa/prayer-bot v0.0.0-20260612144957-d087f96ed7d4/go.mod h1:bteiKqeU1JkPMWTv9Fs11pfUMDCo/v7Z0MY1+8+zwgA=
+github.com/escalopa/prayer-bot v0.0.0-20260613022059-481c438696c7 h1:XOrNfMpZM4nCRzKtehvSw/pDXmALVR/Cy9aYSHoio/s=
+github.com/escalopa/prayer-bot v0.0.0-20260613022059-481c438696c7/go.mod h1:bteiKqeU1JkPMWTv9Fs11pfUMDCo/v7Z0MY1+8+zwgA=
 github.com/google/go-cmp v0.7.0 h1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=
 github.com/google/go-cmp v0.7.0/go.mod h1:pXiqmnSA92OHEEa9HXL2W4E7lf9JzCmGVUdgjX3N/iU=
 github.com/google/gofuzz v1.0.0/go.mod h1:dBl0BpW6vV/+mYPU4Po3pmUjxk6FQPldtuIdl/M65Eg=

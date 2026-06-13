@@ -1,0 +1,95 @@
+name: Load YC Terraform outputs
+description: Read Yandex Cloud Terraform outputs into the job environment
+
+inputs:
+  workspace:
+    description: Terraform workspace (dev/prod)
+    required: true
+  service_account_key:
+    description: Yandex Cloud service account key JSON
+    required: true
+  app_config:
+    description: Application config.json content (required for terraform apply when outputs are missing)
+    required: true
+  app_config_path:
+    description: Path where config.json will be created
+    required: false
+    default: config.json
+  aws_access_key_id:
+    description: AWS access key for YC tfstate S3 backend
+    required: true
+  aws_secret_access_key:
+    description: AWS secret key for YC tfstate S3 backend
+    required: true
+  cloud_id:
+    description: Yandex Cloud ID for Terraform provider
+    required: true
+  folder_id:
+    description: Yandex Cloud folder ID for Terraform provider
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_wrapper: false
+
+    - name: Write service account key
+      shell: bash
+      run: |
+        echo '${{ inputs.service_account_key }}' > iam.json
+        if ! jq empty iam.json 2>/dev/null; then
+          echo "::error::SERVICE_ACCOUNT_KEY is not valid JSON"
+          exit 1
+        fi
+
+    - name: Write config.json
+      shell: bash
+      run: |
+        echo "::add-mask::${{ inputs.app_config }}"
+        echo '${{ inputs.app_config }}' > "${{ inputs.app_config_path }}"
+        if ! jq empty "${{ inputs.app_config_path }}" 2>/dev/null; then
+          echo "::error::APP_CONFIG is not valid JSON"
+          exit 1
+        fi
+
+    - name: Init Terraform and export outputs
+      shell: bash
+      env:
+        AWS_ACCESS_KEY_ID: ${{ inputs.aws_access_key_id }}
+        AWS_SECRET_ACCESS_KEY: ${{ inputs.aws_secret_access_key }}
+        TF_VAR_cloud_id: ${{ inputs.cloud_id }}
+        TF_VAR_folder_id: ${{ inputs.folder_id }}
+      run: |
+        set -euo pipefail
+
+        terraform init \
+          -backend-config="access_key=$AWS_ACCESS_KEY_ID" \
+          -backend-config="secret_key=$AWS_SECRET_ACCESS_KEY"
+
+        terraform workspace select "${{ inputs.workspace }}" || terraform workspace new "${{ inputs.workspace }}"
+
+        if ! terraform output -raw ydb_endpoint >/dev/null 2>&1; then
+          echo "::notice::YC outputs missing from state; running terraform apply to register them"
+          if ! terraform apply -auto-approve -input=false; then
+            echo "::error::Root YC Terraform apply failed. Ensure SERVICE_ACCOUNT_KEY and tfstate access are valid, then retry."
+            exit 1
+          fi
+        fi
+
+        echo "YDB_ENDPOINT=$(terraform output -raw ydb_endpoint)" >> "$GITHUB_ENV"
+        echo "GOOSE_DBSTRING_BASE=$(terraform output -raw ydb_endpoint)" >> "$GITHUB_ENV"
+        echo "YC_BUCKET=$(terraform output -raw bucket_name)" >> "$GITHUB_ENV"
+        echo "S3_ENDPOINT=$(terraform output -raw s3_endpoint)" >> "$GITHUB_ENV"
+        echo "REGION=$(terraform output -raw storage_region)" >> "$GITHUB_ENV"
+
+        ACCESS_KEY="$(terraform output -raw loader_access_key)"
+        SECRET_KEY="$(terraform output -raw loader_secret_key)"
+        echo "::add-mask::$ACCESS_KEY"
+        echo "::add-mask::$SECRET_KEY"
+        echo "AWS_ACCESS_KEY_ID=$ACCESS_KEY" >> "$GITHUB_ENV"
+        echo "AWS_SECRET_ACCESS_KEY=$SECRET_KEY" >> "$GITHUB_ENV"
+
+        echo "::notice::YC Terraform outputs loaded for workspace ${{ inputs.workspace }}"

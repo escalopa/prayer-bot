@@ -295,3 +295,35 @@ resource "yandex_function_trigger" "reminder_trigger" {
     cron_expression = "* * * * ? *" # every minute
   }
 }
+
+output "ydb_endpoint" {
+  description = "YDB endpoint for SDK clients and dual-write on GCP."
+  value       = yandex_ydb_database_serverless.ydb.ydb_full_endpoint
+}
+
+output "bucket_name" {
+  description = "Yandex Object Storage bucket for prayer time CSV files."
+  value       = yandex_storage_bucket.bucket.bucket
+}
+
+output "s3_endpoint" {
+  description = "S3-compatible endpoint for Yandex Object Storage."
+  value       = "https://storage.yandexcloud.net"
+}
+
+output "storage_region" {
+  description = "Region for Yandex Object Storage API calls."
+  value       = var.region
+}
+
+output "loader_access_key" {
+  description = "Static access key for loader SA (bucket read during migration)."
+  value       = yandex_iam_service_account_static_access_key.loader_sa_keys.access_key
+  sensitive   = true
+}
+
+output "loader_secret_key" {
+  description = "Static secret key for loader SA (bucket read during migration)."
+  value       = yandex_iam_service_account_static_access_key.loader_sa_keys.secret_key
+  sensitive   = true
+}

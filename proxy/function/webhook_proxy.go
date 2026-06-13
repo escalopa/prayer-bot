@@ -8,8 +8,13 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
 	"github.com/escalopa/prayer-bot/log"
 )
+
+func init() {
+	functions.HTTP("WebhookProxy", WebhookProxy)
+}
 
 const upstreamTimeout = 15 * time.Second
 

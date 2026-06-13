@@ -122,7 +122,7 @@ func (s *Store) SetLanguageCode(ctx context.Context, botID int64, chatID int64, 
 			return pg.SetLanguageCode(ctx, botID, chatID, languageCode)
 		}
 		return y.SetLanguageCode(ctx, botID, chatID, languageCode)
-	}, func(ctx context.Context, y *YDB) error {
+	}, func(y *YDB) error {
 		return y.SetLanguageCode(ctx, botID, chatID, languageCode)
 	})
 }
@@ -133,7 +133,7 @@ func (s *Store) SetSubscribed(ctx context.Context, botID int64, chatID int64, su
 			return pg.SetSubscribed(ctx, botID, chatID, subscribed)
 		}
 		return y.SetSubscribed(ctx, botID, chatID, subscribed)
-	}, func(ctx context.Context, y *YDB) error {
+	}, func(y *YDB) error {
 		return y.SetSubscribed(ctx, botID, chatID, subscribed)
 	})
 }
@@ -144,7 +144,7 @@ func (s *Store) SetState(ctx context.Context, botID int64, chatID int64, state s
 			return pg.SetState(ctx, botID, chatID, state)
 		}
 		return y.SetState(ctx, botID, chatID, state)
-	}, func(ctx context.Context, y *YDB) error {
+	}, func(y *YDB) error {
 		return y.SetState(ctx, botID, chatID, state)
 	})
 }
@@ -161,7 +161,7 @@ func (s *Store) SetReminderOffset(
 			return pg.SetReminderOffset(ctx, botID, chatID, reminderType, offset)
 		}
 		return y.SetReminderOffset(ctx, botID, chatID, reminderType, offset)
-	}, func(ctx context.Context, y *YDB) error {
+	}, func(y *YDB) error {
 		return y.SetReminderOffset(ctx, botID, chatID, reminderType, offset)
 	})
 }
@@ -172,7 +172,7 @@ func (s *Store) SetJamaatEnabled(ctx context.Context, botID int64, chatID int64,
 			return pg.SetJamaatEnabled(ctx, botID, chatID, enabled)
 		}
 		return y.SetJamaatEnabled(ctx, botID, chatID, enabled)
-	}, func(ctx context.Context, y *YDB) error {
+	}, func(y *YDB) error {
 		return y.SetJamaatEnabled(ctx, botID, chatID, enabled)
 	})
 }
@@ -189,7 +189,7 @@ func (s *Store) SetJamaatDelay(
 			return pg.SetJamaatDelay(ctx, botID, chatID, prayerID, delay)
 		}
 		return y.SetJamaatDelay(ctx, botID, chatID, prayerID, delay)
-	}, func(ctx context.Context, y *YDB) error {
+	}, func(y *YDB) error {
 		return y.SetJamaatDelay(ctx, botID, chatID, prayerID, delay)
 	})
 }
@@ -207,7 +207,7 @@ func (s *Store) UpdateReminder(
 			return pg.UpdateReminder(ctx, botID, chatID, reminderType, messageID, lastAt)
 		}
 		return y.UpdateReminder(ctx, botID, chatID, reminderType, messageID, lastAt)
-	}, func(ctx context.Context, y *YDB) error {
+	}, func(y *YDB) error {
 		return y.UpdateReminder(ctx, botID, chatID, reminderType, messageID, lastAt)
 	})
 }
@@ -218,7 +218,7 @@ func (s *Store) DeleteChat(ctx context.Context, botID int64, chatID int64) error
 			return pg.DeleteChat(ctx, botID, chatID)
 		}
 		return y.DeleteChat(ctx, botID, chatID)
-	}, func(ctx context.Context, y *YDB) error {
+	}, func(y *YDB) error {
 		return y.DeleteChat(ctx, botID, chatID)
 	})
 }
@@ -243,7 +243,7 @@ func (s *Store) SetPrayerDays(ctx context.Context, botID int64, rows []*domain.P
 			return pg.SetPrayerDays(ctx, botID, rows)
 		}
 		return y.SetPrayerDays(ctx, botID, rows)
-	}, func(ctx context.Context, y *YDB) error {
+	}, func(y *YDB) error {
 		return y.SetPrayerDays(ctx, botID, rows)
 	})
 }
@@ -251,7 +251,7 @@ func (s *Store) SetPrayerDays(ctx context.Context, botID int64, rows []*domain.P
 func (s *Store) mutate(
 	ctx context.Context,
 	primaryFn func(context.Context, *Postgres, *YDB) error,
-	mirrorFn func(context.Context, *YDB) error,
+	mirrorFn func(*YDB) error,
 ) error {
 	if s.primary == "postgres" {
 		if err := primaryFn(ctx, s.postgres, s.ydb); err != nil {

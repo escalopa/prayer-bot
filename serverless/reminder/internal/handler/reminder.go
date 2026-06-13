@@ -2,8 +2,6 @@ package handler
 
 import (
 	"context"
-	"fmt"
-	"strings"
 	"time"
 
 	"github.com/escalopa/prayer-bot/domain"
@@ -43,8 +41,9 @@ func (r *TomorrowReminder) ShouldTrigger(ctx context.Context, chat *domain.Chat,
 func (r *TomorrowReminder) Send(ctx context.Context, b *bot.Bot, chat *domain.Chat, _ domain.PrayerID, prayerDay *domain.PrayerDay) (int, error) {
 	deleteMessages(ctx, b, chat, chat.Reminder.Tomorrow.MessageID)
 	res, err := b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID: chat.ChatID,
-		Text:   r.formatPrayerDay(chat.BotID, prayerDay.NextDay, chat.LanguageCode),
+		ChatID:    chat.ChatID,
+		Text:      r.formatPrayerDay(chat.BotID, prayerDay.NextDay, chat.LanguageCode),
+		ParseMode: models.ParseModeMarkdown,
 	})
 	if err != nil {
 		return 0, err
@@ -138,9 +137,9 @@ func (r *SoonReminder) Send(ctx context.Context, b *bot.Bot, chat *domain.Chat, 
 	if chat.Reminder.Jamaat.Enabled && prayerID != domain.PrayerIDShuruq {
 		delay := chat.Reminder.Jamaat.Delay.GetDelayByPrayerID(prayerID)
 		jamaatTime := prayerTimeByID(prayerDay, prayerID, now).Add(delay).In(loc).Format(prayerTimeFormat)
-		message := fmt.Sprintf("%s\n%s",
-			fmt.Sprintf(strings.ReplaceAll(text.PrayerSoon, "*", ""), prayer, domain.FormatDuration(chat.Reminder.Soon.Offset.Duration()), prayerTime),
-			fmt.Sprintf(strings.ReplaceAll(text.PrayerJamaat, "*", ""), domain.FormatDuration(delay+chat.Reminder.Soon.Offset.Duration()), jamaatTime),
+		message := domain.StripMarkdown(
+			domain.FormatMarkdown(text.PrayerSoon, prayer, domain.FormatDuration(chat.Reminder.Soon.Offset.Duration()), prayerTime) + "\n" +
+				domain.FormatMarkdown(text.PrayerJamaat, domain.FormatDuration(delay+chat.Reminder.Soon.Offset.Duration()), jamaatTime),
 		)
 		isAnonymous := false
 
@@ -148,8 +147,8 @@ func (r *SoonReminder) Send(ctx context.Context, b *bot.Bot, chat *domain.Chat, 
 			ChatID:   chat.ChatID,
 			Question: message,
 			Options: []models.InputPollOption{
-				{Text: text.PrayerJoin, TextParseMode: models.ParseModeMarkdown},
-				{Text: text.PrayerJoinDelay, TextParseMode: models.ParseModeMarkdown},
+				{Text: text.PrayerJoin},
+				{Text: text.PrayerJoinDelay},
 			},
 			IsAnonymous: &isAnonymous,
 		})
@@ -162,7 +161,7 @@ func (r *SoonReminder) Send(ctx context.Context, b *bot.Bot, chat *domain.Chat, 
 
 	res, err := b.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID: chat.ChatID,
-		Text: fmt.Sprintf(text.PrayerSoon,
+		Text: domain.FormatMarkdown(text.PrayerSoon,
 			prayer,
 			domain.FormatDuration(chat.Reminder.Soon.Offset.Duration()),
 			prayerTime,
@@ -218,17 +217,15 @@ func (r *ArriveReminder) Send(ctx context.Context, b *bot.Bot, chat *domain.Chat
 
 	text := r.lp.GetText(chat.LanguageCode)
 	prayer := text.Prayer[int(prayerID)]
-	message := fmt.Sprintf(text.PrayerArrived, prayer)
-
 	params := &bot.SendMessageParams{
 		ChatID:    chat.ChatID,
-		Text:      message,
+		Text:      domain.FormatMarkdown(text.PrayerArrived, prayer),
 		ParseMode: models.ParseModeMarkdown,
-		ReplyParameters: &models.ReplyParameters{
-			ChatID:                   chat.ChatID,
-			MessageID:                chat.Reminder.Soon.MessageID, // reply to soon's message
-			AllowSendingWithoutReply: true,                         // allow sending without reply in case of soon's message is deleted
-		},
+	}
+	params.ReplyParameters = &models.ReplyParameters{
+		ChatID:                   chat.ChatID,
+		MessageID:                chat.Reminder.Soon.MessageID, // reply to soon's message
+		AllowSendingWithoutReply: true,                         // allow sending without reply in case of soon's message is deleted
 	}
 
 	res, err := b.SendMessage(ctx, params)

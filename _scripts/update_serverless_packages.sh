@@ -24,4 +24,8 @@ for dir in serverless/*/; do
 
 done
 
+# Update proxy function package
+echo "➡️  Updating proxy function package"
+(cd proxy/function && go get "$REPO@$HASH")
+
 echo "✅ All serverless subprojects updated to $HASH"

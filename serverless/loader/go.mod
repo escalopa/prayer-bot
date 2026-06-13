@@ -9,7 +9,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.47
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.71.0
 	github.com/cloudevents/sdk-go/v2 v2.15.2
-	github.com/escalopa/prayer-bot v0.0.0-20260612144957-d087f96ed7d4
+	github.com/escalopa/prayer-bot v0.0.0-20260613022059-481c438696c7
 	google.golang.org/api v0.214.0
 )
 
@@ -87,5 +87,3 @@ require (
 	google.golang.org/grpc v1.78.0 // indirect
 	google.golang.org/protobuf v1.36.10 // indirect
 )
-
-replace github.com/escalopa/prayer-bot => ../..

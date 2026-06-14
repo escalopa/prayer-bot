@@ -14,7 +14,10 @@ import (
 	"github.com/ydb-platform/ydb-go-sdk/v3"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table/result"
+	"github.com/ydb-platform/ydb-go-sdk/v3/table/types"
 )
+
+const ydbPageSize = 1000
 
 var readTx = table.TxControl(
 	table.BeginTx(table.WithOnlineReadOnly()),
@@ -117,130 +120,266 @@ func main() {
 }
 
 func exportChats(ctx context.Context, client table.Client) ([]chatRow, error) {
-	query := `
-		SELECT bot_id, chat_id, language_code, state, reminder, subscribed, subscribed_at, created_at
-		FROM chats;
-	`
-
 	var rows []chatRow
+	var lastBotID, lastChatID int64
+	hasCursor := false
+
 	err := client.Do(ctx, func(ctx context.Context, s table.Session) error {
-		_, res, err := s.Execute(ctx, readTx, query, table.NewQueryParameters())
-		if err != nil {
-			return err
-		}
-		defer res.Close()
-
-		for res.NextResultSet(ctx) {
-			for res.NextRow() {
-				var row chatRow
-				var languageCode, state, reminderJSON string
-				var subscribed bool
-				var subscribedAt, createdAt time.Time
-
-				if err := res.ScanWithDefaults(
-					&row.BotID,
-					&row.ChatID,
-					&languageCode,
-					&state,
-					&reminderJSON,
-					&subscribed,
-					&subscribedAt,
-					&createdAt,
-				); err != nil {
-					return err
-				}
-
-				row.ReminderJSON = reminderJSON
-				if languageCode != "" {
-					lc := languageCode
-					row.LanguageCode = &lc
-				}
-				if state != "" {
-					st := state
-					row.State = &st
-				}
-				sub := subscribed
-				row.Subscribed = &sub
-				if !subscribedAt.IsZero() {
-					sa := subscribedAt
-					row.SubscribedAt = &sa
-				}
-				if !createdAt.IsZero() {
-					ca := createdAt
-					row.CreatedAt = &ca
-				}
-				rows = append(rows, row)
+		for {
+			batch, err := fetchChatPage(ctx, s, hasCursor, lastBotID, lastChatID)
+			if err != nil {
+				return err
 			}
+			if len(batch) == 0 {
+				break
+			}
+			rows = append(rows, batch...)
+			if len(batch) < ydbPageSize {
+				break
+			}
+			last := batch[len(batch)-1]
+			lastBotID = last.BotID
+			lastChatID = last.ChatID
+			hasCursor = true
 		}
-		return res.Err()
+		return nil
 	})
 
 	return rows, err
 }
 
-func exportPrayers(ctx context.Context, client table.Client) ([]prayerRow, error) {
+func fetchChatPage(
+	ctx context.Context,
+	s table.Session,
+	hasCursor bool,
+	lastBotID, lastChatID int64,
+) ([]chatRow, error) {
 	query := `
-		SELECT bot_id, prayer_date, fajr, shuruq, dhuhr, asr, maghrib, isha
-		FROM prayers;
+		DECLARE $last_bot_id AS Int64;
+		DECLARE $last_chat_id AS Int64;
+
+		SELECT bot_id, chat_id, language_code, state, reminder, subscribed, subscribed_at, created_at
+		FROM chats
+		WHERE bot_id > $last_bot_id OR (bot_id = $last_bot_id AND chat_id > $last_chat_id)
+		ORDER BY bot_id, chat_id
+		LIMIT 1000;
 	`
+	if !hasCursor {
+		query = `
+			SELECT bot_id, chat_id, language_code, state, reminder, subscribed, subscribed_at, created_at
+			FROM chats
+			ORDER BY bot_id, chat_id
+			LIMIT 1000;
+		`
+	}
 
-	var rows []prayerRow
-	err := client.Do(ctx, func(ctx context.Context, s table.Session) error {
-		_, res, err := s.Execute(ctx, readTx, query, table.NewQueryParameters())
-		if err != nil {
-			return err
-		}
-		defer res.Close()
+	var params *table.QueryParameters
+	if hasCursor {
+		params = table.NewQueryParameters(
+			table.ValueParam("$last_bot_id", types.Int64Value(lastBotID)),
+			table.ValueParam("$last_chat_id", types.Int64Value(lastChatID)),
+		)
+	} else {
+		params = table.NewQueryParameters()
+	}
 
-		for res.NextResultSet(ctx) {
-			for res.NextRow() {
-				var row prayerRow
-				var fajr, shuruq, dhuhr, asr, maghrib, isha time.Time
+	_, res, err := s.Execute(ctx, readTx, query, params)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Close()
 
-				if err := res.ScanWithDefaults(
-					&row.BotID,
-					&row.PrayerDate,
-					&fajr,
-					&shuruq,
-					&dhuhr,
-					&asr,
-					&maghrib,
-					&isha,
-				); err != nil {
-					return err
-				}
-
-				if !fajr.IsZero() {
-					t := fajr
-					row.Fajr = &t
-				}
-				if !shuruq.IsZero() {
-					t := shuruq
-					row.Shuruq = &t
-				}
-				if !dhuhr.IsZero() {
-					t := dhuhr
-					row.Dhuhr = &t
-				}
-				if !asr.IsZero() {
-					t := asr
-					row.Asr = &t
-				}
-				if !maghrib.IsZero() {
-					t := maghrib
-					row.Maghrib = &t
-				}
-				if !isha.IsZero() {
-					t := isha
-					row.Isha = &t
-				}
-				rows = append(rows, row)
+	var rows []chatRow
+	for res.NextResultSet(ctx) {
+		for res.NextRow() {
+			row, err := scanChatRow(res)
+			if err != nil {
+				return nil, err
 			}
+			rows = append(rows, row)
 		}
-		return res.Err()
+	}
+	if err := res.Err(); err != nil {
+		return nil, err
+	}
+
+	return rows, nil
+}
+
+func scanChatRow(res result.Result) (chatRow, error) {
+	var row chatRow
+	var languageCode, state, reminderJSON string
+	var subscribed bool
+	var subscribedAt, createdAt time.Time
+
+	if err := res.ScanWithDefaults(
+		&row.BotID,
+		&row.ChatID,
+		&languageCode,
+		&state,
+		&reminderJSON,
+		&subscribed,
+		&subscribedAt,
+		&createdAt,
+	); err != nil {
+		return chatRow{}, err
+	}
+
+	row.ReminderJSON = reminderJSON
+	if languageCode != "" {
+		lc := languageCode
+		row.LanguageCode = &lc
+	}
+	if state != "" {
+		st := state
+		row.State = &st
+	}
+	sub := subscribed
+	row.Subscribed = &sub
+	if !subscribedAt.IsZero() {
+		sa := subscribedAt
+		row.SubscribedAt = &sa
+	}
+	if !createdAt.IsZero() {
+		ca := createdAt
+		row.CreatedAt = &ca
+	}
+
+	return row, nil
+}
+
+func exportPrayers(ctx context.Context, client table.Client) ([]prayerRow, error) {
+	var rows []prayerRow
+	var lastBotID int64
+	var lastDate time.Time
+	hasCursor := false
+
+	err := client.Do(ctx, func(ctx context.Context, s table.Session) error {
+		for {
+			batch, err := fetchPrayerPage(ctx, s, hasCursor, lastBotID, lastDate)
+			if err != nil {
+				return err
+			}
+			if len(batch) == 0 {
+				break
+			}
+			rows = append(rows, batch...)
+			if len(batch) < ydbPageSize {
+				break
+			}
+			last := batch[len(batch)-1]
+			lastBotID = last.BotID
+			lastDate = last.PrayerDate
+			hasCursor = true
+		}
+		return nil
 	})
 
 	return rows, err
+}
+
+func fetchPrayerPage(
+	ctx context.Context,
+	s table.Session,
+	hasCursor bool,
+	lastBotID int64,
+	lastDate time.Time,
+) ([]prayerRow, error) {
+	query := `
+		DECLARE $last_bot_id AS Int64;
+		DECLARE $last_date AS Date;
+
+		SELECT bot_id, prayer_date, fajr, shuruq, dhuhr, asr, maghrib, isha
+		FROM prayers
+		WHERE bot_id > $last_bot_id OR (bot_id = $last_bot_id AND prayer_date > $last_date)
+		ORDER BY bot_id, prayer_date
+		LIMIT 1000;
+	`
+	if !hasCursor {
+		query = `
+			SELECT bot_id, prayer_date, fajr, shuruq, dhuhr, asr, maghrib, isha
+			FROM prayers
+			ORDER BY bot_id, prayer_date
+			LIMIT 1000;
+		`
+	}
+
+	var params *table.QueryParameters
+	if hasCursor {
+		params = table.NewQueryParameters(
+			table.ValueParam("$last_bot_id", types.Int64Value(lastBotID)),
+			table.ValueParam("$last_date", types.DateValueFromTime(lastDate)),
+		)
+	} else {
+		params = table.NewQueryParameters()
+	}
+
+	_, res, err := s.Execute(ctx, readTx, query, params)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Close()
+
+	var rows []prayerRow
+	for res.NextResultSet(ctx) {
+		for res.NextRow() {
+			row, err := scanPrayerRow(res)
+			if err != nil {
+				return nil, err
+			}
+			rows = append(rows, row)
+		}
+	}
+	if err := res.Err(); err != nil {
+		return nil, err
+	}
+
+	return rows, nil
+}
+
+func scanPrayerRow(res result.Result) (prayerRow, error) {
+	var row prayerRow
+	var fajr, shuruq, dhuhr, asr, maghrib, isha time.Time
+
+	if err := res.ScanWithDefaults(
+		&row.BotID,
+		&row.PrayerDate,
+		&fajr,
+		&shuruq,
+		&dhuhr,
+		&asr,
+		&maghrib,
+		&isha,
+	); err != nil {
+		return prayerRow{}, err
+	}
+
+	if !fajr.IsZero() {
+		t := fajr
+		row.Fajr = &t
+	}
+	if !shuruq.IsZero() {
+		t := shuruq
+		row.Shuruq = &t
+	}
+	if !dhuhr.IsZero() {
+		t := dhuhr
+		row.Dhuhr = &t
+	}
+	if !asr.IsZero() {
+		t := asr
+		row.Asr = &t
+	}
+	if !maghrib.IsZero() {
+		t := maghrib
+		row.Maghrib = &t
+	}
+	if !isha.IsZero() {
+		t := isha
+		row.Isha = &t
+	}
+
+	return row, nil
 }
 
 func upsertChats(ctx context.Context, pool *pgxpool.Pool, rows []chatRow) error {

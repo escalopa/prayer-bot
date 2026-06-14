@@ -41,8 +41,9 @@ Runtime env vars (`YDB_ENDPOINT`, `APP_CONFIG`, `S3_*`, loader keys, etc.) come 
 **Deployment 1 — cutover (`deploy_mode=gcp-cutover`):**
 
 1. Actions → Deploy → Run workflow → choose `dev` or `prod`, mode `gcp-cutover`.
-2. Pipeline order: freeze YC reminder cron → Goose on Supabase → full YDB→Postgres copy → GCP infra (no scheduler/loader trigger) → bucket copy → enable scheduler + Eventarc + dual-write → incremental DB sync → Telegram webhook to GCP dispatcher URL.
-3. YC functions and proxy stay deployed for rollback.
+2. Optional: enable **Skip YDB → Supabase data copy** to deploy without running the full/incremental YDB→Postgres sync (Goose schema migration still runs).
+3. Pipeline order: freeze YC reminder cron → Goose on Supabase → full YDB→Postgres copy → GCP infra (no scheduler/loader trigger) → bucket copy → enable scheduler + Eventarc + dual-write → incremental DB sync → Telegram webhook to GCP dispatcher URL.
+4. YC functions and proxy stay deployed for rollback.
 
 **Deployment 2 — Postgres-only (`deploy_mode=gcp-only`):**
 

@@ -14,7 +14,6 @@ import (
 	"github.com/ydb-platform/ydb-go-sdk/v3"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table/result"
-	"github.com/ydb-platform/ydb-go-sdk/v3/table/result/named"
 )
 
 var readTx = table.TxControl(
@@ -134,17 +133,41 @@ func exportChats(ctx context.Context, client table.Client) ([]chatRow, error) {
 		for res.NextResultSet(ctx) {
 			for res.NextRow() {
 				var row chatRow
-				if err := res.ScanNamed(
-					named.Required("bot_id", &row.BotID),
-					named.Required("chat_id", &row.ChatID),
-					named.Optional("language_code", &row.LanguageCode),
-					named.Optional("state", &row.State),
-					named.Required("reminder", &row.ReminderJSON),
-					named.Optional("subscribed", &row.Subscribed),
-					named.Optional("subscribed_at", &row.SubscribedAt),
-					named.Optional("created_at", &row.CreatedAt),
+				var languageCode, state, reminderJSON string
+				var subscribed bool
+				var subscribedAt, createdAt time.Time
+
+				if err := res.ScanWithDefaults(
+					&row.BotID,
+					&row.ChatID,
+					&languageCode,
+					&state,
+					&reminderJSON,
+					&subscribed,
+					&subscribedAt,
+					&createdAt,
 				); err != nil {
 					return err
+				}
+
+				row.ReminderJSON = reminderJSON
+				if languageCode != "" {
+					lc := languageCode
+					row.LanguageCode = &lc
+				}
+				if state != "" {
+					st := state
+					row.State = &st
+				}
+				sub := subscribed
+				row.Subscribed = &sub
+				if !subscribedAt.IsZero() {
+					sa := subscribedAt
+					row.SubscribedAt = &sa
+				}
+				if !createdAt.IsZero() {
+					ca := createdAt
+					row.CreatedAt = &ca
 				}
 				rows = append(rows, row)
 			}
@@ -172,17 +195,44 @@ func exportPrayers(ctx context.Context, client table.Client) ([]prayerRow, error
 		for res.NextResultSet(ctx) {
 			for res.NextRow() {
 				var row prayerRow
-				if err := res.ScanNamed(
-					named.Required("bot_id", &row.BotID),
-					named.Required("prayer_date", &row.PrayerDate),
-					named.Optional("fajr", &row.Fajr),
-					named.Optional("shuruq", &row.Shuruq),
-					named.Optional("dhuhr", &row.Dhuhr),
-					named.Optional("asr", &row.Asr),
-					named.Optional("maghrib", &row.Maghrib),
-					named.Optional("isha", &row.Isha),
+				var fajr, shuruq, dhuhr, asr, maghrib, isha time.Time
+
+				if err := res.ScanWithDefaults(
+					&row.BotID,
+					&row.PrayerDate,
+					&fajr,
+					&shuruq,
+					&dhuhr,
+					&asr,
+					&maghrib,
+					&isha,
 				); err != nil {
 					return err
+				}
+
+				if !fajr.IsZero() {
+					t := fajr
+					row.Fajr = &t
+				}
+				if !shuruq.IsZero() {
+					t := shuruq
+					row.Shuruq = &t
+				}
+				if !dhuhr.IsZero() {
+					t := dhuhr
+					row.Dhuhr = &t
+				}
+				if !asr.IsZero() {
+					t := asr
+					row.Asr = &t
+				}
+				if !maghrib.IsZero() {
+					t := maghrib
+					row.Maghrib = &t
+				}
+				if !isha.IsZero() {
+					t := isha
+					row.Isha = &t
 				}
 				rows = append(rows, row)
 			}

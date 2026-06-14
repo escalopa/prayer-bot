@@ -1,6 +1,6 @@
 //go:build gcp
 
-package main
+package dispatcher
 
 import (
 	"context"

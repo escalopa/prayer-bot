@@ -1,6 +1,6 @@
 //go:build gcp
 
-package main
+package loader
 
 import (
 	"context"

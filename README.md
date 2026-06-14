@@ -32,7 +32,7 @@ The bot can run on GCP with Supabase Postgres while keeping Yandex Cloud availab
 
 | Secret | Purpose |
 |--------|---------|
-| `SUPABASE_DB_URL` | Postgres connection URL (stored in GCP Secret Manager by Terraform) |
+| `SUPABASE_DB_URL` | Postgres connection URL (passed to GCP functions as `DATABASE_URL` env var by Terraform) |
 | `YDB_TOKEN_FOR_GCP` | Long-lived YDB token for dual-write from GCP |
 | `GCP_*` | GCP project / SA / tfstate secrets |
 

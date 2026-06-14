@@ -1,25 +1,6 @@
 variable "project_id" {
   type        = string
-  description = <<-EOT
-    GCP project ID.
-
-    The CI deploy service account (GCP_SA_KEY) needs at least:
-    roles/serviceusage.serviceUsageAdmin,
-    roles/resourcemanager.projectIamAdmin,
-    roles/iam.serviceAccountAdmin,
-    roles/iam.serviceAccountUser,
-    roles/secretmanager.admin,
-    roles/cloudfunctions.admin,
-    roles/run.admin,
-    roles/storage.admin,
-    roles/cloudscheduler.admin,
-    roles/eventarc.admin,
-    roles/pubsub.admin
-    on this project, plus storage access to the tfstate bucket.
-
-    Example (run once as project Owner; replace PROJECT_ID and DEPLOY_SA_EMAIL):
-    gcloud projects add-iam-policy-binding PROJECT_ID --member="serviceAccount:DEPLOY_SA_EMAIL" --role="roles/secretmanager.admin"
-  EOT
+  description = "GCP project ID. The CI deploy service account (GCP_SA_KEY) needs: roles/serviceusage.serviceUsageAdmin, roles/resourcemanager.projectIamAdmin, roles/iam.serviceAccountAdmin, roles/iam.serviceAccountUser, roles/cloudfunctions.admin, roles/run.admin, roles/storage.admin, roles/cloudscheduler.admin, roles/eventarc.admin, roles/pubsub.admin on this project and the tfstate bucket."
 }
 
 variable "region" {

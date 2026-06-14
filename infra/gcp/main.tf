@@ -9,7 +9,6 @@ locals {
     "iam.googleapis.com",
     "pubsub.googleapis.com",
     "run.googleapis.com",
-    "secretmanager.googleapis.com",
     "serviceusage.googleapis.com",
     "storage.googleapis.com",
   ])
@@ -29,6 +28,14 @@ locals {
     YDB_ENDPOINT = local.ydb_endpoint
     APP_CONFIG   = local.app_config_b64
   }
+
+  function_env = merge(
+    local.common_env,
+    {
+      DATABASE_URL = var.supabase_db_url
+    },
+    var.dual_write && var.ydb_token != "" ? { YDB_TOKEN = var.ydb_token } : {}
+  )
 }
 
 provider "google" {
@@ -44,38 +51,6 @@ resource "google_project_service" "required" {
   disable_on_destroy = false
 }
 
-resource "google_secret_manager_secret" "supabase_db_url" {
-  secret_id = "prayer-bot-supabase-db-url-${var.environment}"
-
-  replication {
-    auto {}
-  }
-
-  depends_on = [google_project_service.required]
-}
-
-resource "google_secret_manager_secret_version" "supabase_db_url" {
-  secret      = google_secret_manager_secret.supabase_db_url.id
-  secret_data = var.supabase_db_url
-}
-
-resource "google_secret_manager_secret" "ydb_token" {
-  count     = var.dual_write && var.ydb_token != "" ? 1 : 0
-  secret_id = "prayer-bot-ydb-token-${var.environment}"
-
-  replication {
-    auto {}
-  }
-
-  depends_on = [google_project_service.required]
-}
-
-resource "google_secret_manager_secret_version" "ydb_token" {
-  count       = length(google_secret_manager_secret.ydb_token)
-  secret      = google_secret_manager_secret.ydb_token[0].id
-  secret_data = var.ydb_token
-}
-
 resource "google_service_account" "runtime" {
   account_id   = local.runtime_sa_id
   display_name = "Prayer bot runtime (${var.environment})"
@@ -86,12 +61,6 @@ resource "google_service_account" "runtime" {
 resource "google_project_iam_member" "runtime_logging" {
   project = var.project_id
   role    = "roles/logging.logWriter"
-  member  = "serviceAccount:${google_service_account.runtime.email}"
-}
-
-resource "google_project_iam_member" "runtime_secret_accessor" {
-  project = var.project_id
-  role    = "roles/secretmanager.secretAccessor"
   member  = "serviceAccount:${google_service_account.runtime.email}"
 }
 
@@ -204,30 +173,12 @@ resource "google_cloudfunctions2_function" "dispatcher" {
     ingress_settings      = "ALLOW_ALL"
     service_account_email = google_service_account.runtime.email
 
-    environment_variables = local.common_env
-
-    secret_environment_variables {
-      key        = "DATABASE_URL"
-      project_id = var.project_id
-      secret     = google_secret_manager_secret.supabase_db_url.secret_id
-      version    = "latest"
-    }
-
-    dynamic "secret_environment_variables" {
-      for_each = length(google_secret_manager_secret.ydb_token) > 0 ? [1] : []
-      content {
-        key        = "YDB_TOKEN"
-        project_id = var.project_id
-        secret     = google_secret_manager_secret.ydb_token[0].secret_id
-        version    = "latest"
-      }
-    }
+    environment_variables = local.function_env
   }
 
   depends_on = [
     google_project_service.required,
     google_project_iam_member.runtime_logging,
-    google_secret_manager_secret_version.supabase_db_url,
   ]
 }
 
@@ -265,29 +216,11 @@ resource "google_cloudfunctions2_function" "reminder" {
     ingress_settings      = "ALLOW_ALL"
     service_account_email = google_service_account.runtime.email
 
-    environment_variables = local.common_env
-
-    secret_environment_variables {
-      key        = "DATABASE_URL"
-      project_id = var.project_id
-      secret     = google_secret_manager_secret.supabase_db_url.secret_id
-      version    = "latest"
-    }
-
-    dynamic "secret_environment_variables" {
-      for_each = length(google_secret_manager_secret.ydb_token) > 0 ? [1] : []
-      content {
-        key        = "YDB_TOKEN"
-        project_id = var.project_id
-        secret     = google_secret_manager_secret.ydb_token[0].secret_id
-        version    = "latest"
-      }
-    }
+    environment_variables = local.function_env
   }
 
   depends_on = [
     google_project_service.required,
-    google_secret_manager_secret_version.supabase_db_url,
   ]
 }
 
@@ -354,32 +287,14 @@ resource "google_cloudfunctions2_function" "loader" {
     ingress_settings      = "ALLOW_INTERNAL_ONLY"
     service_account_email = google_service_account.runtime.email
 
-    environment_variables = merge(local.common_env, {
+    environment_variables = merge(local.function_env, {
       STORAGE_BACKEND = "gcs"
       GCS_BUCKET      = google_storage_bucket.data.name
     })
-
-    secret_environment_variables {
-      key        = "DATABASE_URL"
-      project_id = var.project_id
-      secret     = google_secret_manager_secret.supabase_db_url.secret_id
-      version    = "latest"
-    }
-
-    dynamic "secret_environment_variables" {
-      for_each = length(google_secret_manager_secret.ydb_token) > 0 ? [1] : []
-      content {
-        key        = "YDB_TOKEN"
-        project_id = var.project_id
-        secret     = google_secret_manager_secret.ydb_token[0].secret_id
-        version    = "latest"
-      }
-    }
   }
 
   depends_on = [
     google_project_service.required,
-    google_secret_manager_secret_version.supabase_db_url,
   ]
 }
 

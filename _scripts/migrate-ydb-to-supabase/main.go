@@ -14,6 +14,7 @@ import (
 	"github.com/ydb-platform/ydb-go-sdk/v3"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table/result"
+	"github.com/ydb-platform/ydb-go-sdk/v3/table/result/named"
 )
 
 var readTx = table.TxControl(
@@ -133,22 +134,22 @@ func exportChats(ctx context.Context, client table.Client) ([]chatRow, error) {
 		for res.NextResultSet(ctx) {
 			for res.NextRow() {
 				var row chatRow
-				if err := res.ScanWithDefaults(
-					&row.BotID,
-					&row.ChatID,
-					&row.LanguageCode,
-					&row.State,
-					&row.ReminderJSON,
-					&row.Subscribed,
-					&row.SubscribedAt,
-					&row.CreatedAt,
+				if err := res.ScanNamed(
+					named.Required("bot_id", &row.BotID),
+					named.Required("chat_id", &row.ChatID),
+					named.Optional("language_code", &row.LanguageCode),
+					named.Optional("state", &row.State),
+					named.Required("reminder", &row.ReminderJSON),
+					named.Optional("subscribed", &row.Subscribed),
+					named.Optional("subscribed_at", &row.SubscribedAt),
+					named.Optional("created_at", &row.CreatedAt),
 				); err != nil {
 					return err
 				}
 				rows = append(rows, row)
 			}
 		}
-		return nil
+		return res.Err()
 	})
 
 	return rows, err
@@ -171,22 +172,22 @@ func exportPrayers(ctx context.Context, client table.Client) ([]prayerRow, error
 		for res.NextResultSet(ctx) {
 			for res.NextRow() {
 				var row prayerRow
-				if err := res.ScanWithDefaults(
-					&row.BotID,
-					&row.PrayerDate,
-					&row.Fajr,
-					&row.Shuruq,
-					&row.Dhuhr,
-					&row.Asr,
-					&row.Maghrib,
-					&row.Isha,
+				if err := res.ScanNamed(
+					named.Required("bot_id", &row.BotID),
+					named.Required("prayer_date", &row.PrayerDate),
+					named.Optional("fajr", &row.Fajr),
+					named.Optional("shuruq", &row.Shuruq),
+					named.Optional("dhuhr", &row.Dhuhr),
+					named.Optional("asr", &row.Asr),
+					named.Optional("maghrib", &row.Maghrib),
+					named.Optional("isha", &row.Isha),
 				); err != nil {
 					return err
 				}
 				rows = append(rows, row)
 			}
 		}
-		return nil
+		return res.Err()
 	})
 
 	return rows, err

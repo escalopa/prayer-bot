@@ -115,18 +115,21 @@ data "archive_file" "dispatcher_zip" {
   type        = "zip"
   source_dir  = "${path.module}/../../serverless/dispatcher"
   output_path = "${path.module}/dispatcher.zip"
+  excludes    = ["main.go", "cmd"]
 }
 
 data "archive_file" "reminder_zip" {
   type        = "zip"
   source_dir  = "${path.module}/../../serverless/reminder"
   output_path = "${path.module}/reminder.zip"
+  excludes    = ["main.go"]
 }
 
 data "archive_file" "loader_zip" {
   type        = "zip"
   source_dir  = "${path.module}/../../serverless/loader"
   output_path = "${path.module}/loader.zip"
+  excludes    = ["main.go"]
 }
 
 resource "google_storage_bucket_object" "dispatcher_zip" {

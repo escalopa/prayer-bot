@@ -460,7 +460,7 @@ func upsertPrayers(ctx context.Context, pool *pgxpool.Pool, rows []prayerRow) er
 }
 
 func verifyCounts(ctx context.Context, client table.Client, pool *pgxpool.Pool, wantChats, wantPrayers int) error {
-	var ydbChats, ydbPrayers int
+	var ydbChats, ydbPrayers uint64
 	err := client.Do(ctx, func(ctx context.Context, s table.Session) error {
 		_, res, err := s.Execute(ctx, readTx, `
 			SELECT COUNT(*) AS chats FROM chats;
@@ -495,10 +495,10 @@ func verifyCounts(ctx context.Context, client table.Client, pool *pgxpool.Pool, 
 		return err
 	}
 
-	if pgChats != ydbChats || pgChats != wantChats {
+	if int(ydbChats) != pgChats || pgChats != wantChats {
 		return fmt.Errorf("chat count mismatch: ydb=%d exported=%d postgres=%d", ydbChats, wantChats, pgChats)
 	}
-	if pgPrayers != ydbPrayers || pgPrayers != wantPrayers {
+	if int(ydbPrayers) != pgPrayers || pgPrayers != wantPrayers {
 		return fmt.Errorf("prayer count mismatch: ydb=%d exported=%d postgres=%d", ydbPrayers, wantPrayers, pgPrayers)
 	}
 

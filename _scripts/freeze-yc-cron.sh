@@ -9,9 +9,9 @@ fi
 ENVIRONMENT="${ENVIRONMENT:-${WORKSPACE:-prod}}"
 TRIGGER_NAME="reminder"
 
-echo "[INFO] disabling YC reminder timer trigger in ${ENVIRONMENT} workspace context"
+echo "[INFO] pausing YC reminder timer trigger in ${ENVIRONMENT} workspace context"
 
 yc serverless trigger list --format json | jq -e --arg name "$TRIGGER_NAME" '.[] | select(.name == $name)' >/dev/null
 
-yc serverless trigger disable "$TRIGGER_NAME"
-echo "[INFO] disabled trigger: $TRIGGER_NAME"
+yc serverless trigger pause "$TRIGGER_NAME"
+echo "[INFO] paused trigger: $TRIGGER_NAME"

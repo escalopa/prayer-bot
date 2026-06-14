@@ -2,10 +2,8 @@ module github.com/escalopa/prayer-bot/migrate-ydb-to-supabase
 
 go 1.25.0
 
-
-
 require (
-	github.com/escalopa/prayer-bot v0.0.0
+	github.com/escalopa/prayer-bot v0.0.0-20260613022059-481c438696c7
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/ydb-platform/ydb-go-sdk/v3 v3.139.6
 )

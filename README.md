@@ -47,7 +47,9 @@ Runtime env vars (`YDB_ENDPOINT`, `APP_CONFIG`, `S3_*`, loader keys, etc.) come 
 
 **Deployment 2 — Postgres-only (`deploy_mode=gcp-only`):**
 
-After validating dev and prod on GCP, run workflow with `gcp-only`. Functions use Postgres only (`DUAL_WRITE=false`); scheduler and loader trigger are enabled. Yandex code remains in the repo until you manually decommission YC infra.
+After validating dev and prod on GCP, run workflow with `gcp-only`. Functions use Postgres only (`DUAL_WRITE=false`); scheduler and loader trigger are enabled. Telegram webhooks are registered to the GCP dispatcher URL automatically (not the legacy GCP→YC proxy).
+
+**Run deploy (dev or prod):** Actions → *Deploy to Yandex Cloud* → Run workflow → pick environment → mode **gcp-only**. Push to `main` runs lint/validate only; deploy requires workflow dispatch.
 
 ---
 

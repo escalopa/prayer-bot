@@ -10,6 +10,11 @@ if [[ -z "$WEBHOOK_URL" && -z "$DISPATCHER_FUNCTION_ID" ]]; then
   exit 1
 fi
 
+if [[ -n "$WEBHOOK_URL" && "$WEBHOOK_URL" == *webhook-proxy* && "${REJECT_PROXY_WEBHOOK:-}" == "1" ]]; then
+  echo "[ERROR] WEBHOOK_URL points at the legacy GCP proxy; expected GCP dispatcher URL"
+  exit 1
+fi
+
 if [[ -n "$WEBHOOK_URL" ]]; then
   export DISPATCHER_ENDPOINT="$WEBHOOK_URL"
 else

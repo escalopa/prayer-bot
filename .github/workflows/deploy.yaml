@@ -24,7 +24,7 @@ on:
           - legacy
           - gcp-cutover
           - gcp-only
-        default: legacy
+        default: gcp-only
       skip_ydb_to_supabase:
         description: 'Skip YDB → Supabase data copy (full + incremental). Schema Goose step still runs.'
         required: false
@@ -55,6 +55,7 @@ jobs:
       workspace: ${{ steps.set-workspace.outputs.workspace }}
       deploy_mode: ${{ steps.set-workspace.outputs.deploy_mode }}
       skip_ydb_migration: ${{ steps.set-workspace.outputs.skip_ydb_migration }}
+      run_deploy: ${{ steps.set-workspace.outputs.run_deploy }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -63,11 +64,13 @@ jobs:
         id: set-workspace
         run: |
           WORKSPACE=${{ github.event_name == 'pull_request' && 'dev' || (github.event_name == 'workflow_dispatch' && inputs.environment || 'prod') }}
-          DEPLOY_MODE=${{ github.event_name == 'workflow_dispatch' && inputs.deploy_mode || 'legacy' }}
+          DEPLOY_MODE=${{ github.event_name == 'workflow_dispatch' && inputs.deploy_mode || 'gcp-only' }}
           SKIP_YDB=${{ github.event_name == 'workflow_dispatch' && inputs.skip_ydb_to_supabase || false }}
+          RUN_DEPLOY=${{ github.event_name == 'workflow_dispatch' }}
           echo "workspace=$WORKSPACE" >> $GITHUB_OUTPUT
           echo "deploy_mode=$DEPLOY_MODE" >> $GITHUB_OUTPUT
           echo "skip_ydb_migration=$SKIP_YDB" >> $GITHUB_OUTPUT
+          echo "run_deploy=$RUN_DEPLOY" >> $GITHUB_OUTPUT
           echo "::notice::Workspace: $WORKSPACE"
           echo "::notice::Deploy mode: $DEPLOY_MODE"
           if [ "$SKIP_YDB" = "true" ]; then
@@ -144,7 +147,7 @@ jobs:
     name: Database Migration
     runs-on: ubuntu-latest
     needs: setup
-    if: needs.setup.outputs.deploy_mode == 'legacy'
+    if: needs.setup.outputs.run_deploy == 'true' && needs.setup.outputs.deploy_mode == 'legacy'
     environment: ${{ needs.setup.outputs.workspace }}
     steps:
       - name: Checkout code
@@ -207,7 +210,7 @@ jobs:
     name: Freeze YC Reminder Cron
     runs-on: ubuntu-latest
     needs: setup
-    if: needs.setup.outputs.deploy_mode == 'gcp-cutover'
+    if: needs.setup.outputs.run_deploy == 'true' && needs.setup.outputs.deploy_mode == 'gcp-cutover'
     environment: ${{ needs.setup.outputs.workspace }}
     steps:
       - uses: actions/checkout@v4
@@ -237,7 +240,7 @@ jobs:
     name: Postgres Schema Migration
     runs-on: ubuntu-latest
     needs: setup
-    if: contains(fromJSON('["gcp-cutover","gcp-only"]'), needs.setup.outputs.deploy_mode)
+    if: needs.setup.outputs.run_deploy == 'true' && contains(fromJSON('["gcp-cutover","gcp-only"]'), needs.setup.outputs.deploy_mode)
     environment: ${{ needs.setup.outputs.workspace }}
     steps:
       - uses: actions/checkout@v4
@@ -265,6 +268,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [setup, migrate-schema-postgres]
     if: |
+      needs.setup.outputs.run_deploy == 'true' &&
       needs.setup.outputs.deploy_mode == 'gcp-cutover' &&
       needs.setup.outputs.skip_ydb_migration != 'true'
     environment: ${{ needs.setup.outputs.workspace }}
@@ -321,6 +325,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [setup, migrate-schema-postgres, migrate-db-full]
     if: |
+      needs.setup.outputs.run_deploy == 'true' &&
       needs.setup.outputs.deploy_mode == 'gcp-cutover' &&
       needs.migrate-schema-postgres.result == 'success' &&
       (needs.migrate-db-full.result == 'success' ||
@@ -397,7 +402,7 @@ jobs:
     name: Deploy GCP Infrastructure (gcp-only)
     runs-on: ubuntu-latest
     needs: [setup, migrate-schema-postgres]
-    if: needs.setup.outputs.deploy_mode == 'gcp-only'
+    if: needs.setup.outputs.run_deploy == 'true' && needs.setup.outputs.deploy_mode == 'gcp-only'
     environment: ${{ needs.setup.outputs.workspace }}
     outputs:
       dispatcher_url: ${{ steps.outputs.outputs.dispatcher_url }}
@@ -472,7 +477,7 @@ jobs:
     name: Migrate YC Bucket to GCS
     runs-on: ubuntu-latest
     needs: [setup, deploy-gcp-infra]
-    if: needs.setup.outputs.deploy_mode == 'gcp-cutover' && needs.deploy-gcp-infra.result == 'success'
+    if: needs.setup.outputs.run_deploy == 'true' && needs.setup.outputs.deploy_mode == 'gcp-cutover' && needs.deploy-gcp-infra.result == 'success'
     environment: ${{ needs.setup.outputs.workspace }}
     steps:
       - uses: actions/checkout@v4
@@ -508,7 +513,7 @@ jobs:
     name: Deploy GCP Functions (phase 2)
     runs-on: ubuntu-latest
     needs: [setup, deploy-gcp-infra, migrate-storage]
-    if: needs.setup.outputs.deploy_mode == 'gcp-cutover' && needs.migrate-storage.result == 'success'
+    if: needs.setup.outputs.run_deploy == 'true' && needs.setup.outputs.deploy_mode == 'gcp-cutover' && needs.migrate-storage.result == 'success'
     environment: ${{ needs.setup.outputs.workspace }}
     outputs:
       dispatcher_url: ${{ steps.outputs.outputs.dispatcher_url }}
@@ -582,6 +587,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [setup, deploy-gcp-functions]
     if: |
+      needs.setup.outputs.run_deploy == 'true' &&
       needs.setup.outputs.deploy_mode == 'gcp-cutover' &&
       needs.setup.outputs.skip_ydb_migration != 'true' &&
       needs.deploy-gcp-functions.result == 'success'
@@ -717,7 +723,7 @@ jobs:
     name: Terraform Apply
     runs-on: ubuntu-latest
     needs: [setup, plan, migrate]
-    if: needs.setup.outputs.deploy_mode == 'legacy' && needs.plan.result == 'success' && needs.migrate.result == 'success'
+    if: needs.setup.outputs.run_deploy == 'true' && needs.setup.outputs.deploy_mode == 'legacy' && needs.plan.result == 'success' && needs.migrate.result == 'success'
     environment: ${{ needs.setup.outputs.workspace }}
     outputs:
       dispatcher_function_id: ${{ steps.outputs.outputs.dispatcher_function_id }}
@@ -772,7 +778,7 @@ jobs:
     name: Terraform Proxy Apply
     runs-on: ubuntu-latest
     needs: [setup, apply]
-    if: needs.setup.outputs.deploy_mode == 'legacy' && needs.apply.result == 'success'
+    if: needs.setup.outputs.run_deploy == 'true' && needs.setup.outputs.deploy_mode == 'legacy' && needs.apply.result == 'success'
     environment: ${{ needs.setup.outputs.workspace }}
     outputs:
       webhook_url: ${{ steps.outputs.outputs.webhook_url }}
@@ -828,13 +834,16 @@ jobs:
       - deploy-gcp-functions
       - migrate-db-incremental
       - deploy-gcp-infra-only
+    # always(): upstream jobs skipped in GCP modes (apply, proxy, etc.) must not block this job
     if: |
-      (needs.setup.outputs.deploy_mode == 'legacy' && needs.apply.result == 'success') ||
-      (needs.setup.outputs.deploy_mode == 'gcp-cutover' &&
-        needs.deploy-gcp-functions.result == 'success' &&
-        (needs.migrate-db-incremental.result == 'success' ||
-          (needs.setup.outputs.skip_ydb_migration == 'true' && needs.migrate-db-incremental.result == 'skipped'))) ||
-      (needs.setup.outputs.deploy_mode == 'gcp-only' && needs.deploy-gcp-infra-only.result == 'success')
+      needs.setup.outputs.run_deploy == 'true' &&
+      always() &&
+      !cancelled() &&
+      (
+        (needs.setup.outputs.deploy_mode == 'legacy' && needs.apply.result == 'success') ||
+        (needs.setup.outputs.deploy_mode == 'gcp-cutover' && needs.deploy-gcp-functions.result == 'success') ||
+        (needs.setup.outputs.deploy_mode == 'gcp-only' && needs.deploy-gcp-infra-only.result == 'success')
+      )
     environment: ${{ needs.setup.outputs.workspace }}
     steps:
       - name: Checkout code
@@ -845,6 +854,10 @@ jobs:
         with:
           app_config: ${{ secrets.APP_CONFIG }}
           app_config_path: ${{ env.APP_CONFIG_PATH }}
+
+      - name: Write GCP credentials
+        if: needs.setup.outputs.deploy_mode != 'legacy'
+        run: echo '${{ env.GCP_SA_KEY }}' > gcp-sa.json
 
       - name: Get Dispatcher Function ID
         if: needs.setup.outputs.deploy_mode == 'legacy'
@@ -864,11 +877,42 @@ jobs:
             WEBHOOK_URL="${{ needs.deploy-gcp-functions.outputs.dispatcher_url }}"
           fi
           echo "WEBHOOK_URL=$WEBHOOK_URL" >> $GITHUB_ENV
+
+      - name: Resolve webhook URL from Terraform
+        if: needs.setup.outputs.deploy_mode != 'legacy'
+        working-directory: infra/gcp
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-sa.json
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
           if [ -n "$WEBHOOK_URL" ]; then
-            echo "::notice::Webhook URL: $WEBHOOK_URL"
+            echo "::notice::Webhook URL from deploy job: $WEBHOOK_URL"
+            exit 0
           fi
+          terraform init \
+            -backend-config="bucket=${GCP_TFSTATE_BUCKET}" \
+            -backend-config="prefix=prayer-bot/infra-${{ needs.setup.outputs.workspace }}"
+          WEBHOOK_URL="$(terraform output -raw dispatcher_url)"
+          echo "WEBHOOK_URL=$WEBHOOK_URL" >> $GITHUB_ENV
+          echo "::notice::Webhook URL from Terraform: $WEBHOOK_URL"
+
+      - name: Validate webhook URL
+        if: needs.setup.outputs.deploy_mode != 'legacy'
+        run: |
+          if [ -z "$WEBHOOK_URL" ]; then
+            echo "::error::WEBHOOK_URL is empty — cannot register Telegram webhooks"
+            exit 1
+          fi
+          if echo "$WEBHOOK_URL" | grep -q 'webhook-proxy'; then
+            echo "::error::WEBHOOK_URL must be the GCP dispatcher, not the legacy proxy: $WEBHOOK_URL"
+            exit 1
+          fi
+          echo "::notice::Registering Telegram webhooks at: $WEBHOOK_URL"
 
       - name: Execute webhook setup script
+        env:
+          REJECT_PROXY_WEBHOOK: ${{ needs.setup.outputs.deploy_mode != 'legacy' && '1' || '0' }}
         run: |
           chmod +x _scripts/hook.sh
           bash _scripts/hook.sh
@@ -879,9 +923,14 @@ jobs:
     runs-on: ubuntu-latest
     needs: [setup, apply, deploy-gcp-functions, deploy-gcp-infra-only]
     if: |
-      (needs.setup.outputs.deploy_mode == 'legacy' && needs.apply.result == 'success') ||
-      (needs.setup.outputs.deploy_mode == 'gcp-cutover' && needs.deploy-gcp-functions.result == 'success') ||
-      (needs.setup.outputs.deploy_mode == 'gcp-only' && needs.deploy-gcp-infra-only.result == 'success')
+      needs.setup.outputs.run_deploy == 'true' &&
+      always() &&
+      !cancelled() &&
+      (
+        (needs.setup.outputs.deploy_mode == 'legacy' && needs.apply.result == 'success') ||
+        (needs.setup.outputs.deploy_mode == 'gcp-cutover' && needs.deploy-gcp-functions.result == 'success') ||
+        (needs.setup.outputs.deploy_mode == 'gcp-only' && needs.deploy-gcp-infra-only.result == 'success')
+      )
     environment: ${{ needs.setup.outputs.workspace }}
     steps:
       - name: Checkout code

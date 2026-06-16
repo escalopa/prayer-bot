@@ -1,12 +1,11 @@
-//go:build gcp
-
-package loader
+package function
 
 import (
 	"context"
 	"fmt"
 	"sync"
 
+	_ "github.com/GoogleCloudPlatform/functions-framework-go/funcframework"
 	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/escalopa/prayer-bot/config"

@@ -113,23 +113,20 @@ resource "google_storage_bucket" "data" {
 
 data "archive_file" "dispatcher_zip" {
   type        = "zip"
-  source_dir  = "${path.module}/../../serverless/dispatcher"
+  source_dir  = "${path.module}/../../serverless/dispatcher/function"
   output_path = "${path.module}/dispatcher.zip"
-  excludes    = ["main.go", "cmd"]
 }
 
 data "archive_file" "reminder_zip" {
   type        = "zip"
-  source_dir  = "${path.module}/../../serverless/reminder"
+  source_dir  = "${path.module}/../../serverless/reminder/function"
   output_path = "${path.module}/reminder.zip"
-  excludes    = ["main.go"]
 }
 
 data "archive_file" "loader_zip" {
   type        = "zip"
-  source_dir  = "${path.module}/../../serverless/loader"
+  source_dir  = "${path.module}/../../serverless/loader/function"
   output_path = "${path.module}/loader.zip"
-  excludes    = ["main.go"]
 }
 
 resource "google_storage_bucket_object" "dispatcher_zip" {
@@ -157,10 +154,6 @@ resource "google_cloudfunctions2_function" "dispatcher" {
   build_config {
     runtime     = "go125"
     entry_point = "DispatcherHTTP"
-
-    environment_variables = {
-      GO_BUILD_TAGS = "gcp"
-    }
 
     source {
       storage_source {
@@ -200,10 +193,6 @@ resource "google_cloudfunctions2_function" "reminder" {
   build_config {
     runtime     = "go125"
     entry_point = "ReminderHTTP"
-
-    environment_variables = {
-      GO_BUILD_TAGS = "gcp"
-    }
 
     source {
       storage_source {
@@ -271,10 +260,6 @@ resource "google_cloudfunctions2_function" "loader" {
   build_config {
     runtime     = "go125"
     entry_point = "LoaderCloudEvent"
-
-    environment_variables = {
-      GO_BUILD_TAGS = "gcp"
-    }
 
     source {
       storage_source {

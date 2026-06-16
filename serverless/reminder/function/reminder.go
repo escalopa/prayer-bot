@@ -1,6 +1,4 @@
-//go:build gcp
-
-package reminder
+package function
 
 import (
 	"context"
@@ -8,6 +6,7 @@ import (
 	"net/http"
 	"sync"
 
+	_ "github.com/GoogleCloudPlatform/functions-framework-go/funcframework"
 	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
 	"github.com/escalopa/prayer-bot/config"
 	"github.com/escalopa/prayer-bot/log"

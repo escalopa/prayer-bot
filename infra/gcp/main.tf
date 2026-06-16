@@ -36,6 +36,8 @@ locals {
     },
     var.dual_write && var.ydb_token != "" ? { YDB_TOKEN = var.ydb_token } : {}
   )
+
+  deploy_sa_member = var.deploy_service_account_email != "" ? "serviceAccount:${var.deploy_service_account_email}" : null
 }
 
 provider "google" {
@@ -49,6 +51,41 @@ resource "google_project_service" "required" {
   project            = var.project_id
   service            = each.key
   disable_on_destroy = false
+}
+
+data "google_project" "current" {
+  project_id = var.project_id
+
+  depends_on = [google_project_service.required]
+}
+
+resource "google_project_iam_member" "deploy_cloudscheduler_admin" {
+  count   = local.deploy_sa_member != null ? 1 : 0
+  project = var.project_id
+  role    = "roles/cloudscheduler.admin"
+  member  = local.deploy_sa_member
+}
+
+resource "google_project_iam_member" "deploy_eventarc_admin" {
+  count   = local.deploy_sa_member != null ? 1 : 0
+  project = var.project_id
+  role    = "roles/eventarc.admin"
+  member  = local.deploy_sa_member
+}
+
+resource "google_project_iam_member" "deploy_pubsub_admin" {
+  count   = local.deploy_sa_member != null ? 1 : 0
+  project = var.project_id
+  role    = "roles/pubsub.admin"
+  member  = local.deploy_sa_member
+}
+
+resource "google_project_iam_member" "gcs_pubsub_publisher" {
+  project = var.project_id
+  role    = "roles/pubsub.publisher"
+  member  = "serviceAccount:service-${data.google_project.current.number}@gs-project-accounts.iam.gserviceaccount.com"
+
+  depends_on = [google_project_service.required]
 }
 
 resource "google_service_account" "runtime" {
@@ -315,6 +352,7 @@ resource "google_eventarc_trigger" "loader" {
     google_cloudfunctions2_function.loader,
     google_project_iam_member.runtime_eventarc_receiver,
     google_cloud_run_v2_service_iam_member.loader_eventarc,
+    google_project_iam_member.gcs_pubsub_publisher,
   ]
 }
 

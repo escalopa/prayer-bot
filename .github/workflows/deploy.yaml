@@ -345,6 +345,9 @@ jobs:
       - name: Write GCP credentials
         run: echo '${{ env.GCP_SA_KEY }}' > gcp-sa.json
 
+      - name: Export deploy service account email
+        run: echo "DEPLOY_SA_EMAIL=$(jq -r .client_email gcp-sa.json)" >> $GITHUB_ENV
+
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
@@ -379,6 +382,7 @@ jobs:
           TF_VAR_dual_write: true
           TF_VAR_supabase_db_url: ${{ secrets.SUPABASE_DB_URL }}
           TF_VAR_ydb_token: ${{ secrets.YDB_TOKEN_FOR_GCP }}
+          TF_VAR_deploy_service_account_email: ${{ env.DEPLOY_SA_EMAIL }}
         run: terraform apply -auto-approve
 
       - name: Export outputs
@@ -415,6 +419,9 @@ jobs:
       - name: Write GCP credentials
         run: echo '${{ env.GCP_SA_KEY }}' > gcp-sa.json
 
+      - name: Export deploy service account email
+        run: echo "DEPLOY_SA_EMAIL=$(jq -r .client_email gcp-sa.json)" >> $GITHUB_ENV
+
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
@@ -449,6 +456,7 @@ jobs:
           TF_VAR_dual_write: false
           TF_VAR_supabase_db_url: ${{ secrets.SUPABASE_DB_URL }}
           TF_VAR_ydb_token: ""
+          TF_VAR_deploy_service_account_email: ${{ env.DEPLOY_SA_EMAIL }}
         run: terraform apply -auto-approve
 
       - name: Export outputs
@@ -521,6 +529,9 @@ jobs:
       - name: Write GCP credentials
         run: echo '${{ env.GCP_SA_KEY }}' > gcp-sa.json
 
+      - name: Export deploy service account email
+        run: echo "DEPLOY_SA_EMAIL=$(jq -r .client_email gcp-sa.json)" >> $GITHUB_ENV
+
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
@@ -555,6 +566,7 @@ jobs:
           TF_VAR_dual_write: true
           TF_VAR_supabase_db_url: ${{ secrets.SUPABASE_DB_URL }}
           TF_VAR_ydb_token: ${{ secrets.YDB_TOKEN_FOR_GCP }}
+          TF_VAR_deploy_service_account_email: ${{ env.DEPLOY_SA_EMAIL }}
         run: terraform apply -auto-approve
 
       - name: Export outputs

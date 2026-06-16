@@ -66,3 +66,9 @@ variable "ydb_token" {
   description = "YDB IAM token for dual-write from GCP."
   default     = ""
 }
+
+variable "deploy_service_account_email" {
+  type        = string
+  description = "Email of the CI/Terraform deploy SA (GCP_SA_KEY). IAM bindings applied in phase 1."
+  default     = ""
+}

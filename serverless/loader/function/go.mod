@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	github.com/GoogleCloudPlatform/functions-framework-go v1.9.2
 	github.com/cloudevents/sdk-go/v2 v2.15.2
-	github.com/escalopa/prayer-bot v0.0.0-20260617153703-97893a4f2f33
+	github.com/escalopa/prayer-bot v0.0.0-20260617160051-44d99b9aab19
 	github.com/escalopa/prayer-bot/loader v0.0.0
 )
 

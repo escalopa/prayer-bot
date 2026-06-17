@@ -3,7 +3,7 @@ module github.com/escalopa/prayer-bot/reminder
 go 1.25.0
 
 require (
-	github.com/escalopa/prayer-bot v0.0.0-20260617153703-97893a4f2f33
+	github.com/escalopa/prayer-bot v0.0.0-20260617160051-44d99b9aab19
 	github.com/go-telegram/bot v1.15.0
 	golang.org/x/sync v0.19.0
 	gopkg.in/yaml.v3 v3.0.1

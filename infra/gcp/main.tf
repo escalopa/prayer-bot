@@ -53,8 +53,8 @@ resource "google_project_service" "required" {
   disable_on_destroy = false
 }
 
-data "google_project" "current" {
-  project_id = var.project_id
+data "google_storage_project_service_account" "gcs_account" {
+  project = var.project_id
 
   depends_on = [google_project_service.required]
 }
@@ -83,9 +83,9 @@ resource "google_project_iam_member" "deploy_pubsub_admin" {
 resource "google_project_iam_member" "gcs_pubsub_publisher" {
   project = var.project_id
   role    = "roles/pubsub.publisher"
-  member  = "serviceAccount:service-${data.google_project.current.number}@gs-project-accounts.iam.gserviceaccount.com"
+  member  = "serviceAccount:${data.google_storage_project_service_account.gcs_account.email_address}"
 
-  depends_on = [google_project_service.required]
+  depends_on = [data.google_storage_project_service_account.gcs_account]
 }
 
 resource "google_service_account" "runtime" {

@@ -3,7 +3,7 @@ module github.com/escalopa/prayer-bot/dispatcher
 go 1.25.0
 
 require (
-	github.com/escalopa/prayer-bot v0.0.0-20260617063247-26e09b697026
+	github.com/escalopa/prayer-bot v0.0.0-20260617122154-9423ff8cb460
 	github.com/go-telegram/bot v1.15.0
 	golang.org/x/sync v0.19.0
 	gopkg.in/yaml.v3 v3.0.1

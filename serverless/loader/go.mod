@@ -7,7 +7,7 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.32.6
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.47
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.71.0
-	github.com/escalopa/prayer-bot v0.0.0-20260617063247-26e09b697026
+	github.com/escalopa/prayer-bot v0.0.0-20260617122154-9423ff8cb460
 	google.golang.org/api v0.214.0
 )
 

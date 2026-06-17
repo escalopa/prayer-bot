@@ -437,6 +437,8 @@ github.com/escalopa/prayer-bot v0.0.0-20260613022059-481c438696c7 h1:XOrNfMpZM4n
 github.com/escalopa/prayer-bot v0.0.0-20260613022059-481c438696c7/go.mod h1:bteiKqeU1JkPMWTv9Fs11pfUMDCo/v7Z0MY1+8+zwgA=
 github.com/escalopa/prayer-bot v0.0.0-20260617063247-26e09b697026 h1:l0IeroTlcZi5v1UDkSSz/sxFOtq4mTJjox12fpW1wL8=
 github.com/escalopa/prayer-bot v0.0.0-20260617063247-26e09b697026/go.mod h1:BLkMnLC7bUZUQYcEkKQlWfNafLQDrOePcBcxZCL4NUo=
+github.com/escalopa/prayer-bot v0.0.0-20260617122154-9423ff8cb460 h1:TjViKp7n0ikXajXxR9RjB/xNMV0AzmK+5MYapEBmAG8=
+github.com/escalopa/prayer-bot v0.0.0-20260617122154-9423ff8cb460/go.mod h1:BLkMnLC7bUZUQYcEkKQlWfNafLQDrOePcBcxZCL4NUo=
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
 github.com/go-gl/glfw v0.0.0-20190409004039-e6da0acd62b1/go.mod h1:vR7hzQXu2zJy9AVAgeJqvqgH9Q5CA+iKCZ2gyEVpxRU=
 github.com/go-gl/glfw/v3.3/glfw v0.0.0-20191125211704-12ad95a8df72/go.mod h1:tQ2UAYgL5IevRw8kRxooKSPJfGvJ9fJQFa0TUsXzTg8=

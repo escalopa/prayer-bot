@@ -45,9 +45,14 @@ Infrastructure is defined in [`infra/gcp/`](infra/gcp/).
 | `SUPABASE_DB_URL` | Supabase transaction pooler URL (port 6543) — runtime `DATABASE_URL` on functions |
 | `SUPABASE_DB_DIRECT_URL` | Supabase direct Postgres URL (port 5432) — Goose schema migrations |
 
-**Pull requests and pushes to `main`** run CI only: lint, Terraform validate, and plan (against the `dev` workspace for PRs).
+**Automatic deploys**
 
-**Deploy to an environment** requires a manual run: Actions → *Deploy to GCP* → Run workflow → pick `dev` or `prod`. That runs the full chain in order: lint → validate → plan → Goose schema migration → Terraform apply → Telegram webhooks → bot profile sync. Apply is blocked unless lint, validate, and plan all succeed.
+| Trigger | Environment | What runs |
+|---------|-------------|-----------|
+| Pull request → `main` | `dev` | lint → validate → plan → Goose migrate → Terraform apply → webhooks → profiles |
+| Push / merge to `main` | `prod` | same full chain |
+
+**Manual deploy (hotfixes):** Actions → *Deploy to GCP* → Run workflow → pick `dev` or `prod` and optionally a branch.
 
 ---
 

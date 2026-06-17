@@ -39,14 +39,19 @@ jobs:
     outputs:
       workspace: ${{ steps.set-workspace.outputs.workspace }}
       run_deploy: ${{ steps.set-workspace.outputs.run_deploy }}
+      deploy_trigger: ${{ steps.set-workspace.outputs.deploy_trigger }}
     steps:
       - name: Set workspace
         id: set-workspace
         run: |
           WORKSPACE=${{ github.event_name == 'pull_request' && 'dev' || (github.event_name == 'workflow_dispatch' && inputs.environment || 'prod') }}
-          RUN_DEPLOY=${{ github.event_name == 'workflow_dispatch' }}
           echo "workspace=$WORKSPACE" >> $GITHUB_OUTPUT
-          echo "run_deploy=$RUN_DEPLOY" >> $GITHUB_OUTPUT
+          echo "run_deploy=true" >> $GITHUB_OUTPUT
+          case "${{ github.event_name }}" in
+            pull_request) echo "deploy_trigger=PR → auto deploy to dev" ;;
+            push)         echo "deploy_trigger=push to main → auto deploy to prod" ;;
+            *)            echo "deploy_trigger=manual dispatch → deploy to $WORKSPACE" ;;
+          esac >> $GITHUB_OUTPUT
           echo "::notice::Workspace: $WORKSPACE"
 
   lint:
@@ -401,11 +406,8 @@ jobs:
         run: |
           echo "## Deployment Summary — \`${{ needs.setup.outputs.workspace }}\` environment" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ needs.setup.outputs.run_deploy }}" != "true" ]; then
-            echo "> CI only (pull request or push). Deploy jobs were skipped." >> $GITHUB_STEP_SUMMARY
-            echo "> To deploy: **Actions → Deploy to GCP → Run workflow** → pick \`dev\` or \`prod\`." >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-          fi
+          echo "**Trigger:** ${{ needs.setup.outputs.deploy_trigger }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
           echo "| Code Linting | ${{ needs.lint.result }} |" >> $GITHUB_STEP_SUMMARY

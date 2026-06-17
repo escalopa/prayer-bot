@@ -13,6 +13,13 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+const pgComponent = "db.postgres"
+
+func logPG(op, detail string, args ...any) {
+	log.Error(pgComponent+"."+op+": "+detail,
+		append([]any{log.Op(op)}, args...)...)
+}
+
 type Postgres struct {
 	pool *pgxpool.Pool
 }
@@ -43,7 +50,7 @@ func unmarshalReminder(reminderJSON []byte, botID, chatID int64) (*domain.Remind
 
 	var reminder domain.Reminder
 	if err := json.Unmarshal(reminderJSON, &reminder); err != nil {
-		log.Error("unmarshal reminder json", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+		logPG("unmarshalReminder", "failed to decode reminder json", log.Err(err), log.BotID(botID), log.ChatID(chatID))
 		return nil, domain.ErrUnmarshalJSON
 	}
 
@@ -97,7 +104,7 @@ func (p *Postgres) CreateChat(
 ) error {
 	reminderJSON, err := json.Marshal(reminder)
 	if err != nil {
-		log.Error("marshal reminder json", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+		logPG("CreateChat.marshalReminder", "failed to encode reminder json", log.Err(err), log.BotID(botID), log.ChatID(chatID))
 		return domain.ErrInternal
 	}
 
@@ -109,7 +116,7 @@ func (p *Postgres) CreateChat(
 		if isUniqueViolation(err) {
 			return domain.ErrAlreadyExists
 		}
-		log.Error("create chat", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+		logPG("CreateChat", "insert failed", log.Err(err), log.BotID(botID), log.ChatID(chatID))
 		return domain.ErrInternal
 	}
 
@@ -128,7 +135,7 @@ func (p *Postgres) GetChat(ctx context.Context, botID int64, chatID int64) (chat
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, domain.ErrNotFound
 		}
-		log.Error("get chat", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+		logPG("GetChat", "select failed", log.Err(err), log.BotID(botID), log.ChatID(chatID))
 		return nil, domain.ErrInternal
 	}
 
@@ -142,7 +149,7 @@ func (p *Postgres) GetChats(ctx context.Context, botID int64) (chats []*domain.C
 		WHERE bot_id = $1
 	`, botID)
 	if err != nil {
-		log.Error("execute get chats query", log.Err(err), log.BotID(botID))
+		logPG("GetChats", "query failed", log.Err(err), log.BotID(botID))
 		return nil, domain.ErrInternal
 	}
 	defer rows.Close()
@@ -153,14 +160,14 @@ func (p *Postgres) GetChats(ctx context.Context, botID int64) (chats []*domain.C
 			if errors.Is(err, domain.ErrUnmarshalJSON) {
 				return nil, err
 			}
-			log.Error("scan chat fields", log.Err(err), log.BotID(botID))
+			logPG("GetChats.scanRow", "scan failed", log.Err(err), log.BotID(botID))
 			return nil, domain.ErrInternal
 		}
 		chats = append(chats, chat)
 	}
 
 	if err := rows.Err(); err != nil {
-		log.Error("iterate get chats rows", log.Err(err), log.BotID(botID))
+		logPG("GetChats.iterateRows", "iteration failed", log.Err(err), log.BotID(botID))
 		return nil, domain.ErrInternal
 	}
 
@@ -174,7 +181,7 @@ func (p *Postgres) GetChatsByIDs(ctx context.Context, botID int64, chatIDs []int
 		WHERE bot_id = $1 AND chat_id = ANY($2)
 	`, botID, chatIDs)
 	if err != nil {
-		log.Error("execute get chats by ids query", log.Err(err), log.BotID(botID))
+		logPG("GetChatsByIDs", "query failed", log.Err(err), log.BotID(botID))
 		return nil, domain.ErrInternal
 	}
 	defer rows.Close()
@@ -185,14 +192,14 @@ func (p *Postgres) GetChatsByIDs(ctx context.Context, botID int64, chatIDs []int
 			if errors.Is(err, domain.ErrUnmarshalJSON) {
 				return nil, err
 			}
-			log.Error("scan chat fields", log.Err(err), log.BotID(botID))
+			logPG("GetChatsByIDs.scanRow", "scan failed", log.Err(err), log.BotID(botID))
 			return nil, domain.ErrInternal
 		}
 		chats = append(chats, chat)
 	}
 
 	if err := rows.Err(); err != nil {
-		log.Error("iterate get chats by ids rows", log.Err(err), log.BotID(botID))
+		logPG("GetChatsByIDs.iterateRows", "iteration failed", log.Err(err), log.BotID(botID))
 		return nil, domain.ErrInternal
 	}
 
@@ -206,7 +213,7 @@ func (p *Postgres) GetSubscribers(ctx context.Context, botID int64) (chatIDs []i
 		WHERE bot_id = $1 AND COALESCE(subscribed, false) = true
 	`, botID)
 	if err != nil {
-		log.Error("execute get subscribers query", log.Err(err), log.BotID(botID))
+		logPG("GetSubscribers", "query failed", log.Err(err), log.BotID(botID))
 		return nil, domain.ErrInternal
 	}
 	defer rows.Close()
@@ -214,14 +221,14 @@ func (p *Postgres) GetSubscribers(ctx context.Context, botID int64) (chatIDs []i
 	for rows.Next() {
 		var chatID int64
 		if err := rows.Scan(&chatID); err != nil {
-			log.Error("scan subscriber chat id", log.Err(err), log.BotID(botID))
+			logPG("GetSubscribers.scanRow", "scan failed", log.Err(err), log.BotID(botID))
 			return nil, domain.ErrInternal
 		}
 		chatIDs = append(chatIDs, chatID)
 	}
 
 	if err := rows.Err(); err != nil {
-		log.Error("iterate get subscribers rows", log.Err(err), log.BotID(botID))
+		logPG("GetSubscribers.iterateRows", "iteration failed", log.Err(err), log.BotID(botID))
 		return nil, domain.ErrInternal
 	}
 
@@ -235,7 +242,7 @@ func (p *Postgres) SetLanguageCode(ctx context.Context, botID int64, chatID int6
 		WHERE bot_id = $1 AND chat_id = $2
 	`, botID, chatID, languageCode)
 	if err != nil {
-		log.Error("execute set language code query", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+		logPG("SetLanguageCode", "update failed", log.Err(err), log.BotID(botID), log.ChatID(chatID))
 		return domain.ErrInternal
 	}
 
@@ -250,7 +257,7 @@ func (p *Postgres) SetSubscribed(ctx context.Context, botID int64, chatID int64,
 		WHERE bot_id = $1 AND chat_id = $2
 	`, botID, chatID, subscribed)
 	if err != nil {
-		log.Error("execute set subscribed query", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+		logPG("SetSubscribed", "update failed", log.Err(err), log.BotID(botID), log.ChatID(chatID))
 		return domain.ErrInternal
 	}
 
@@ -289,7 +296,7 @@ func (p *Postgres) SetState(ctx context.Context, botID int64, chatID int64, stat
 		WHERE bot_id = $1 AND chat_id = $2
 	`, botID, chatID, state)
 	if err != nil {
-		log.Error("execute set state query", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+		logPG("SetState", "update failed", log.Err(err), log.BotID(botID), log.ChatID(chatID))
 		return domain.ErrInternal
 	}
 
@@ -307,14 +314,14 @@ func (p *Postgres) GetPrayerDay(ctx context.Context, botID int64, date time.Time
 		ORDER BY prayer_date
 	`, botID, date, nextDate)
 	if err != nil {
-		log.Error("execute get prayer day query", log.Err(err), log.BotID(botID))
+		logPG("GetPrayerDay", "query failed", log.Err(err), log.BotID(botID))
 		return nil, domain.ErrInternal
 	}
 	defer rows.Close()
 
 	if !rows.Next() {
 		if err := rows.Err(); err != nil {
-			log.Error("iterate get prayer day rows", log.Err(err), log.BotID(botID))
+			logPG("GetPrayerDay.iterateRows", "iteration failed", log.Err(err), log.BotID(botID))
 			return nil, domain.ErrInternal
 		}
 		return nil, domain.ErrNotFound
@@ -327,13 +334,13 @@ func (p *Postgres) GetPrayerDay(ctx context.Context, botID int64, date time.Time
 		&prayerDay.Dhuhr, &prayerDay.Asr,
 		&prayerDay.Maghrib, &prayerDay.Isha,
 	); err != nil {
-		log.Error("scan prayer day fields", log.Err(err), log.BotID(botID))
+		logPG("GetPrayerDay.scanRow", "scan failed", log.Err(err), log.BotID(botID))
 		return nil, domain.ErrInternal
 	}
 
 	if !rows.Next() {
 		if err := rows.Err(); err != nil {
-			log.Error("iterate get prayer day rows", log.Err(err), log.BotID(botID))
+			logPG("GetPrayerDay.iterateRows", "iteration failed", log.Err(err), log.BotID(botID))
 			return nil, domain.ErrInternal
 		}
 		return nil, domain.ErrNotFound
@@ -346,13 +353,13 @@ func (p *Postgres) GetPrayerDay(ctx context.Context, botID int64, date time.Time
 		&nextDay.Dhuhr, &nextDay.Asr,
 		&nextDay.Maghrib, &nextDay.Isha,
 	); err != nil {
-		log.Error("scan next prayer day fields", log.Err(err), log.BotID(botID))
+		logPG("GetPrayerDay.scanNextRow", "scan failed", log.Err(err), log.BotID(botID))
 		return nil, domain.ErrInternal
 	}
 	prayerDay.NextDay = nextDay
 
 	if err := rows.Err(); err != nil {
-		log.Error("iterate get prayer day rows", log.Err(err), log.BotID(botID))
+		logPG("GetPrayerDay.iterateRows", "iteration failed", log.Err(err), log.BotID(botID))
 		return nil, domain.ErrInternal
 	}
 
@@ -371,7 +378,7 @@ func (p *Postgres) GetStats(ctx context.Context, botID int64) (*domain.Stats, er
 		WHERE bot_id = $1
 	`, botID).Scan(&stats.Users, &stats.Subscribed, &stats.Unsubscribed)
 	if err != nil {
-		log.Error("execute get stats query", log.Err(err), log.BotID(botID))
+		logPG("GetStats", "query failed", log.Err(err), log.BotID(botID))
 		return nil, domain.ErrInternal
 	}
 
@@ -382,7 +389,7 @@ func (p *Postgres) GetStats(ctx context.Context, botID int64) (*domain.Stats, er
 		GROUP BY language_code
 	`, botID)
 	if err != nil {
-		log.Error("execute get language stats query", log.Err(err), log.BotID(botID))
+		logPG("GetStats.languages", "query failed", log.Err(err), log.BotID(botID))
 		return nil, domain.ErrInternal
 	}
 	defer rows.Close()
@@ -393,14 +400,14 @@ func (p *Postgres) GetStats(ctx context.Context, botID int64) (*domain.Stats, er
 			count        uint64
 		)
 		if err := rows.Scan(&languageCode, &count); err != nil {
-			log.Error("scan language stats", log.Err(err), log.BotID(botID))
+			logPG("GetStats.scanLanguage", "scan failed", log.Err(err), log.BotID(botID))
 			return nil, domain.ErrInternal
 		}
 		stats.LanguagesGrouped[languageCode] = count
 	}
 
 	if err := rows.Err(); err != nil {
-		log.Error("iterate language stats rows", log.Err(err), log.BotID(botID))
+		logPG("GetStats.iterateLanguages", "iteration failed", log.Err(err), log.BotID(botID))
 		return nil, domain.ErrInternal
 	}
 
@@ -436,7 +443,7 @@ func (p *Postgres) DeleteChat(ctx context.Context, botID int64, chatID int64) er
 		WHERE bot_id = $1 AND chat_id = $2
 	`, botID, chatID)
 	if err != nil {
-		log.Error("execute delete chat query", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+		logPG("DeleteChat", "delete failed", log.Err(err), log.BotID(botID), log.ChatID(chatID))
 		return domain.ErrInternal
 	}
 
@@ -485,7 +492,7 @@ func (p *Postgres) SetPrayerDays(ctx context.Context, botID int64, rows []*domai
 func (p *Postgres) updateReminder(ctx context.Context, botID int64, chatID int64, mutate func(*domain.Reminder)) error {
 	tx, err := p.pool.Begin(ctx)
 	if err != nil {
-		log.Error("begin update reminder transaction", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+		logPG("updateReminder.beginTx", "transaction start failed", log.Err(err), log.BotID(botID), log.ChatID(chatID))
 		return domain.ErrInternal
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
@@ -500,7 +507,7 @@ func (p *Postgres) updateReminder(ctx context.Context, botID int64, chatID int64
 		if errors.Is(err, pgx.ErrNoRows) {
 			return domain.ErrNotFound
 		}
-		log.Error("execute select query", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+		logPG("updateReminder.select", "select failed", log.Err(err), log.BotID(botID), log.ChatID(chatID))
 		return domain.ErrInternal
 	}
 
@@ -513,7 +520,7 @@ func (p *Postgres) updateReminder(ctx context.Context, botID int64, chatID int64
 
 	updatedReminderJSON, err := json.Marshal(reminder)
 	if err != nil {
-		log.Error("marshal updated reminder json", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+		logPG("updateReminder.marshal", "failed to encode reminder json", log.Err(err), log.BotID(botID), log.ChatID(chatID))
 		return domain.ErrInternal
 	}
 
@@ -523,12 +530,12 @@ func (p *Postgres) updateReminder(ctx context.Context, botID int64, chatID int64
 		WHERE bot_id = $1 AND chat_id = $2
 	`, botID, chatID, updatedReminderJSON)
 	if err != nil {
-		log.Error("execute update reminder query", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+		logPG("updateReminder.update", "update failed", log.Err(err), log.BotID(botID), log.ChatID(chatID))
 		return domain.ErrInternal
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		log.Error("commit update reminder transaction", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+		logPG("updateReminder.commit", "commit failed", log.Err(err), log.BotID(botID), log.ChatID(chatID))
 		return domain.ErrInternal
 	}
 

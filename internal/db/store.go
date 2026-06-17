@@ -63,7 +63,9 @@ func (s *Store) mirrorWrite(ctx context.Context, fn func(*YDB) error) {
 		return
 	}
 	if err := fn(s.ydb); err != nil {
-		log.Error("secondary ydb write failed", log.Err(err))
+		log.Error("db.store.mirrorWrite: secondary ydb write failed",
+			log.Op("mirrorWrite"),
+			log.Err(err))
 	}
 }
 

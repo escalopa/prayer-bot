@@ -15,6 +15,13 @@ import (
 	yc "github.com/ydb-platform/ydb-go-yc"
 )
 
+const ydbComponent = "db.ydb"
+
+func logYDB(op, detail string, args ...any) {
+	log.Error(ydbComponent+"."+op+": "+detail,
+		append([]any{log.Op(op)}, args...)...)
+}
+
 var (
 	readTx = table.TxControl(
 		table.BeginTx(table.WithOnlineReadOnly()),
@@ -58,7 +65,7 @@ func (db *YDB) CreateChat(
 ) error {
 	reminderJSON, err := json.Marshal(reminder)
 	if err != nil {
-		log.Error("marshal reminder json", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+		logYDB("marshalReminder", "failed to encode reminder json", log.Err(err), log.BotID(botID), log.ChatID(chatID))
 		return domain.ErrInternal
 	}
 
@@ -90,7 +97,7 @@ func (db *YDB) CreateChat(
 		if ydb.IsOperationError(err, Ydb.StatusIds_PRECONDITION_FAILED) { // chat already exists
 			return domain.ErrAlreadyExists
 		}
-		log.Error("create chat", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+		logYDB("CreateChat", "insert failed", log.Err(err), log.BotID(botID), log.ChatID(chatID))
 		return domain.ErrInternal
 	}
 
@@ -115,7 +122,7 @@ func (db *YDB) GetChat(ctx context.Context, botID int64, chatID int64) (chat *do
 	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
 		_, res, err := s.Execute(ctx, readTx, query, params)
 		if err != nil {
-			log.Error("execute get chat query", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+			logYDB("GetChat", "query failed", log.Err(err), log.BotID(botID), log.ChatID(chatID))
 			return domain.ErrInternal
 		}
 
@@ -132,13 +139,13 @@ func (db *YDB) GetChat(ctx context.Context, botID int64, chatID int64) (chat *do
 				&reminderJSON,
 			)
 			if err != nil {
-				log.Error("scan chat fields", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+				logYDB("GetChat.scanRow", "scan failed", log.Err(err), log.BotID(botID), log.ChatID(chatID))
 				return domain.ErrInternal
 			}
 
 			var reminder domain.Reminder
 			if err := json.Unmarshal([]byte(reminderJSON), &reminder); err != nil {
-				log.Error("unmarshal reminder json", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+				logYDB("unmarshalReminder", "failed to decode reminder json", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 				return domain.ErrUnmarshalJSON
 			}
 
@@ -170,7 +177,7 @@ func (db *YDB) GetChats(ctx context.Context, botID int64) (chats []*domain.Chat,
 	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
 		_, res, err := s.Execute(ctx, readTx, query, params)
 		if err != nil {
-			log.Error("execute get chats query", log.Err(err), log.BotID(botID))
+			logYDB("GetChats", "query failed", log.Err(err), log.BotID(botID))
 			return domain.ErrInternal
 		}
 
@@ -188,13 +195,13 @@ func (db *YDB) GetChats(ctx context.Context, botID int64) (chats []*domain.Chat,
 					&reminderJSON,
 				)
 				if err != nil {
-					log.Error("scan chat fields", log.Err(err), log.BotID(botID))
+					logYDB("GetChats.scanRow", "scan failed", log.Err(err), log.BotID(botID))
 					return domain.ErrInternal
 				}
 
 				var reminder domain.Reminder
 				if err := json.Unmarshal([]byte(reminderJSON), &reminder); err != nil {
-					log.Error("unmarshal reminder json", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+					logYDB("unmarshalReminder", "failed to decode reminder json", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 					return domain.ErrUnmarshalJSON
 				}
 				chat.Reminder = &reminder
@@ -236,7 +243,7 @@ func (db *YDB) GetChatsByIDs(ctx context.Context, botID int64, chatIDs []int64) 
 	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
 		_, res, err := s.Execute(ctx, readTx, query, params)
 		if err != nil {
-			log.Error("execute get chats by ids query", log.Err(err), log.BotID(botID))
+			logYDB("GetChatsByIDs", "query failed", log.Err(err), log.BotID(botID))
 			return domain.ErrInternal
 		}
 
@@ -253,13 +260,13 @@ func (db *YDB) GetChatsByIDs(ctx context.Context, botID int64, chatIDs []int64) 
 					&reminderJSON,
 				)
 				if err != nil {
-					log.Error("scan chat fields", log.Err(err), log.BotID(botID))
+					logYDB("GetChatsByIDs.scanRow", "scan failed", log.Err(err), log.BotID(botID))
 					return domain.ErrInternal
 				}
 
 				var reminder domain.Reminder
 				if err := json.Unmarshal([]byte(reminderJSON), &reminder); err != nil {
-					log.Error("unmarshal reminder json", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+					logYDB("unmarshalReminder", "failed to decode reminder json", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 					return domain.ErrUnmarshalJSON
 				}
 				chat.Reminder = &reminder
@@ -291,7 +298,7 @@ func (db *YDB) GetSubscribers(ctx context.Context, botID int64) (chatIDs []int64
 	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
 		_, res, err := s.Execute(ctx, readTx, query, params)
 		if err != nil {
-			log.Error("execute get subscribers query", log.Err(err), log.BotID(botID))
+			logYDB("GetSubscribers", "query failed", log.Err(err), log.BotID(botID))
 			return domain.ErrInternal
 		}
 
@@ -301,7 +308,7 @@ func (db *YDB) GetSubscribers(ctx context.Context, botID int64) (chatIDs []int64
 				var chatID int64
 				err = res.ScanWithDefaults(&chatID)
 				if err != nil {
-					log.Error("scan subscriber chat id", log.Err(err), log.BotID(botID))
+					logYDB("GetSubscribers.scanRow", "scan failed", log.Err(err), log.BotID(botID))
 					return domain.ErrInternal
 				}
 				chatIDs = append(chatIDs, chatID)
@@ -338,7 +345,7 @@ func (db *YDB) SetLanguageCode(ctx context.Context, botID int64, chatID int64, l
 	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
 		_, _, err := s.Execute(ctx, writeTx, query, params)
 		if err != nil {
-			log.Error("execute set language code query", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+			logYDB("SetLanguageCode", "update failed", log.Err(err), log.BotID(botID), log.ChatID(chatID))
 			return domain.ErrInternal
 		}
 		return nil
@@ -367,7 +374,7 @@ func (db *YDB) SetSubscribed(ctx context.Context, botID int64, chatID int64, sub
 	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
 		_, _, err := s.Execute(ctx, writeTx, query, params)
 		if err != nil {
-			log.Error("execute set subscribed query", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+			logYDB("SetSubscribed", "update failed", log.Err(err), log.BotID(botID), log.ChatID(chatID))
 			return domain.ErrInternal
 		}
 		return nil
@@ -421,7 +428,7 @@ func (db *YDB) SetState(ctx context.Context, botID int64, chatID int64, state st
 	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
 		_, _, err := s.Execute(ctx, writeTx, query, params)
 		if err != nil {
-			log.Error("execute set state query", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+			logYDB("SetState", "update failed", log.Err(err), log.BotID(botID), log.ChatID(chatID))
 			return domain.ErrInternal
 		}
 		return nil
@@ -457,7 +464,7 @@ func (db *YDB) GetPrayerDay(ctx context.Context, botID int64, date time.Time) (p
 	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
 		_, res, err := s.Execute(ctx, readTx, query, params)
 		if err != nil {
-			log.Error("execute get prayer day query", log.Err(err), log.BotID(botID))
+			logYDB("GetPrayerDay", "query failed", log.Err(err), log.BotID(botID))
 			return domain.ErrInternal
 		}
 
@@ -472,7 +479,7 @@ func (db *YDB) GetPrayerDay(ctx context.Context, botID int64, date time.Time) (p
 					&prayerDay.Maghrib, &prayerDay.Isha,
 				)
 				if err != nil {
-					log.Error("scan prayer day fields", log.Err(err), log.BotID(botID))
+					logYDB("GetPrayerDay.scanRow", "scan failed", log.Err(err), log.BotID(botID))
 					return domain.ErrInternal
 				}
 			} else {
@@ -488,7 +495,7 @@ func (db *YDB) GetPrayerDay(ctx context.Context, botID int64, date time.Time) (p
 					&nextDay.Maghrib, &nextDay.Isha,
 				)
 				if err != nil {
-					log.Error("scan next prayer day fields", log.Err(err), log.BotID(botID))
+					logYDB("GetPrayerDay.scanNextRow", "scan failed", log.Err(err), log.BotID(botID))
 					return domain.ErrInternal
 				}
 				prayerDay.NextDay = nextDay
@@ -574,7 +581,7 @@ func (db *YDB) GetStats(ctx context.Context, botID int64) (*domain.Stats, error)
 	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
 		_, res, err := s.Execute(ctx, readTx, query, params)
 		if err != nil {
-			log.Error("execute get stats query", log.Err(err), log.BotID(botID))
+			logYDB("GetStats", "query failed", log.Err(err), log.BotID(botID))
 			return domain.ErrInternal
 		}
 
@@ -582,7 +589,7 @@ func (db *YDB) GetStats(ctx context.Context, botID int64) (*domain.Stats, error)
 		if res.NextResultSet(ctx) && res.NextRow() {
 			err = res.ScanWithDefaults(&stats.Users, &stats.Subscribed, &stats.Unsubscribed)
 			if err != nil {
-				log.Error("scan stats fields", log.Err(err), log.BotID(botID))
+				logYDB("GetStats.scanRow", "scan failed", log.Err(err), log.BotID(botID))
 				return domain.ErrInternal
 			}
 		}
@@ -596,7 +603,7 @@ func (db *YDB) GetStats(ctx context.Context, botID int64) (*domain.Stats, error)
 
 				err = res.ScanWithDefaults(&languageCode, &count)
 				if err != nil {
-					log.Error("scan language stats", log.Err(err), log.BotID(botID))
+					logYDB("GetStats.scanLanguage", "scan failed", log.Err(err), log.BotID(botID))
 					return domain.ErrInternal
 				}
 				stats.LanguagesGrouped[languageCode] = count
@@ -639,7 +646,7 @@ func (db *YDB) UpdateReminder(
 
 		txID, res, err := s.Execute(ctx, txBegin, selectQuery, selectParams)
 		if err != nil {
-			log.Error("execute select query", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+			logYDB("updateReminder.select", "select failed", log.Err(err), log.BotID(botID), log.ChatID(chatID))
 			return domain.ErrInternal
 		}
 
@@ -649,7 +656,7 @@ func (db *YDB) UpdateReminder(
 		if res.NextResultSet(ctx) && res.NextRow() {
 			err = res.ScanWithDefaults(&reminderJSON)
 			if err != nil {
-				log.Error("scan reminder json", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+				logYDB("updateReminder.scan", "scan failed", log.Err(err), log.BotID(botID), log.ChatID(chatID))
 				return domain.ErrInternal
 			}
 		} else {
@@ -658,7 +665,7 @@ func (db *YDB) UpdateReminder(
 
 		var reminder domain.Reminder
 		if err := json.Unmarshal([]byte(reminderJSON), &reminder); err != nil {
-			log.Error("unmarshal reminder json", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+			logYDB("unmarshalReminder", "failed to decode reminder json", log.Err(err), log.BotID(botID), log.ChatID(chatID))
 			return domain.ErrUnmarshalJSON
 		}
 
@@ -676,7 +683,7 @@ func (db *YDB) UpdateReminder(
 
 		updatedReminderJSON, err := json.Marshal(&reminder)
 		if err != nil {
-			log.Error("marshal updated reminder json", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+			logYDB("updateReminder.marshal", "failed to encode reminder json", log.Err(err), log.BotID(botID), log.ChatID(chatID))
 			return domain.ErrInternal
 		}
 
@@ -699,7 +706,7 @@ func (db *YDB) UpdateReminder(
 		txCommit := table.TxControl(table.WithTx(txID), table.CommitTx())
 		_, _, err = s.Execute(ctx, txCommit, updateQuery, updateParams)
 		if err != nil {
-			log.Error("execute update reminder query", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+			logYDB("updateReminder.update", "update failed", log.Err(err), log.BotID(botID), log.ChatID(chatID))
 			return domain.ErrInternal
 		}
 		return nil
@@ -725,7 +732,7 @@ func (db *YDB) DeleteChat(ctx context.Context, botID int64, chatID int64) error 
 	err := db.client.Do(ctx, func(ctx context.Context, s table.Session) error {
 		_, _, err := s.Execute(ctx, writeTx, query, params)
 		if err != nil {
-			log.Error("execute delete chat query", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+			logYDB("DeleteChat", "delete failed", log.Err(err), log.BotID(botID), log.ChatID(chatID))
 			return domain.ErrInternal
 		}
 		return nil
@@ -754,7 +761,7 @@ func (db *YDB) updateReminder(ctx context.Context, botID int64, chatID int64, mu
 
 		txID, res, err := s.Execute(ctx, txBegin, selectQuery, selectParams)
 		if err != nil {
-			log.Error("execute select query", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+			logYDB("updateReminder.select", "select failed", log.Err(err), log.BotID(botID), log.ChatID(chatID))
 			return domain.ErrInternal
 		}
 
@@ -764,7 +771,7 @@ func (db *YDB) updateReminder(ctx context.Context, botID int64, chatID int64, mu
 		if res.NextResultSet(ctx) && res.NextRow() {
 			err = res.ScanWithDefaults(&reminderJSON)
 			if err != nil {
-				log.Error("scan reminder json", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+				logYDB("updateReminder.scan", "scan failed", log.Err(err), log.BotID(botID), log.ChatID(chatID))
 				return domain.ErrInternal
 			}
 		} else {
@@ -773,7 +780,7 @@ func (db *YDB) updateReminder(ctx context.Context, botID int64, chatID int64, mu
 
 		var reminder domain.Reminder
 		if err := json.Unmarshal([]byte(reminderJSON), &reminder); err != nil {
-			log.Error("unmarshal reminder json", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+			logYDB("unmarshalReminder", "failed to decode reminder json", log.Err(err), log.BotID(botID), log.ChatID(chatID))
 			return domain.ErrUnmarshalJSON
 		}
 
@@ -781,7 +788,7 @@ func (db *YDB) updateReminder(ctx context.Context, botID int64, chatID int64, mu
 
 		updatedReminderJSON, err := json.Marshal(&reminder)
 		if err != nil {
-			log.Error("marshal updated reminder json", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+			logYDB("updateReminder.marshal", "failed to encode reminder json", log.Err(err), log.BotID(botID), log.ChatID(chatID))
 			return domain.ErrInternal
 		}
 
@@ -804,7 +811,7 @@ func (db *YDB) updateReminder(ctx context.Context, botID int64, chatID int64, mu
 		txCommit := table.TxControl(table.WithTx(txID), table.CommitTx())
 		_, _, err = s.Execute(ctx, txCommit, updateQuery, updateParams)
 		if err != nil {
-			log.Error("execute update reminder query", log.Err(err), log.BotID(botID), log.ChatID(chatID))
+			logYDB("updateReminder.update", "update failed", log.Err(err), log.BotID(botID), log.ChatID(chatID))
 			return domain.ErrInternal
 		}
 		return nil

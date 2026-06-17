@@ -58,3 +58,11 @@ func Err(err error) slog.Attr {
 func String(key string, value string) slog.Attr {
 	return slog.String(key, value)
 }
+
+func Int(key string, value int64) slog.Attr {
+	return slog.Int64(key, value)
+}
+
+func Op(name string) slog.Attr {
+	return slog.String("op", name)
+}

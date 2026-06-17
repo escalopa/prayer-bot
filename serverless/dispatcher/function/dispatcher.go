@@ -24,7 +24,7 @@ var (
 	dispatcherErr  error
 )
 
-func getDispatcherHandler(ctx context.Context) (*handler.Handler, error) {
+func getDispatcherHandler() (*handler.Handler, error) {
 	dispatcherOnce.Do(func() {
 		botConfig, err := config.Load()
 		if err != nil {
@@ -32,7 +32,7 @@ func getDispatcherHandler(ctx context.Context) (*handler.Handler, error) {
 			return
 		}
 
-		db, err := service.NewDB(ctx)
+		db, err := service.NewDB(context.Background())
 		if err != nil {
 			dispatcherErr = err
 			return
@@ -51,10 +51,11 @@ func DispatcherHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithCancel(r.Context())
+	// Telegram may close the HTTP connection before handler work finishes.
+	ctx, cancel := context.WithCancel(context.WithoutCancel(r.Context()))
 	defer cancel()
 
-	h, err := getDispatcherHandler(ctx)
+	h, err := getDispatcherHandler()
 	if err != nil {
 		log.Error("dispatcher.gcp.initHandler: failed",
 			log.Op("initHandler"), log.Err(err))

@@ -3,6 +3,7 @@ package function
 import (
 	"context"
 	"io"
+	"log/slog"
 	"net/http"
 	"sync"
 	"time"
@@ -84,8 +85,15 @@ func DispatcherHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	handlerCtx, cancel := context.WithTimeout(context.WithoutCancel(r.Context()), dispatcherHandlerTimeout)
+	handlerCtx, cancel := context.WithTimeout(context.Background(), dispatcherHandlerTimeout)
 	defer cancel()
+
+	deadline, ok := handlerCtx.Deadline()
+	log.Info("dispatcher.gcp.startHandler",
+		log.Op("startHandler"),
+		slog.Bool("has_deadline", ok),
+		log.String("deadline", deadline.Format(time.RFC3339Nano)),
+	)
 
 	if err := h.Handel(handlerCtx, botID, string(body)); err != nil {
 		log.Error("dispatcher.gcp.processRequest: handler failed",

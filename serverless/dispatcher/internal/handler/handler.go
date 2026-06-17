@@ -58,6 +58,10 @@ func New(cfg map[int64]*domain.BotConfig, db DB) (*Handler, error) {
 
 func (h *Handler) opts() []bot.Option {
 	return []bot.Option{
+		// Webhook mode: ProcessUpdate must finish before HTTP handler returns;
+		// default async handlers run after defer cancel() in dispatcher.go.
+		bot.WithNotAsyncHandlers(),
+
 		bot.WithDefaultHandler(h.errorH(h.chatH(h.defaultHandler))),
 
 		bot.WithMessageTextHandler(startCommand.String(), bot.MatchTypeCommandStartOnly, h.errorH(h.chatH(h.start))),

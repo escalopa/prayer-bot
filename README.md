@@ -34,7 +34,7 @@ The bot can run on GCP with Supabase Postgres while keeping Yandex Cloud availab
 |--------|---------|
 | `SUPABASE_DB_URL` | Postgres connection URL (passed to GCP functions as `DATABASE_URL` env var by Terraform) |
 | `YDB_TOKEN_FOR_GCP` | Long-lived YDB token for dual-write from GCP |
-| `GCP_*` | GCP project / SA / tfstate secrets |
+| `GCP_*` | GCP project / SA / tfstate secrets (dev uses project `prayer-bot-infra`, tfstate bucket `prayer-bot-infra-tfstate`) |
 
 Runtime env vars (`YDB_ENDPOINT`, `APP_CONFIG`, `S3_*`, loader keys, etc.) come from **Terraform outputs** and `infra/gcp` function config — not manual env configuration. During cutover, GCP Terraform reads the Yandex endpoint from YC Terraform remote state.
 

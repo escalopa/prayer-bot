@@ -18,6 +18,7 @@ _config
 # secret
 iam.json
 key.json
+gcp-sa.json
 config.json
 graphify-out/
 _scripts/city/*.csv

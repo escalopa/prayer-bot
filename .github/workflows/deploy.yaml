@@ -19,7 +19,7 @@ on:
 
 concurrency:
   group: deploy-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || (github.event_name == 'workflow_dispatch' && inputs.environment || 'prod') }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name != 'pull_request' }}
 
 env:
   TERRAFORM_VERSION: 1.6.3
@@ -213,8 +213,12 @@ jobs:
   migrate-schema:
     name: Postgres Schema Migration
     runs-on: ubuntu-latest
-    needs: setup
-    if: needs.setup.outputs.run_deploy == 'true'
+    needs: [setup, lint, validate, plan]
+    if: |
+      needs.setup.outputs.run_deploy == 'true' &&
+      needs.lint.result == 'success' &&
+      needs.validate.result == 'success' &&
+      needs.plan.result == 'success'
     environment: ${{ needs.setup.outputs.workspace }}
     steps:
       - uses: actions/checkout@v4
@@ -240,8 +244,13 @@ jobs:
   deploy-gcp:
     name: Deploy GCP Infrastructure
     runs-on: ubuntu-latest
-    needs: [setup, migrate-schema]
-    if: needs.setup.outputs.run_deploy == 'true'
+    needs: [setup, lint, validate, plan, migrate-schema]
+    if: |
+      needs.setup.outputs.run_deploy == 'true' &&
+      needs.lint.result == 'success' &&
+      needs.validate.result == 'success' &&
+      needs.plan.result == 'success' &&
+      needs.migrate-schema.result == 'success'
     environment: ${{ needs.setup.outputs.workspace }}
     outputs:
       dispatcher_url: ${{ steps.outputs.outputs.dispatcher_url }}
@@ -392,6 +401,11 @@ jobs:
         run: |
           echo "## Deployment Summary — \`${{ needs.setup.outputs.workspace }}\` environment" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.setup.outputs.run_deploy }}" != "true" ]; then
+            echo "> CI only (pull request or push). Deploy jobs were skipped." >> $GITHUB_STEP_SUMMARY
+            echo "> To deploy: **Actions → Deploy to GCP → Run workflow** → pick \`dev\` or \`prod\`." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
           echo "| Code Linting | ${{ needs.lint.result }} |" >> $GITHUB_STEP_SUMMARY

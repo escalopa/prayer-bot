@@ -71,7 +71,7 @@ func (h Handler) Handel(ctx context.Context, bucket string, key string) error {
 		return fmt.Errorf("store prayers: %v", err)
 	}
 
-	log.Info("set prayers done", log.BotID(botID), log.String("key", key))
+	infoLoader("Handel.setPrayerDays", "prayer schedule stored", log.BotID(botID), log.String("key", key))
 	return nil
 }
 

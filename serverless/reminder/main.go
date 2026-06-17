@@ -14,19 +14,22 @@ import (
 func Handler(ctx context.Context) error {
 	botConfig, err := config.Load()
 	if err != nil {
-		log.Error("load config", log.Err(err))
+		log.Error("reminder.entry.loadConfig: failed",
+			log.Op("loadConfig"), log.Err(err))
 		return fmt.Errorf("load config")
 	}
 
 	db, err := service.NewDB(ctx)
 	if err != nil {
-		log.Error("create db", log.Err(err))
+		log.Error("reminder.entry.createDB: failed",
+			log.Op("createDB"), log.Err(err))
 		return fmt.Errorf("create db")
 	}
 
 	h, err := handler.New(botConfig, db)
 	if err != nil {
-		log.Error("create handler", log.Err(err))
+		log.Error("reminder.entry.createHandler: failed",
+			log.Op("createHandler"), log.Err(err))
 		return fmt.Errorf("create handler")
 	}
 
@@ -36,7 +39,8 @@ func Handler(ctx context.Context) error {
 		errG.Go(func() error {
 			err := h.Handel(ctx, botID)
 			if err != nil {
-				log.Error("reminder cannot process request", log.BotID(botID), log.Err(err))
+				log.Error("reminder.entry.processBot: handler failed",
+					log.Op("processBot"), log.BotID(botID), log.Err(err))
 			}
 			return nil
 		})

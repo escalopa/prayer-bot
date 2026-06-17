@@ -53,27 +53,31 @@ func DispatcherHTTP(w http.ResponseWriter, r *http.Request) {
 
 	h, err := getDispatcherHandler(r.Context())
 	if err != nil {
-		log.Error("init dispatcher handler", log.Err(err))
+		log.Error("dispatcher.gcp.initHandler: failed",
+			log.Op("initHandler"), log.Err(err))
 		http.Error(w, "init handler", http.StatusInternalServerError)
 		return
 	}
 
 	botID, err := h.Authenticate(headerMap(r.Header))
 	if err != nil {
-		log.Error("authenticate", log.Err(err))
+		log.Error("dispatcher.gcp.authenticate: failed",
+			log.Op("authenticate"), log.Err(err))
 		http.Error(w, "authenticate", http.StatusUnauthorized)
 		return
 	}
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		log.Error("read request body", log.Err(err))
+		log.Error("dispatcher.gcp.readBody: failed",
+			log.Op("readBody"), log.Err(err))
 		http.Error(w, "read request body", http.StatusBadRequest)
 		return
 	}
 
 	if err := h.Handel(r.Context(), botID, string(body)); err != nil {
-		log.Error("dispatcher cannot process request", log.Err(err))
+		log.Error("dispatcher.gcp.processRequest: handler failed",
+			log.Op("processRequest"), log.Err(err))
 		http.Error(w, "process request", http.StatusInternalServerError)
 		return
 	}

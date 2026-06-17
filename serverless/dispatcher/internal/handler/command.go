@@ -74,7 +74,7 @@ func (h *Handler) help(ctx context.Context, b *bot.Bot, _ *models.Update) error 
 	_, err := b.SendMessage(ctx, markdownMessage(chat.ChatID, h.lp.GetText(chat.LanguageCode).Help))
 
 	if err != nil {
-		log.Error("help: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logCommand("help: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -87,13 +87,13 @@ func (h *Handler) today(ctx context.Context, b *bot.Bot, _ *models.Update) error
 
 	prayerDay, err := h.db.GetPrayerDay(ctx, chat.BotID, h.nowDateUTC(chat.BotID))
 	if err != nil {
-		log.Error("today: get prayer day", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logCommand("today: get prayer day", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
 	_, err = b.SendMessage(ctx, markdownMessage(chat.ChatID, h.formatPrayerDay(chat.BotID, prayerDay, chat.LanguageCode)))
 	if err != nil {
-		log.Error("today: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logCommand("today: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -107,13 +107,13 @@ func (h *Handler) tomorrow(ctx context.Context, b *bot.Bot, _ *models.Update) er
 	tomorrow := h.nowDateUTC(chat.BotID).Add(24 * time.Hour)
 	prayerDay, err := h.db.GetPrayerDay(ctx, chat.BotID, tomorrow)
 	if err != nil {
-		log.Error("tomorrow: get prayer day", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logCommand("tomorrow: get prayer day", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
 	_, err = b.SendMessage(ctx, markdownMessage(chat.ChatID, h.formatPrayerDay(chat.BotID, prayerDay, chat.LanguageCode)))
 	if err != nil {
-		log.Error("tomorrow: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logCommand("tomorrow: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -130,7 +130,7 @@ func (h *Handler) date(ctx context.Context, b *bot.Bot, _ *models.Update) error 
 		h.monthsKeyboard(chat.LanguageCode),
 	))
 	if err != nil {
-		log.Error("date: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logCommand("date: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -148,7 +148,7 @@ func (h *Handler) next(ctx context.Context, b *bot.Bot, _ *models.Update) error 
 
 	prayerDay, err := h.db.GetPrayerDay(ctx, chat.BotID, date)
 	if err != nil {
-		log.Error("next: get prayer day", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logCommand("next: get prayer day", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -172,7 +172,7 @@ func (h *Handler) next(ctx context.Context, b *bot.Bot, _ *models.Update) error 
 	case prayerDay.NextDay.Shuruq.After(now):
 		prayerID, duration, prayerTime = domain.PrayerIDShuruq, prayerDay.NextDay.Shuruq.Sub(now), prayerDay.NextDay.Shuruq
 	default:
-		log.Error("next: no prayer time found",
+		logCommand("next: no prayer time found",
 			log.BotID(chat.BotID),
 			log.ChatID(chat.ChatID),
 			log.String("date", date.String()),
@@ -189,7 +189,7 @@ func (h *Handler) next(ctx context.Context, b *bot.Bot, _ *models.Update) error 
 		prayerTime.In(h.cfg[chat.BotID].Location.V()).Format(prayerTimeFormat),
 	)))
 	if err != nil {
-		log.Error("next: send message",
+		logCommand("next: send message",
 			log.Err(err),
 			log.BotID(chat.BotID),
 			log.ChatID(chat.ChatID),
@@ -216,7 +216,7 @@ func (h *Handler) remind(ctx context.Context, b *bot.Bot, _ *models.Update) erro
 
 	_, err := b.SendMessage(ctx, markdownMessageWithMarkup(chat.ChatID, messageText, h.remindMenuKeyboard(chat)))
 	if err != nil {
-		log.Error("remind: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logCommand("remind: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -229,13 +229,13 @@ func (h *Handler) bug(ctx context.Context, b *bot.Bot, _ *models.Update) error {
 
 	_, err := b.SendMessage(ctx, markdownMessage(chat.ChatID, h.lp.GetText(chat.LanguageCode).Bug.Start))
 	if err != nil {
-		log.Error("bug: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logCommand("bug: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
 	err = h.db.SetState(ctx, chat.BotID, chat.ChatID, bugState.String())
 	if err != nil {
-		log.Error("bug: set state", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logCommand("bug: set state", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -247,13 +247,13 @@ func (h *Handler) feedback(ctx context.Context, b *bot.Bot, _ *models.Update) er
 
 	_, err := b.SendMessage(ctx, markdownMessage(chat.ChatID, h.lp.GetText(chat.LanguageCode).Feedback.Start))
 	if err != nil {
-		log.Error("feedback: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logCommand("feedback: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
 	err = h.db.SetState(ctx, chat.BotID, chat.ChatID, feedbackState.String())
 	if err != nil {
-		log.Error("feedback: set state", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logCommand("feedback: set state", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -269,7 +269,7 @@ func (h *Handler) language(ctx context.Context, b *bot.Bot, _ *models.Update) er
 		h.languagesKeyboard(),
 	))
 	if err != nil {
-		log.Error("language: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logCommand("language: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -282,7 +282,7 @@ func (h *Handler) admin(ctx context.Context, b *bot.Bot, _ *models.Update) error
 
 	_, err := b.SendMessage(ctx, markdownMessage(chat.ChatID, h.lp.GetText(chat.LanguageCode).HelpAdmin))
 	if err != nil {
-		log.Error("admin: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logCommand("admin: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -333,7 +333,7 @@ func (h *Handler) info(ctx context.Context, b *bot.Bot, _ *models.Update) error 
 
 	_, err := b.SendMessage(ctx, markdownMessage(chat.ChatID, message))
 	if err != nil {
-		log.Error("info: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logCommand("info: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -346,13 +346,13 @@ func (h *Handler) reply(ctx context.Context, b *bot.Bot, _ *models.Update) error
 
 	err := h.db.SetState(ctx, chat.BotID, chat.ChatID, string(replyState))
 	if err != nil {
-		log.Error("reply: set state", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logCommand("reply: set state", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
 	_, err = b.SendMessage(ctx, markdownMessage(chat.ChatID, h.lp.GetText(chat.LanguageCode).Reply.Start))
 	if err != nil {
-		log.Error("reply: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logCommand("reply: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -365,7 +365,7 @@ func (h *Handler) stats(ctx context.Context, b *bot.Bot, _ *models.Update) error
 
 	stats, err := h.db.GetStats(ctx, chat.BotID)
 	if err != nil {
-		log.Error("stats: get stats", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logCommand("stats: get stats", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -382,7 +382,7 @@ func (h *Handler) stats(ctx context.Context, b *bot.Bot, _ *models.Update) error
 	)
 	_, err = b.SendMessage(ctx, markdownMessage(chat.ChatID, message))
 	if err != nil {
-		log.Error("stats: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logCommand("stats: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -395,13 +395,13 @@ func (h *Handler) announce(ctx context.Context, b *bot.Bot, _ *models.Update) er
 
 	err := h.db.SetState(ctx, chat.BotID, chat.ChatID, string(announceState))
 	if err != nil {
-		log.Error("announce: set state", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logCommand("announce: set state", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
 	_, err = b.SendMessage(ctx, markdownMessage(chat.ChatID, h.lp.GetText(chat.LanguageCode).Announce.Start))
 	if err != nil {
-		log.Error("announce: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logCommand("announce: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -415,7 +415,7 @@ func (h *Handler) cancel(ctx context.Context, b *bot.Bot, _ *models.Update) erro
 	if chat.State == string(defaultState) {
 		_, err := b.SendMessage(ctx, markdownMessage(chat.ChatID, h.lp.GetText(chat.LanguageCode).Noop))
 		if err != nil {
-			log.Error("cancel: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+			logCommand("cancel: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 			return domain.ErrInternal
 		}
 		return nil
@@ -423,13 +423,13 @@ func (h *Handler) cancel(ctx context.Context, b *bot.Bot, _ *models.Update) erro
 
 	err := h.db.SetState(ctx, chat.BotID, chat.ChatID, string(defaultState))
 	if err != nil {
-		log.Error("cancel: set state", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logCommand("cancel: set state", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
 	_, err = b.SendMessage(ctx, markdownMessage(chat.ChatID, h.lp.GetText(chat.LanguageCode).Cancel))
 	if err != nil {
-		log.Error("cancel: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logCommand("cancel: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -455,12 +455,13 @@ func (h *Handler) defaultHandler(ctx context.Context, b *bot.Bot, update *models
 			b.ProcessUpdate(ctx, update)
 			return nil
 		}
-		log.Info("defaultHandler: got unexpected update", log.BotID(chat.BotID), log.ChatID(chat.ChatID), "update", update)
+		infoDispatcher("defaultHandler.unexpectedUpdate", "received unexpected update type",
+			log.BotID(chat.BotID), log.ChatID(chat.ChatID), "update", update)
 		return nil // do nothing
 	}
 
 	if err != nil {
-		log.Error("defaultHandler: process state",
+		logCommand("defaultHandler: process state",
 			log.Err(err),
 			log.BotID(chat.BotID),
 			log.ChatID(chat.ChatID),
@@ -476,14 +477,14 @@ func (h *Handler) defaultHandler(ctx context.Context, b *bot.Bot, update *models
 func (h *Handler) isDirectoBotCommand(ctx context.Context, chat *domain.Chat, b *bot.Bot, update *models.Update) bool {
 	user, err := b.GetMe(ctx)
 	if err != nil {
-		log.Error("get me", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logCommand("get me", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return false
 	}
 
 	regexCommand := fmt.Sprintf(string(regexCommandTmpl), user.Username /* bot username */)
 	exp, err := regexp.Compile(regexCommand)
 	if err != nil {
-		log.Error("regex compile", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logCommand("regex compile", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return false
 	}
 
@@ -504,6 +505,6 @@ func (h *Handler) resetState(ctx context.Context, chat *domain.Chat) {
 	}
 	err := h.db.SetState(ctx, chat.BotID, chat.ChatID, string(defaultState))
 	if err != nil {
-		log.Error("reset state", log.Err(err))
+		logCommand("reset state", log.Err(err))
 	}
 }

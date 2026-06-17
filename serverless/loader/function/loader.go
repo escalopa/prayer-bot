@@ -58,18 +58,21 @@ func getLoaderHandler(ctx context.Context) (*handler.Handler, error) {
 func LoaderCloudEvent(ctx context.Context, e cloudevents.Event) error {
 	var data gcsObjectData
 	if err := e.DataAs(&data); err != nil {
-		log.Error("parse cloud event data", log.Err(err))
+		log.Error("loader.gcp.parseEvent: failed",
+			log.Op("parseEvent"), log.Err(err))
 		return fmt.Errorf("parse event data: %w", err)
 	}
 
 	h, err := getLoaderHandler(ctx)
 	if err != nil {
-		log.Error("init loader handler", log.Err(err))
+		log.Error("loader.gcp.initHandler: failed",
+			log.Op("initHandler"), log.Err(err))
 		return err
 	}
 
 	if err := h.Handel(ctx, data.Bucket, data.Name); err != nil {
-		log.Error("loader cannot process request",
+		log.Error("loader.gcp.processObject: handler failed",
+			log.Op("processObject"),
 			log.Err(err),
 			log.String("bucket", data.Bucket),
 			log.String("key", data.Name),

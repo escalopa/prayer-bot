@@ -41,13 +41,13 @@ func parsePrayerDays(file io.Reader, loc *time.Location) (prayerDays []*domain.P
 			if errors.Is(err, io.EOF) {
 				break
 			}
-			log.Error("reading csv record", log.Err(err))
+			logLoader("parseCSV.readRecord", "csv read failed", log.Err(err))
 			return nil, err
 		}
 
 		prayerDay, err := parseRecord(record, loc)
 		if err != nil {
-			log.Error("parse prayer day", log.Err(err), log.String("record", strings.Join(record, ",")))
+			logLoader("parseCSV.parsePrayerDay", "prayer day parse failed", log.Err(err), log.String("record", strings.Join(record, ",")))
 			return nil, err
 		}
 

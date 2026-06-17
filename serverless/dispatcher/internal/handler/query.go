@@ -79,13 +79,13 @@ func (h *Handler) monthQuery(ctx context.Context, b *bot.Bot, update *models.Upd
 		h.daysKeyboard(h.nowDateUTC(chat.BotID), month),
 	))
 	if err != nil {
-		log.Error("monthQuery: edit message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logQuery("monthQuery: edit message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
 	_, err = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: update.CallbackQuery.ID})
 	if err != nil {
-		log.Error("monthQuery: answer query query", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logQuery("monthQuery: answer query query", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -102,7 +102,7 @@ func (h *Handler) dayQuery(ctx context.Context, b *bot.Bot, update *models.Updat
 
 	prayerDay, err := h.db.GetPrayerDay(ctx, chat.BotID, date)
 	if err != nil {
-		log.Error("dayQuery: get prayer day", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logQuery("dayQuery: get prayer day", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -112,13 +112,13 @@ func (h *Handler) dayQuery(ctx context.Context, b *bot.Bot, update *models.Updat
 		h.formatPrayerDay(chat.BotID, prayerDay, chat.LanguageCode),
 	))
 	if err != nil {
-		log.Error("dayQuery: edit message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logQuery("dayQuery: edit message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
 	_, err = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: update.CallbackQuery.ID})
 	if err != nil {
-		log.Error("dayQuery: answer query query", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logQuery("dayQuery: answer query query", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -131,7 +131,7 @@ func (h *Handler) languageQuery(ctx context.Context, b *bot.Bot, update *models.
 
 	languageCode := strings.TrimPrefix(update.CallbackQuery.Data, languageQuery.String())
 	if !h.lp.IsSupportedCode(languageCode) {
-		log.Error("languageQuery: unsupported language code",
+		logQuery("languageQuery: unsupported language code",
 			log.BotID(chat.BotID),
 			log.ChatID(chat.ChatID),
 			log.String("language_code", languageCode),
@@ -141,7 +141,7 @@ func (h *Handler) languageQuery(ctx context.Context, b *bot.Bot, update *models.
 
 	err := h.db.SetLanguageCode(ctx, chat.BotID, chat.ChatID, languageCode)
 	if err != nil {
-		log.Error("languageQuery: set language code", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logQuery("languageQuery: set language code", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -151,13 +151,13 @@ func (h *Handler) languageQuery(ctx context.Context, b *bot.Bot, update *models.
 		domain.FormatMarkdown(h.lp.GetText(languageCode).Language.Success, languageCode),
 	))
 	if err != nil {
-		log.Error("languageQuery: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logQuery("languageQuery: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
 	_, err = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: update.CallbackQuery.ID})
 	if err != nil {
-		log.Error("languageQuery: answer query query", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logQuery("languageQuery: answer query query", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -183,13 +183,13 @@ func (h *Handler) remindMenuQuery(ctx context.Context, b *bot.Bot, update *model
 		h.remindMenuKeyboard(chat),
 	))
 	if err != nil {
-		log.Error("remindMenuQuery: edit message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logQuery("remindMenuQuery: edit message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
 	_, err = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: update.CallbackQuery.ID})
 	if err != nil {
-		log.Error("remindMenuQuery: answer callback", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logQuery("remindMenuQuery: answer callback", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -202,7 +202,7 @@ func (h *Handler) remindToggleQuery(ctx context.Context, b *bot.Bot, update *mod
 	newSubscribed := !chat.Subscribed
 	err := h.db.SetSubscribed(ctx, chat.BotID, chat.ChatID, newSubscribed)
 	if err != nil {
-		log.Error("remindToggleQuery: set subscribed", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logQuery("remindToggleQuery: set subscribed", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -219,7 +219,7 @@ func (h *Handler) remindEditQuery(ctx context.Context, b *bot.Bot, update *model
 
 	parts := strings.Split(update.CallbackQuery.Data, ":")
 	if len(parts) < 3 {
-		log.Error("remindEditQuery: invalid callback data", log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logQuery("remindEditQuery: invalid callback data", log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -235,7 +235,7 @@ func (h *Handler) remindEditQuery(ctx context.Context, b *bot.Bot, update *model
 		offset = chat.Reminder.Soon.Offset.Duration()
 		messageText = fmt.Sprintf("%s - %s", text.RemindEdit.TitleSoon, domain.FormatDuration(offset))
 	default:
-		log.Error("remindEditQuery: unknown reminder type",
+		logQuery("remindEditQuery: unknown reminder type",
 			log.BotID(chat.BotID),
 			log.ChatID(chat.ChatID),
 			log.String("type", reminderType.String()),
@@ -250,13 +250,13 @@ func (h *Handler) remindEditQuery(ctx context.Context, b *bot.Bot, update *model
 		h.remindEditKeyboard(reminderType, chat.LanguageCode),
 	))
 	if err != nil {
-		log.Error("remindEditQuery: edit message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logQuery("remindEditQuery: edit message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
 	_, err = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: update.CallbackQuery.ID})
 	if err != nil {
-		log.Error("remindEditQuery: answer callback", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logQuery("remindEditQuery: answer callback", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -268,7 +268,7 @@ func (h *Handler) remindAdjustQuery(ctx context.Context, b *bot.Bot, update *mod
 
 	parts := strings.Split(update.CallbackQuery.Data, ":")
 	if len(parts) < 4 {
-		log.Error("remindAdjustQuery: invalid callback data", log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logQuery("remindAdjustQuery: invalid callback data", log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -288,7 +288,7 @@ func (h *Handler) remindAdjustQuery(ctx context.Context, b *bot.Bot, update *mod
 		minOffset = SoonMinOffset
 		maxOffset = SoonMaxOffset
 	default:
-		log.Error("remindAdjustQuery: unknown reminder type", log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logQuery("remindAdjustQuery: unknown reminder type", log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -302,7 +302,7 @@ func (h *Handler) remindAdjustQuery(ctx context.Context, b *bot.Bot, update *mod
 
 	err := h.db.SetReminderOffset(ctx, chat.BotID, chat.ChatID, reminderType, newOffset)
 	if err != nil {
-		log.Error("remindAdjustQuery: set reminder offset", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logQuery("remindAdjustQuery: set reminder offset", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -341,13 +341,13 @@ func (h *Handler) remindJamaatMenuQuery(ctx context.Context, b *bot.Bot, update 
 		h.jammatMenuKeyboard(chat),
 	))
 	if err != nil {
-		log.Error("remindJamaatMenuQuery: edit message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logQuery("remindJamaatMenuQuery: edit message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
 	_, err = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: update.CallbackQuery.ID})
 	if err != nil {
-		log.Error("remindJamaatMenuQuery: answer callback", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logQuery("remindJamaatMenuQuery: answer callback", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -365,7 +365,7 @@ func (h *Handler) remindJamaatToggleQuery(ctx context.Context, b *bot.Bot, updat
 	newEnabled := !chat.Reminder.Jamaat.Enabled
 	err := h.db.SetJamaatEnabled(ctx, chat.BotID, chat.ChatID, newEnabled)
 	if err != nil {
-		log.Error("remindJamaatToggleQuery: set jamaat enabled", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logQuery("remindJamaatToggleQuery: set jamaat enabled", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -386,7 +386,7 @@ func (h *Handler) remindJamaatEditQuery(ctx context.Context, b *bot.Bot, update 
 
 	parts := strings.Split(update.CallbackQuery.Data, ":")
 	if len(parts) < 4 {
-		log.Error("remindJamaatEditQuery: invalid callback data", log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logQuery("remindJamaatEditQuery: invalid callback data", log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -403,13 +403,13 @@ func (h *Handler) remindJamaatEditQuery(ctx context.Context, b *bot.Bot, update 
 		h.jammatEditKeyboard(prayerID, chat.LanguageCode),
 	))
 	if err != nil {
-		log.Error("remindJamaatEditQuery: edit message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logQuery("remindJamaatEditQuery: edit message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
 	_, err = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: update.CallbackQuery.ID})
 	if err != nil {
-		log.Error("remindJamaatEditQuery: answer callback", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logQuery("remindJamaatEditQuery: answer callback", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -426,7 +426,7 @@ func (h *Handler) remindJamaatAdjustQuery(ctx context.Context, b *bot.Bot, updat
 
 	parts := strings.Split(update.CallbackQuery.Data, ":")
 	if len(parts) < 5 {
-		log.Error("remindJamaatAdjustQuery: invalid callback data", log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logQuery("remindJamaatAdjustQuery: invalid callback data", log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -445,7 +445,7 @@ func (h *Handler) remindJamaatAdjustQuery(ctx context.Context, b *bot.Bot, updat
 
 	err := h.db.SetJamaatDelay(ctx, chat.BotID, chat.ChatID, prayerID, newDelay)
 	if err != nil {
-		log.Error("remindJamaatAdjustQuery: set jamaat delay", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logQuery("remindJamaatAdjustQuery: set jamaat delay", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -460,7 +460,7 @@ func (h *Handler) remindBackQuery(ctx context.Context, b *bot.Bot, update *model
 
 	parts := strings.Split(update.CallbackQuery.Data, ":")
 	if len(parts) < 3 {
-		log.Error("remindBackQuery: invalid callback data", log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logQuery("remindBackQuery: invalid callback data", log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -485,7 +485,7 @@ func (h *Handler) remindBackQuery(ctx context.Context, b *bot.Bot, update *model
 		}
 		keyboard = h.jammatMenuKeyboard(chat)
 	default:
-		log.Error("remindBackQuery: unknown destination", log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logQuery("remindBackQuery: unknown destination", log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -496,13 +496,13 @@ func (h *Handler) remindBackQuery(ctx context.Context, b *bot.Bot, update *model
 		keyboard,
 	))
 	if err != nil {
-		log.Error("remindBackQuery: edit message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logQuery("remindBackQuery: edit message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
 	_, err = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: update.CallbackQuery.ID})
 	if err != nil {
-		log.Error("remindBackQuery: answer callback", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logQuery("remindBackQuery: answer callback", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -517,13 +517,13 @@ func (h *Handler) remindCloseQuery(ctx context.Context, b *bot.Bot, update *mode
 		MessageID: update.CallbackQuery.Message.Message.ID,
 	})
 	if err != nil {
-		log.Error("remindCloseQuery: delete message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logQuery("remindCloseQuery: delete message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
 	_, err = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: update.CallbackQuery.ID})
 	if err != nil {
-		log.Error("remindCloseQuery: answer callback", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logQuery("remindCloseQuery: answer callback", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 

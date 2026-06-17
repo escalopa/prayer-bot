@@ -14,18 +14,24 @@ if [ ! -d "serverless" ]; then
   exit 1
 fi
 
-# Iterate over first-level subdirectories
+update_module() {
+  local dir=$1
+  echo "➡️  Updating $dir"
+  (cd "$dir" && go get "$REPO@$HASH")
+}
+
+# Yandex Cloud serverless modules (dispatcher, reminder, loader)
 for dir in serverless/*/; do
   [ -d "$dir" ] || continue
-  echo "➡️  Entering $dir"
+  update_module "$dir"
 
-  # Run go get inside the subdirectory
-  (cd "$dir" && go get "$REPO@$HASH")
-
+  # GCP Cloud Functions deployable modules (serverless/*/function)
+  if [ -d "${dir}function" ]; then
+    update_module "${dir}function"
+  fi
 done
 
-# Update proxy function package
-echo "➡️  Updating proxy function package"
-(cd proxy/function && go get "$REPO@$HASH")
+# GCP webhook proxy
+update_module "proxy/function"
 
-echo "✅ All serverless subprojects updated to $HASH"
+echo "✅ All serverless and GCP function packages updated to $HASH"

@@ -54,14 +54,16 @@ func ReminderHTTP(w http.ResponseWriter, r *http.Request) {
 
 	h, err := getReminderHandler(r.Context())
 	if err != nil {
-		log.Error("init reminder handler", log.Err(err))
+		log.Error("reminder.gcp.initHandler: failed",
+			log.Op("initHandler"), log.Err(err))
 		http.Error(w, "init handler", http.StatusInternalServerError)
 		return
 	}
 
 	botConfig, err := config.Load()
 	if err != nil {
-		log.Error("load config", log.Err(err))
+		log.Error("reminder.gcp.loadConfig: failed",
+			log.Op("loadConfig"), log.Err(err))
 		http.Error(w, "load config", http.StatusInternalServerError)
 		return
 	}
@@ -72,7 +74,8 @@ func ReminderHTTP(w http.ResponseWriter, r *http.Request) {
 		errG.Go(func() error {
 			err := h.Handel(r.Context(), botID)
 			if err != nil {
-				log.Error("reminder cannot process request", log.BotID(botID), log.Err(err))
+				log.Error("reminder.gcp.processBot: handler failed",
+					log.Op("processBot"), log.BotID(botID), log.Err(err))
 			}
 			return nil
 		})

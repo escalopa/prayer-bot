@@ -502,6 +502,8 @@ github.com/envoyproxy/protoc-gen-validate v1.2.1 h1:DEo3O99U8j4hBFwbJfrz9VtgcDfU
 github.com/envoyproxy/protoc-gen-validate v1.2.1/go.mod h1:d/C80l/jxXLdfEIhX1W2TmLfsJ31lvEjwamM4DxlWXU=
 github.com/escalopa/prayer-bot v0.0.0-20260613022059-481c438696c7 h1:XOrNfMpZM4nCRzKtehvSw/pDXmALVR/Cy9aYSHoio/s=
 github.com/escalopa/prayer-bot v0.0.0-20260613022059-481c438696c7/go.mod h1:bteiKqeU1JkPMWTv9Fs11pfUMDCo/v7Z0MY1+8+zwgA=
+github.com/escalopa/prayer-bot v0.0.0-20260617063247-26e09b697026 h1:l0IeroTlcZi5v1UDkSSz/sxFOtq4mTJjox12fpW1wL8=
+github.com/escalopa/prayer-bot v0.0.0-20260617063247-26e09b697026/go.mod h1:BLkMnLC7bUZUQYcEkKQlWfNafLQDrOePcBcxZCL4NUo=
 github.com/felixge/httpsnoop v1.0.4 h1:NFTV2Zj1bL4mc9sqWACXbQFVBBg2W3GPvqp8/ESS2Wg=
 github.com/felixge/httpsnoop v1.0.4/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=

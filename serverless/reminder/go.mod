@@ -3,7 +3,7 @@ module github.com/escalopa/prayer-bot/reminder
 go 1.25.0
 
 require (
-	github.com/escalopa/prayer-bot v0.0.0-20260613022059-481c438696c7
+	github.com/escalopa/prayer-bot v0.0.0-20260617063247-26e09b697026
 	github.com/go-telegram/bot v1.15.0
 	golang.org/x/sync v0.19.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -30,3 +30,5 @@ require (
 	google.golang.org/grpc v1.78.0 // indirect
 	google.golang.org/protobuf v1.36.10 // indirect
 )
+
+replace github.com/escalopa/prayer-bot => ../..

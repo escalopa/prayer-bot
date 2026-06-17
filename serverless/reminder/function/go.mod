@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/GoogleCloudPlatform/functions-framework-go v1.9.2
-	github.com/escalopa/prayer-bot v0.0.0-20260613022059-481c438696c7
+	github.com/escalopa/prayer-bot v0.0.0-20260617063247-26e09b697026
 	github.com/escalopa/prayer-bot/reminder v0.0.0
 	golang.org/x/sync v0.19.0
 )

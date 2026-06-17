@@ -69,7 +69,7 @@ func (h *Handler) bugState(ctx context.Context, b *bot.Bot, update *models.Updat
 		MessageID:  update.Message.ID,
 	})
 	if err != nil {
-		log.Error("bugState: forward message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logState("bugState: forward message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -79,13 +79,13 @@ func (h *Handler) bugState(ctx context.Context, b *bot.Bot, update *models.Updat
 		Text:   info.JSON(),
 	})
 	if err != nil {
-		log.Error("bugState: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logState("bugState: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
 	_, err = b.SendMessage(ctx, markdownMessage(chat.ChatID, h.lp.GetText(chat.LanguageCode).Bug.Success))
 	if err != nil {
-		log.Error("bugState: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logState("bugState: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -101,7 +101,7 @@ func (h *Handler) feedbackState(ctx context.Context, b *bot.Bot, update *models.
 		MessageID:  update.Message.ID,
 	})
 	if err != nil {
-		log.Error("feedbackState: forward message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logState("feedbackState: forward message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -111,13 +111,13 @@ func (h *Handler) feedbackState(ctx context.Context, b *bot.Bot, update *models.
 		Text:   info.JSON(),
 	})
 	if err != nil {
-		log.Error("feedbackState: send message to owner", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logState("feedbackState: send message to owner", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
 	_, err = b.SendMessage(ctx, markdownMessage(chat.ChatID, h.lp.GetText(chat.LanguageCode).Feedback.Success))
 	if err != nil {
-		log.Error("feedbackState: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logState("feedbackState: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -134,7 +134,7 @@ func (h *Handler) replyState(ctx context.Context, b *bot.Bot, update *models.Upd
 	info := &replyInfo{}
 	err := json.Unmarshal([]byte(update.Message.ReplyToMessage.Text), info)
 	if err != nil {
-		log.Error("replyState: unmarshal reply info", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logState("replyState: unmarshal reply info", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -148,13 +148,13 @@ func (h *Handler) replyState(ctx context.Context, b *bot.Bot, update *models.Upd
 		Entities: update.Message.Entities,
 	})
 	if err != nil {
-		log.Error("replyState: reply message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logState("replyState: reply message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
 	_, err = b.SendMessage(ctx, markdownMessage(chat.ChatID, h.lp.GetText(chat.LanguageCode).Reply.Success))
 	if err != nil {
-		log.Error("replyState: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logState("replyState: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -166,7 +166,7 @@ func (h *Handler) announceState(ctx context.Context, b *bot.Bot, update *models.
 
 	chats, err := h.db.GetChats(ctx, chat.BotID)
 	if err != nil {
-		log.Error("announceState: get all chats", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logState("announceState: get all chats", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 
@@ -179,7 +179,7 @@ func (h *Handler) announceState(ctx context.Context, b *bot.Bot, update *models.
 				Text:   update.Message.Text,
 			})
 			if err != nil {
-				log.Error("announceState: send message to user",
+				logState("announceState: send message to user",
 					log.Err(err),
 					log.BotID(c.ChatID),
 					log.ChatID(c.ChatID),
@@ -193,7 +193,7 @@ func (h *Handler) announceState(ctx context.Context, b *bot.Bot, update *models.
 
 	_, err = b.SendMessage(ctx, markdownMessage(chat.ChatID, h.lp.GetText(chat.LanguageCode).Announce.Success))
 	if err != nil {
-		log.Error("announceState: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logState("announceState: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
 

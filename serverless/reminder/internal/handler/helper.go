@@ -48,10 +48,10 @@ func (h *Handler) formatPrayerDay(botID int64, prayerDay *domain.PrayerDay, lang
 func (h *Handler) deleteChat(ctx context.Context, chat *domain.Chat) {
 	err := h.db.DeleteChat(ctx, chat.BotID, chat.ChatID)
 	if err != nil {
-		log.Error("remindUserJamaat: delete chat", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		logReminder("remindUserJamaat.deleteChat", "db DeleteChat failed", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return
 	}
-	log.Warn("remindUserJamaat: deleted chat", log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+	warnReminder("remindUserJamaat.deleteChat", "deleted blocked chat", log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 }
 
 func deleteMessages(ctx context.Context, b *bot.Bot, chat *domain.Chat, ids ...int) {
@@ -72,7 +72,7 @@ func deleteMessages(ctx context.Context, b *bot.Bot, chat *domain.Chat, ids ...i
 		MessageIDs: messageIDs,
 	})
 	if err != nil {
-		log.Error("delete messages", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID), "ids", ids)
+		logReminder("deleteMessages", "telegram delete failed", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID), "ids", ids)
 	}
 }
 

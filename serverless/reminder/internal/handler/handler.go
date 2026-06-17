@@ -80,7 +80,7 @@ func (h *Handler) getBot(botID int64) (*bot.Bot, error) {
 func (h *Handler) Handel(ctx context.Context, botID int64) error {
 	chatIDs, err := h.db.GetSubscribers(ctx, botID)
 	if err != nil {
-		log.Error("get subscribers", log.Err(err), log.BotID(botID))
+		logReminder("Handel.getSubscribers", "db GetSubscribers failed", log.Err(err), log.BotID(botID))
 		return domain.ErrInternal
 	}
 
@@ -90,13 +90,13 @@ func (h *Handler) Handel(ctx context.Context, botID int64) error {
 
 	chats, err := h.db.GetChatsByIDs(ctx, botID, chatIDs)
 	if err != nil {
-		log.Error("get chats", log.Err(err), log.BotID(botID))
+		logReminder("Handel.getChatsByIDs", "db GetChatsByIDs failed", log.Err(err), log.BotID(botID))
 		return domain.ErrInternal
 	}
 
 	b, err := h.getBot(botID)
 	if err != nil {
-		log.Error("get bot", log.Err(err), log.BotID(botID))
+		logReminder("Handel.getBot", "failed to get telegram bot client", log.Err(err), log.BotID(botID))
 		return domain.ErrInternal
 	}
 
@@ -106,7 +106,7 @@ func (h *Handler) Handel(ctx context.Context, botID int64) error {
 	date := time.Date(y, m, d, 0, 0, 0, 0, now.Location())
 	prayerDay, err := h.db.GetPrayerDay(ctx, botID, date)
 	if err != nil {
-		log.Error("get prayer day", log.Err(err), log.BotID(botID))
+		logReminder("Handel.getPrayerDay", "db GetPrayerDay failed", log.Err(err), log.BotID(botID))
 		return domain.ErrInternal
 	}
 
@@ -140,7 +140,7 @@ func (h *Handler) Handel(ctx context.Context, botID int64) error {
 						h.deleteChat(ctx, chat)
 						return nil
 					}
-					log.Error("send reminder",
+					logReminder("Handel.sendReminder", "telegram send failed",
 						log.Err(err),
 						log.BotID(chat.BotID),
 						log.ChatID(chat.ChatID),
@@ -151,7 +151,7 @@ func (h *Handler) Handel(ctx context.Context, botID int64) error {
 
 				err = h.db.UpdateReminder(ctx, chat.BotID, chat.ChatID, reminder.Name(), messageID, now)
 				if err != nil {
-					log.Error("update reminder state",
+					logReminder("Handel.updateReminderState", "db UpdateReminder failed",
 						log.Err(err),
 						log.BotID(chat.BotID),
 						log.ChatID(chat.ChatID),

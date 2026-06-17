@@ -99,7 +99,7 @@ func (h *Handler) errorH(fn func(ctx context.Context, b *bot.Bot, update *models
 	return func(ctx context.Context, b *bot.Bot, update *models.Update) {
 		defer func() {
 			if r := recover(); r != nil {
-				log.Error("recovered from panic",
+				logDispatcher("errorH.recover", "panic recovered",
 					log.String("stack", string(debug.Stack())),
 					log.String("err", fmt.Sprintf("%+v", r)),
 					"update", update,
@@ -107,10 +107,10 @@ func (h *Handler) errorH(fn func(ctx context.Context, b *bot.Bot, update *models
 			}
 		}()
 
-		log.Info("got update", "update", update)
+		infoDispatcher("errorH.processUpdate", "received telegram update", "update", update)
 		err := fn(ctx, b, update)
 		if err != nil {
-			log.Error("handler error", log.Err(err), "update", update)
+			logDispatcher("errorH.processUpdate", "handler returned error", log.Err(err), "update", update)
 		}
 	}
 }
@@ -122,7 +122,7 @@ func (h *Handler) chatH(fn func(ctx context.Context, b *bot.Bot, update *models.
 			if errors.Is(err, domain.ErrInvalidArgument) {
 				return nil
 			}
-			log.Error("chatH: get chat", log.Err(err))
+			logDispatcher("chatH.getChat", "failed to resolve chat for update", log.Err(err))
 			return err
 		}
 		ctx = setContextChat(ctx, chat)
@@ -163,14 +163,14 @@ func (h *Handler) Authenticate(headers map[string]string) (int64, error) {
 func (h *Handler) Handel(ctx context.Context, botID int64, data string) error {
 	b, err := h.getBot(botID)
 	if err != nil {
-		log.Error("get bot", log.Err(err), log.BotID(botID), log.String("payload", data))
+		logDispatcher("Handel.getBot", "failed to get telegram bot client", log.Err(err), log.BotID(botID), log.String("payload", data))
 		return err
 	}
 
 	var update models.Update
 	err = json.Unmarshal([]byte(data), &update)
 	if err != nil {
-		log.Error("unmarshal update", log.Err(err), log.String("payload", data))
+		logDispatcher("Handel.unmarshalUpdate", "failed to decode telegram update json", log.Err(err), log.String("payload", data))
 		return nil
 	}
 
@@ -190,13 +190,13 @@ func (h *Handler) getBot(botID int64) (*bot.Bot, error) {
 
 	botConfig, ok := h.cfg[botID]
 	if !ok {
-		log.Error("bot not found", log.BotID(botID))
+		logDispatcher("getBot.configLookup", "bot config not found", log.BotID(botID))
 		return nil, domain.ErrNotFound
 	}
 
 	b, err := bot.New(botConfig.Token, h.opts()...)
 	if err != nil {
-		log.Error("create bot", log.BotID(botID), log.Err(err))
+		logDispatcher("getBot.createClient", "failed to create telegram bot client", log.BotID(botID), log.Err(err))
 		return nil, domain.ErrInternal
 	}
 
@@ -215,13 +215,13 @@ func (h *Handler) getChat(ctx context.Context, update *models.Update) (*domain.C
 		chatID = update.CallbackQuery.Message.Message.Chat.ID
 	default:
 		bytes, _ := json.Marshal(update)
-		log.Info("ignore message", log.BotID(botID), log.String("update", string(bytes)))
+		infoDispatcher("getChat.ignoreUpdate", "ignoring update without message or callback", log.BotID(botID), log.String("update", string(bytes)))
 		return nil, domain.ErrInvalidArgument // ignore message
 	}
 
 	chat, err := h.db.GetChat(ctx, botID, chatID)
 	if err != nil && !errors.Is(err, domain.ErrNotFound) {
-		log.Error("get chat", log.Err(err), log.BotID(botID), log.ChatID(chatID), "update", update)
+		logDispatcher("getChat.loadExisting", "db GetChat failed", log.Err(err), log.BotID(botID), log.ChatID(chatID), "update", update)
 		return nil, domain.ErrInternal
 	}
 
@@ -260,7 +260,7 @@ func (h *Handler) getChat(ctx context.Context, update *models.Update) (*domain.C
 
 	err = h.db.CreateChat(ctx, botID, chatID, languageCode, string(defaultState), reminder)
 	if err != nil {
-		log.Error("create chat", log.Err(err), log.BotID(botID), log.ChatID(chatID), "update", update)
+		logDispatcher("getChat.createNew", "db CreateChat failed", log.Err(err), log.BotID(botID), log.ChatID(chatID), "update", update)
 		return nil, domain.ErrInternal
 	}
 

@@ -34,37 +34,43 @@ func Handler(ctx context.Context, requestBytes []byte) (*Response, error) {
 	request := &Request{}
 
 	if err := json.Unmarshal(requestBytes, &request); err != nil {
-		log.Error("unmarshal request body", log.Err(err))
+		log.Error("dispatcher.entry.unmarshalRequest: failed",
+			log.Op("unmarshalRequest"), log.Err(err))
 		return newResponse(http.StatusBadRequest, "unmarshal request body")
 	}
 
 	botConfig, err := config.Load()
 	if err != nil {
-		log.Error("load config", log.Err(err))
+		log.Error("dispatcher.entry.loadConfig: failed",
+			log.Op("loadConfig"), log.Err(err))
 		return newResponse(http.StatusInternalServerError, "load config")
 	}
 
 	db, err := service.NewDB(ctx)
 	if err != nil {
-		log.Error("create db", log.Err(err))
+		log.Error("dispatcher.entry.createDB: failed",
+			log.Op("createDB"), log.Err(err))
 		return newResponse(http.StatusInternalServerError, "create db")
 	}
 
 	h, err := handler.New(botConfig, db)
 	if err != nil {
-		log.Error("create handler", log.Err(err))
+		log.Error("dispatcher.entry.createHandler: failed",
+			log.Op("createHandler"), log.Err(err))
 		return newResponse(http.StatusInternalServerError, "create handler")
 	}
 
 	botID, err := h.Authenticate(request.Headers)
 	if err != nil {
-		log.Error("authenticate", log.Err(err))
+		log.Error("dispatcher.entry.authenticate: failed",
+			log.Op("authenticate"), log.Err(err))
 		return newResponse(http.StatusUnauthorized, "authenticate")
 	}
 
 	err = h.Handel(ctx, botID, request.Body)
 	if err != nil {
-		log.Error("dispatcher cannot process request", log.Err(err))
+		log.Error("dispatcher.entry.processRequest: handler failed",
+			log.Op("processRequest"), log.Err(err))
 		return newResponse(http.StatusInternalServerError, "dispatcher cannot process request")
 	}
 

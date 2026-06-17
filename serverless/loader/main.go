@@ -37,19 +37,22 @@ type (
 func Handler(ctx context.Context, event *Event) error {
 	botConfig, err := config.Load()
 	if err != nil {
-		log.Error("load config", log.Err(err))
+		log.Error("loader.entry.loadConfig: failed",
+			log.Op("loadConfig"), log.Err(err))
 		return fmt.Errorf("load config")
 	}
 
 	storage, err := service.NewStorage()
 	if err != nil {
-		log.Error("create storage", log.Err(err))
+		log.Error("loader.entry.createStorage: failed",
+			log.Op("createStorage"), log.Err(err))
 		return fmt.Errorf("create storage")
 	}
 
 	db, err := service.NewDB(ctx)
 	if err != nil {
-		log.Error("create db", log.Err(err))
+		log.Error("loader.entry.createDB: failed",
+			log.Op("createDB"), log.Err(err))
 		return fmt.Errorf("create db")
 	}
 
@@ -61,7 +64,8 @@ func Handler(ctx context.Context, event *Event) error {
 
 		err = h.Handel(ctx, bucket, key)
 		if err != nil {
-			log.Error("loader cannot process request",
+			log.Error("loader.entry.processObject: handler failed",
+				log.Op("processObject"),
 				log.Err(err),
 				log.String("bucket", bucket),
 				log.String("key", key),

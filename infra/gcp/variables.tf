@@ -72,3 +72,9 @@ variable "deploy_service_account_email" {
   description = "Email of the CI/Terraform deploy SA (GCP_SA_KEY). IAM bindings applied in phase 1."
   default     = ""
 }
+
+variable "dispatcher_timeout_seconds" {
+  type        = number
+  description = "Request timeout for the Telegram webhook dispatcher (Cloud Functions Gen2 / Cloud Run)."
+  default     = 60
+}

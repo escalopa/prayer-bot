@@ -202,7 +202,7 @@ resource "google_cloudfunctions2_function" "dispatcher" {
 
   service_config {
     available_memory      = "256M"
-    timeout_seconds       = 30
+    timeout_seconds       = var.dispatcher_timeout_seconds
     ingress_settings      = "ALLOW_ALL"
     service_account_email = google_service_account.runtime.email
 

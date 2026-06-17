@@ -1,13 +1,16 @@
 package handler
 
 import (
-	"os"
-	"path/filepath"
+	"embed"
+	"fmt"
 	"sort"
 	"strings"
 
 	"gopkg.in/yaml.v3"
 )
+
+//go:embed languages/*.yaml
+var languageFiles embed.FS
 
 type (
 	Month struct {
@@ -128,33 +131,47 @@ func (t *Text) GetMonths() []Month {
 }
 
 func newLanguageProvider() (*languagesProvider, error) {
-	const pattern = "internal/handler/languages/*.yaml" // relative to the `main.go` directory (source root)
-
-	files, err := filepath.Glob(pattern)
+	entries, err := languageFiles.ReadDir("languages")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read embedded languages: %w", err)
 	}
 
-	storage := make(map[string]*Text, len(files))
-	for _, file := range files {
-		languageCode := strings.TrimSuffix(filepath.Base(file), filepath.Ext(file))
-		content, err := os.ReadFile(file)
+	storage := make(map[string]*Text, len(entries))
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".yaml") {
+			continue
+		}
+
+		languageCode := strings.TrimSuffix(entry.Name(), ".yaml")
+		content, err := languageFiles.ReadFile("languages/" + entry.Name())
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("read language %q: %w", languageCode, err)
 		}
 
 		var text Text
 		if err := yaml.Unmarshal(content, &text); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("parse language %q: %w", languageCode, err)
 		}
 
 		storage[languageCode] = &text
 	}
 
+	if len(storage) == 0 {
+		return nil, fmt.Errorf("no language files embedded")
+	}
+	if storage[defaultLanguageCode] == nil {
+		return nil, fmt.Errorf("default language %q not embedded", defaultLanguageCode)
+	}
+
 	return &languagesProvider{storage: storage}, nil
 }
 
-func (p *languagesProvider) GetText(languageCode string) *Text { return p.storage[languageCode] }
+func (p *languagesProvider) GetText(languageCode string) *Text {
+	if text := p.storage[languageCode]; text != nil {
+		return text
+	}
+	return p.storage[defaultLanguageCode]
+}
 
 func (p *languagesProvider) IsSupportedCode(languageCode string) bool {
 	_, ok := p.storage[languageCode]

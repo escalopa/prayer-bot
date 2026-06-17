@@ -32,7 +32,8 @@ The bot can run on GCP with Supabase Postgres while keeping Yandex Cloud availab
 
 | Secret | Purpose |
 |--------|---------|
-| `SUPABASE_DB_URL` | Postgres connection URL (passed to GCP functions as `DATABASE_URL` env var by Terraform) |
+| `SUPABASE_DB_URL` | Supabase **transaction pooler** URL (port 6543) — passed to GCP functions as `DATABASE_URL` for runtime queries |
+| `SUPABASE_DB_DIRECT_URL` | Supabase **direct** Postgres URL (port 5432) — used for Goose schema migrations and YDB→Postgres data copy only |
 | `YDB_TOKEN_FOR_GCP` | Long-lived YDB token for dual-write from GCP |
 | `GCP_*` | GCP project / SA / tfstate secrets (dev uses project `prayer-bot-infra`, tfstate bucket `prayer-bot-infra-tfstate`) |
 

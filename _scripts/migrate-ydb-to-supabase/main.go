@@ -65,11 +65,14 @@ func main() {
 	}
 	databaseURL := os.Getenv("DATABASE_URL")
 	if databaseURL == "" {
+		databaseURL = os.Getenv("SUPABASE_DB_DIRECT_URL")
+	}
+	if databaseURL == "" {
 		databaseURL = os.Getenv("SUPABASE_DB_URL")
 	}
 
 	if ydbEndpoint == "" || databaseURL == "" {
-		fmt.Fprintln(os.Stderr, "YDB_ENDPOINT and DATABASE_URL (or SUPABASE_DB_URL) are required")
+		fmt.Fprintln(os.Stderr, "YDB_ENDPOINT and DATABASE_URL (or SUPABASE_DB_DIRECT_URL) are required")
 		os.Exit(1)
 	}
 

@@ -57,7 +57,7 @@ variable "yc_tfstate_key" {
 variable "supabase_db_url" {
   type        = string
   sensitive   = true
-  description = "Supabase Postgres connection URL."
+  description = "Supabase transaction pooler URL (port 6543) for runtime DATABASE_URL on Cloud Functions."
 }
 
 variable "ydb_token" {

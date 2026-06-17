@@ -257,7 +257,7 @@ jobs:
       - name: Run Postgres Goose migrations
         env:
           GOOSE_DRIVER: postgres
-          GOOSE_DBSTRING: ${{ secrets.SUPABASE_DB_URL }}
+          GOOSE_DBSTRING: ${{ secrets.SUPABASE_DB_DIRECT_URL }}
         run: |
           export PATH="$HOME/.goose:$PATH"
           cd migrations/postgres
@@ -315,7 +315,7 @@ jobs:
       - name: Run full database migration
         env:
           YDB_ENDPOINT: ${{ env.YDB_ENDPOINT }}
-          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_DIRECT_URL }}
           YDB_TOKEN: ${{ env.YDB_ACCESS_TOKEN }}
         working-directory: _scripts/migrate-ydb-to-supabase
         run: go run . --mode=full
@@ -635,7 +635,7 @@ jobs:
       - name: Run incremental database migration
         env:
           YDB_ENDPOINT: ${{ env.YDB_ENDPOINT }}
-          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_DIRECT_URL }}
           YDB_TOKEN: ${{ env.YDB_ACCESS_TOKEN }}
         working-directory: _scripts/migrate-ydb-to-supabase
         run: go run . --mode=incremental

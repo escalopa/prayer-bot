@@ -117,8 +117,8 @@ func (p *Postgres) CreateChat(
 
 	_, err = p.pool.Exec(ctx, `
 		INSERT INTO chats (bot_id, chat_id, language_code, state, reminder, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6)
-	`, botID, chatID, languageCode, state, reminderJSON, time.Now().UTC())
+		VALUES ($1, $2, $3, $4, $5::jsonb, $6)
+	`, botID, chatID, languageCode, state, string(reminderJSON), time.Now().UTC())
 	if err != nil {
 		if isUniqueViolation(err) {
 			return domain.ErrAlreadyExists
@@ -533,9 +533,9 @@ func (p *Postgres) updateReminder(ctx context.Context, botID int64, chatID int64
 
 	_, err = tx.Exec(ctx, `
 		UPDATE chats
-		SET reminder = $3
+		SET reminder = $3::jsonb
 		WHERE bot_id = $1 AND chat_id = $2
-	`, botID, chatID, updatedReminderJSON)
+	`, botID, chatID, string(updatedReminderJSON))
 	if err != nil {
 		logPG("updateReminder.update", "update failed", log.Err(err), log.BotID(botID), log.ChatID(chatID))
 		return domain.ErrInternal

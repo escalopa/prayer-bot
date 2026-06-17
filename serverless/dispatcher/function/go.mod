@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/GoogleCloudPlatform/functions-framework-go v1.9.2
-	github.com/escalopa/prayer-bot v0.0.0-20260617160051-44d99b9aab19
+	github.com/escalopa/prayer-bot v0.0.0-20260617185345-8bb53e057cb4
 	github.com/escalopa/prayer-bot/dispatcher v0.0.0
 )
 

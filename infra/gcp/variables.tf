@@ -15,25 +15,14 @@ variable "environment" {
 
 variable "enable_loader_trigger" {
   type        = bool
-  default     = false
-  description = "Enable Eventarc loader trigger after bucket migration."
+  default     = true
+  description = "Enable Eventarc loader trigger on the data bucket."
 }
 
 variable "enable_scheduler" {
   type        = bool
-  default     = false
-  description = "Enable Cloud Scheduler reminder cron (phase 2 / gcp-only)."
-}
-
-variable "dual_write" {
-  type    = bool
-  default = true
-}
-
-variable "ydb_endpoint" {
-  type        = string
-  description = "Optional YDB endpoint override; defaults to YC Terraform remote state."
-  default     = ""
+  default     = true
+  description = "Enable Cloud Scheduler reminder cron."
 }
 
 variable "app_config_path" {
@@ -42,29 +31,10 @@ variable "app_config_path" {
   default     = null
 }
 
-variable "yc_tfstate_bucket" {
-  type        = string
-  description = "S3 bucket holding Yandex Cloud Terraform state."
-  default     = "escalopa-tfstate"
-}
-
-variable "yc_tfstate_key" {
-  type        = string
-  description = "State key for Yandex Cloud Terraform."
-  default     = "prayer-bot/terraform.tfstate"
-}
-
 variable "supabase_db_url" {
   type        = string
   sensitive   = true
   description = "Supabase transaction pooler URL (port 6543) for runtime DATABASE_URL on Cloud Functions."
-}
-
-variable "ydb_token" {
-  type        = string
-  sensitive   = true
-  description = "YDB IAM token for dual-write from GCP."
-  default     = ""
 }
 
 variable "deploy_service_account_email" {

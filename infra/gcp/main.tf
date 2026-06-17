@@ -20,22 +20,10 @@ locals {
   app_config_file = coalesce(var.app_config_path, "${path.module}/../../config.json")
   app_config_b64  = base64encode(file(local.app_config_file))
 
-  ydb_endpoint = var.dual_write ? (var.ydb_endpoint != "" ? var.ydb_endpoint : try(data.terraform_remote_state.yc[0].outputs.ydb_endpoint, "")) : ""
-
-  common_env = {
-    DB_PRIMARY   = "postgres"
-    DUAL_WRITE   = var.dual_write ? "true" : "false"
-    YDB_ENDPOINT = local.ydb_endpoint
+  function_env = {
+    DATABASE_URL = var.supabase_db_url
     APP_CONFIG   = local.app_config_b64
   }
-
-  function_env = merge(
-    local.common_env,
-    {
-      DATABASE_URL = var.supabase_db_url
-    },
-    var.dual_write && var.ydb_token != "" ? { YDB_TOKEN = var.ydb_token } : {}
-  )
 
   deploy_sa_member = var.deploy_service_account_email != "" ? "serviceAccount:${var.deploy_service_account_email}" : null
 }
@@ -150,19 +138,19 @@ resource "google_storage_bucket" "data" {
 
 data "archive_file" "dispatcher_zip" {
   type        = "zip"
-  source_dir  = "${path.module}/../../serverless/dispatcher/function"
+  source_dir  = "${path.module}/../../serverless/dispatcher"
   output_path = "${path.module}/dispatcher.zip"
 }
 
 data "archive_file" "reminder_zip" {
   type        = "zip"
-  source_dir  = "${path.module}/../../serverless/reminder/function"
+  source_dir  = "${path.module}/../../serverless/reminder"
   output_path = "${path.module}/reminder.zip"
 }
 
 data "archive_file" "loader_zip" {
   type        = "zip"
-  source_dir  = "${path.module}/../../serverless/loader/function"
+  source_dir  = "${path.module}/../../serverless/loader"
   output_path = "${path.module}/loader.zip"
 }
 
@@ -313,8 +301,7 @@ resource "google_cloudfunctions2_function" "loader" {
     service_account_email = google_service_account.runtime.email
 
     environment_variables = merge(local.function_env, {
-      STORAGE_BACKEND = "gcs"
-      GCS_BUCKET      = google_storage_bucket.data.name
+      GCS_BUCKET = google_storage_bucket.data.name
     })
   }
 

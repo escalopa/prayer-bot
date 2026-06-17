@@ -16,41 +16,43 @@ A serverless Telegram bot that provides Muslim prayer times and sends notificati
 
 ## Architecture 🏗️
 
-This bot is completely serverless, utilizing Yandex Cloud Functions for operation and YDB for data storage.
+The bot runs on **GCP Cloud Functions** with **Supabase Postgres** for data and **GCS** for prayer schedule CSV files.
 
-![architecture](./_img/architecture.png)
+```mermaid
+flowchart LR
+  Telegram --> Dispatcher
+  Scheduler --> Reminder
+  GCS --> Loader
 
-![terraform](./_img/terraform.png)
+  Dispatcher --> Postgres[(Supabase Postgres)]
+  Reminder --> Postgres
+  Loader --> Postgres
+  Loader --> GCS
+```
 
-For infrastructure configuration details, check the [terraform file](./main.tf).
+Infrastructure is defined in [`infra/gcp/`](infra/gcp/).
 
-### GCP migration (Supabase + Cloud Functions)
-
-The bot can run on GCP with Supabase Postgres while keeping Yandex Cloud available for rollback.
+### Deployment
 
 **GitHub secrets (per environment):**
 
 | Secret | Purpose |
 |--------|---------|
-| `SUPABASE_DB_URL` | Supabase **transaction pooler** URL (port 6543) — passed to GCP functions as `DATABASE_URL` for runtime queries |
-| `SUPABASE_DB_DIRECT_URL` | Supabase **direct** Postgres URL (port 5432) — used for Goose schema migrations and YDB→Postgres data copy only |
-| `YDB_TOKEN_FOR_GCP` | Long-lived YDB token for dual-write from GCP |
-| `GCP_*` | GCP project / SA / tfstate secrets (dev uses project `prayer-bot-infra`, tfstate bucket `prayer-bot-infra-tfstate`) |
+| `APP_CONFIG` | Bot config JSON |
+| `GCP_PROJECT_ID` | GCP project ID |
+| `GCP_SA_KEY` | GCP deploy service account JSON |
+| `GCP_TFSTATE_BUCKET` | GCS bucket for Terraform state |
+| `SUPABASE_DB_URL` | Supabase transaction pooler URL (port 6543) — runtime `DATABASE_URL` on functions |
+| `SUPABASE_DB_DIRECT_URL` | Supabase direct Postgres URL (port 5432) — Goose schema migrations |
 
-Runtime env vars (`YDB_ENDPOINT`, `APP_CONFIG`, `S3_*`, loader keys, etc.) come from **Terraform outputs** and `infra/gcp` function config — not manual env configuration. During cutover, GCP Terraform reads the Yandex endpoint from YC Terraform remote state.
+**Automatic deploys**
 
-**Deployment 1 — cutover (`deploy_mode=gcp-cutover`):**
+| Trigger | Environment | What runs |
+|---------|-------------|-----------|
+| Pull request → `main` | `dev` | lint → validate → plan → Goose migrate → Terraform apply → webhooks → profiles |
+| Push / merge to `main` | `prod` | same full chain |
 
-1. Actions → Deploy → Run workflow → choose `dev` or `prod`, mode `gcp-cutover`.
-2. Optional: enable **Skip YDB → Supabase data copy** to deploy without running the full/incremental YDB→Postgres sync (Goose schema migration still runs).
-3. Pipeline order: freeze YC reminder cron → Goose on Supabase → full YDB→Postgres copy → GCP infra (no scheduler/loader trigger) → bucket copy → enable scheduler + Eventarc + dual-write → incremental DB sync → Telegram webhook to GCP dispatcher URL.
-4. YC functions and proxy stay deployed for rollback.
-
-**Deployment 2 — Postgres-only (`deploy_mode=gcp-only`):**
-
-After validating dev and prod on GCP, run workflow with `gcp-only`. Functions use Postgres only (`DUAL_WRITE=false`); scheduler and loader trigger are enabled. Telegram webhooks are registered to the GCP dispatcher URL automatically (not the legacy GCP→YC proxy).
-
-**Run deploy (dev or prod):** Actions → *Deploy to Yandex Cloud* → Run workflow → pick environment → mode **gcp-only**. Push to `main` runs lint/validate only; deploy requires workflow dispatch.
+**Manual deploy (hotfixes):** Actions → *Deploy to GCP* → Run workflow → pick `dev` or `prod` and optionally a branch.
 
 ---
 
@@ -127,7 +129,7 @@ You do:
 I do:
 
 1. Create a new Telegram bot
-2. Upload the city file to storage bucket
+2. Upload the city file to the GCS data bucket
 
 ### [2] Add a Language
 
@@ -206,14 +208,8 @@ Found a bug? Want to add a new feature? Just open an issue or submit a pull requ
 ## Visualization 🖥️
 
 ```bash
+cd infra/gcp
 terraform plan -out plan.out
 terraform show -json plan.out > plan.json
-docker run --rm -it -p 9000:9000 -v $(pwd)/plan.json:/src/plan.json im2nguyen/rover:latest -planJSONPath=plan.json
-```
-
-## Useful
-
-```bash
-export AWS_ACCESS_KEY_ID=$(jq -r '.aws_access_key_id' key.json)
-export AWS_SECRET_ACCESS_KEY=$(jq -r '.aws_secret_access_key' key.json)
+docker run --rm -it -p 9000:9000 -v "$(pwd)/plan.json:/src/plan.json" im2nguyen/rover:latest -planJSONPath=plan.json
 ```

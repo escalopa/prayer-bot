@@ -1,13 +1,13 @@
 -- +goose Up
 CREATE TABLE chats (
-    chat_id Int64 NOT NULL,
-    bot_id Int64 NOT NULL,
-    language_code Utf8,
-    state Utf8,
-    reminder Json,
-    subscribed Bool,
-    subscribed_at Datetime,
-    created_at Datetime,
+    bot_id BIGINT NOT NULL,
+    chat_id BIGINT NOT NULL,
+    language_code TEXT,
+    state TEXT,
+    reminder JSONB,
+    subscribed BOOLEAN,
+    subscribed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ,
     PRIMARY KEY (bot_id, chat_id)
 );
 

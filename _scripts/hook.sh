@@ -5,30 +5,15 @@ if [[ -z "$APP_CONFIG_PATH" ]]; then
   exit 1
 fi
 
-if [[ -z "$WEBHOOK_URL" && -z "$DISPATCHER_FUNCTION_ID" ]]; then
-  echo "[ERROR] WEBHOOK_URL or DISPATCHER_FUNCTION_ID must be set"
+if [[ -z "$WEBHOOK_URL" ]]; then
+  echo "[ERROR] WEBHOOK_URL is not set"
   exit 1
-fi
-
-if [[ -n "$WEBHOOK_URL" && "$WEBHOOK_URL" == *webhook-proxy* && "${REJECT_PROXY_WEBHOOK:-}" == "1" ]]; then
-  echo "[ERROR] WEBHOOK_URL points at the legacy GCP proxy; expected GCP dispatcher URL"
-  exit 1
-fi
-
-if [[ -n "$WEBHOOK_URL" ]]; then
-  export DISPATCHER_ENDPOINT="$WEBHOOK_URL"
-else
-  export DISPATCHER_ENDPOINT="https://functions.yandexcloud.net/${DISPATCHER_FUNCTION_ID}"
 fi
 
 CONFIG_FILE="$APP_CONFIG_PATH"
 
 echo "[INFO] using config file: \"$CONFIG_FILE\""
-if [[ -n "$WEBHOOK_URL" ]]; then
-  echo "[INFO] using webhook url: \"$WEBHOOK_URL\""
-else
-  echo "[INFO] using dispatcher function ID: \"$DISPATCHER_FUNCTION_ID\""
-fi
+echo "[INFO] using webhook url: \"$WEBHOOK_URL\""
 
 jq -c 'to_entries[]' "$CONFIG_FILE" | while read -r entry; do
     BOT_ID=$(echo "$entry" | jq -r '.value.bot_id')
@@ -39,7 +24,7 @@ jq -c 'to_entries[]' "$CONFIG_FILE" | while read -r entry; do
 
     curl -s -X POST "https://api.telegram.org/bot${TOKEN}/setWebhook" \
          -H "Content-Type: application/json" \
-         -d "{\"url\": \"${DISPATCHER_ENDPOINT}\", \"secret_token\": \"${SECRET}\"}" | jq
+         -d "{\"url\": \"${WEBHOOK_URL}\", \"secret_token\": \"${SECRET}\"}" | jq
 
     echo "[INFO] webhook set for bot_id: $BOT_ID"
 done

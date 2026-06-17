@@ -3,10 +3,8 @@ package function
 import (
 	"context"
 	"io"
-	"log/slog"
 	"net/http"
 	"sync"
-	"time"
 
 	_ "github.com/GoogleCloudPlatform/functions-framework-go/funcframework"
 	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
@@ -20,22 +18,14 @@ func init() {
 	functions.HTTP("DispatcherHTTP", DispatcherHTTP)
 }
 
-const (
-	dispatcherInitTimeout    = 30 * time.Second
-	dispatcherHandlerTimeout = 55 * time.Second
-)
-
 var (
 	dispatcherOnce sync.Once
 	dispatcherH    *handler.Handler
 	dispatcherErr  error
 )
 
-func getDispatcherHandler() (*handler.Handler, error) {
+func getDispatcherHandler(ctx context.Context) (*handler.Handler, error) {
 	dispatcherOnce.Do(func() {
-		ctx, cancel := context.WithTimeout(context.Background(), dispatcherInitTimeout)
-		defer cancel()
-
 		botConfig, err := config.Load()
 		if err != nil {
 			dispatcherErr = err
@@ -61,7 +51,10 @@ func DispatcherHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h, err := getDispatcherHandler()
+	ctx, cancel := context.WithCancel(r.Context())
+	defer cancel()
+
+	h, err := getDispatcherHandler(ctx)
 	if err != nil {
 		log.Error("dispatcher.gcp.initHandler: failed",
 			log.Op("initHandler"), log.Err(err))
@@ -85,17 +78,7 @@ func DispatcherHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	handlerCtx, cancel := context.WithTimeout(context.Background(), dispatcherHandlerTimeout)
-	defer cancel()
-
-	deadline, ok := handlerCtx.Deadline()
-	log.Info("dispatcher.gcp.startHandler",
-		log.Op("startHandler"),
-		slog.Bool("has_deadline", ok),
-		log.String("deadline", deadline.Format(time.RFC3339Nano)),
-	)
-
-	if err := h.Handel(handlerCtx, botID, string(body)); err != nil {
+	if err := h.Handel(ctx, botID, string(body)); err != nil {
 		log.Error("dispatcher.gcp.processRequest: handler failed",
 			log.Op("processRequest"), log.Err(err))
 		http.Error(w, "process request", http.StatusInternalServerError)

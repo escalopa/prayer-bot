@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	_ "github.com/GoogleCloudPlatform/functions-framework-go/funcframework"
 	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
@@ -23,14 +24,19 @@ type gcsObjectData struct {
 	Name   string `json:"name"`
 }
 
+const loaderInitTimeout = 30 * time.Second
+
 var (
 	loaderOnce sync.Once
 	loaderH    *handler.Handler
 	loaderErr  error
 )
 
-func getLoaderHandler(ctx context.Context) (*handler.Handler, error) {
+func getLoaderHandler() (*handler.Handler, error) {
 	loaderOnce.Do(func() {
+		initCtx, cancel := context.WithTimeout(context.Background(), loaderInitTimeout)
+		defer cancel()
+
 		botConfig, err := config.Load()
 		if err != nil {
 			loaderErr = fmt.Errorf("load config: %w", err)
@@ -43,7 +49,7 @@ func getLoaderHandler(ctx context.Context) (*handler.Handler, error) {
 			return
 		}
 
-		db, err := service.NewDB(ctx)
+		db, err := service.NewDB(initCtx)
 		if err != nil {
 			loaderErr = err
 			return
@@ -63,7 +69,7 @@ func LoaderCloudEvent(ctx context.Context, e cloudevents.Event) error {
 		return fmt.Errorf("parse event data: %w", err)
 	}
 
-	h, err := getLoaderHandler(ctx)
+	h, err := getLoaderHandler()
 	if err != nil {
 		log.Error("loader.gcp.initHandler: failed",
 			log.Op("initHandler"), log.Err(err))

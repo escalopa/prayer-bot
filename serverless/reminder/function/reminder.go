@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
+	"time"
 
 	_ "github.com/GoogleCloudPlatform/functions-framework-go/funcframework"
 	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
@@ -19,14 +20,22 @@ func init() {
 	functions.HTTP("ReminderHTTP", ReminderHTTP)
 }
 
+const (
+	reminderInitTimeout    = 30 * time.Second
+	reminderHandlerTimeout = 55 * time.Second
+)
+
 var (
 	reminderOnce sync.Once
 	reminderH    *handler.Handler
 	reminderErr  error
 )
 
-func getReminderHandler(ctx context.Context) (*handler.Handler, error) {
+func getReminderHandler() (*handler.Handler, error) {
 	reminderOnce.Do(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), reminderInitTimeout)
+		defer cancel()
+
 		botConfig, err := config.Load()
 		if err != nil {
 			reminderErr = fmt.Errorf("load config: %w", err)
@@ -52,7 +61,7 @@ func ReminderHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h, err := getReminderHandler(r.Context())
+	h, err := getReminderHandler()
 	if err != nil {
 		log.Error("reminder.gcp.initHandler: failed",
 			log.Op("initHandler"), log.Err(err))
@@ -72,7 +81,10 @@ func ReminderHTTP(w http.ResponseWriter, r *http.Request) {
 	for botID := range botConfig {
 		botID := botID
 		errG.Go(func() error {
-			err := h.Handel(r.Context(), botID)
+			handlerCtx, cancel := context.WithTimeout(context.WithoutCancel(r.Context()), reminderHandlerTimeout)
+			defer cancel()
+
+			err := h.Handel(handlerCtx, botID)
 			if err != nil {
 				log.Error("reminder.gcp.processBot: handler failed",
 					log.Op("processBot"), log.BotID(botID), log.Err(err))

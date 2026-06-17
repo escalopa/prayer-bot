@@ -37,6 +37,13 @@ func openPostgres(ctx context.Context, databaseURL string) (*Postgres, error) {
 		return nil, err
 	}
 
+	err = pool.Ping(ctx)
+	if err != nil {
+		pool.Close()
+		logPG("openPostgres.ping", "ping failed", log.Err(err))
+		return nil, err
+	}
+
 	return &Postgres{pool: pool}, nil
 }
 

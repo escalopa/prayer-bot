@@ -32,10 +32,10 @@ prayer:
   6: "Xufton"
 
 prayer_date: "📅 Namoz vaqtlarini ko‘rish uchun sana tanlang"
-prayer_soon: '⏳ *%s* keyin *%s* (%s)'
+prayer_soon: '⏳ *%s* keyin *%s* \(%s\)'
 
 remind:
-  start: "⏰ Necha daqiqa oldin eslatma olishni xohlaysiz?"
+  start: "⏰ Necha daqiqa oldin eslatma olishni xohlaysiz? \\(daqiqalarda\\)"
   success: "✅ Eslatma vaqti *%d* daqiqa qilib belgilandi"
 
 language:
@@ -44,8 +44,8 @@ language:
 
 
 remind_menu:
-  title_enabled: "⚙️ Eslatmalar - Yoqilgan ✅"
-  title_disabled: "⚙️ Eslatmalar - O'chirilgan 🔕"
+  title_enabled: "⚙️ Eslatmalar \\- Yoqilgan ✅"
+  title_disabled: "⚙️ Eslatmalar \\- O'chirilgan 🔕"
   enable: "🔔 Yoqish"
   disable: "🔕 O'chirish"
   tomorrow: "🌅 Ertangi Ko'rinish"
@@ -58,8 +58,8 @@ remind_edit:
   title_soon: "⏰ Namoz Eslatmasi\n⏱ Har bir namoz vaqtidan oldin eslatma"
 
 jamaat_menu:
-  title_enabled: "🕌 Jamoat Vaqtlari - Yoqilgan ✅\n(Faqat Guruhlar)"
-  title_disabled: "🕌 Jamoat Vaqtlari - O'chirilgan 🔕\n(Faqat Guruhlar)"
+  title_enabled: "🕌 Jamoat Vaqtlari \\- Yoqilgan ✅\n\\(Faqat Guruhlar\\)"
+  title_disabled: "🕌 Jamoat Vaqtlari \\- O'chirilgan 🔕\n\\(Faqat Guruhlar\\)"
   enable: "🔔 Yoqish"
   disable: "🔕 O'chirish"
 
@@ -88,12 +88,12 @@ help: |
   💬 /feedback – Fikr-mulohaza yuborish
 
 feedback:
-  start: "💬 Fikr-mulohazangizni yuboring! (/cancel yozib to‘xtatish mumkin)"
-  success: "✅ Rahmat! Fikringiz yuborildi"
+  start: "💬 Fikr-mulohazangizni yuboring\\! \\(/cancel yozib to‘xtatish mumkin\\)"
+  success: "✅ Rahmat\\! Fikringiz yuborildi"
 
 bug:
-  start: "🐞 Topilgan xatolikni ta’riflab bering (/cancel yozib to‘xtatish mumkin)"
-  success: "✅ Rahmat! Xatolik qabul qilindi"
+  start: "🐞 Topilgan xatolikni ta’riflab bering \\(/cancel yozib to‘xtatish mumkin\\)"
+  success: "✅ Rahmat\\! Xatolik qabul qilindi"
 
 help_admin: |
   📊 /info – Chat ma'lumotlari va sozlamalarini ko'rish
@@ -130,11 +130,11 @@ info:
   disabled: "❌ O'chirilgan"
 
 reply:
-  start: "✍️ Javobni quyida yozing (/cancel yozib to‘xtatish mumkin)"
+  start: "✍️ Javobni quyida yozing \\(/cancel yozib to‘xtatish mumkin\\)"
   success: "✅ Javob yuborildi"
 
 announce:
-  start: "📢 Nima haqida e’lon qilmoqchisiz? (/cancel yozib to‘xtatish mumkin)"
+  start: "📢 Nima haqida e’lon qilmoqchisiz? \\(/cancel yozib to‘xtatish mumkin\\)"
   success: "✅ E’lon yuborildi"
 
 stats: |

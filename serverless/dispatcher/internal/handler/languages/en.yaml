@@ -32,10 +32,10 @@ prayer:
   6: "Isha"
 
 prayer_date: "📅 Choose a date to view prayers"
-prayer_soon: '⏳ *%s* after *%s* (%s)'
+prayer_soon: '⏳ *%s* after *%s* \(%s\)'
 
 remind:
-  start: "⏰ Pick how early you want to be reminded (in minutes)"
+  start: "⏰ Pick how early you want to be reminded \\(in minutes\\)"
   success: "✅ Reminder time set to *%d* minutes"
 
 language:
@@ -43,8 +43,8 @@ language:
   success: "✅ Language changed to *%s*"
 
 remind_menu:
-  title_enabled: "⚙️ Reminders - Enabled ✅"
-  title_disabled: "⚙️ Reminders - Disabled 🔕"
+  title_enabled: "⚙️ Reminders \\- Enabled ✅"
+  title_disabled: "⚙️ Reminders \\- Disabled 🔕"
   enable: "🔔 Enable"
   disable: "🔕 Disable"
   tomorrow: "🌅 Tomorrow Preview"
@@ -57,8 +57,8 @@ remind_edit:
   title_soon: "⏰ Prayer Alert\n⏱ Remind before each prayer time"
 
 jamaat_menu:
-  title_enabled: "🕌 Jamaat Times - Enabled ✅\n(Group Only)"
-  title_disabled: "🕌 Jamaat Times - Disabled 🔕\n(Group Only)"
+  title_enabled: "🕌 Jamaat Times \\- Enabled ✅\n\\(Group Only\\)"
+  title_disabled: "🕌 Jamaat Times \\- Disabled 🔕\n\\(Group Only\\)"
   enable: "🔔 Enable"
   disable: "🔕 Disable"
 
@@ -87,12 +87,12 @@ help: |
   💬 /feedback – Send feedback
 
 feedback:
-  start: "💬 Share your feedback! (or type /cancel to stop)"
-  success: "✅ Thank you! Your feedback has been sent"
+  start: "💬 Share your feedback\\! \\(or type /cancel to stop\\)"
+  success: "✅ Thank you\\! Your feedback has been sent"
 
 bug:
-  start: "🐞 Describe the bug you found (or /cancel to stop)"
-  success: "✅ Thanks! Your report has been received"
+  start: "🐞 Describe the bug you found \\(or /cancel to stop\\)"
+  success: "✅ Thanks\\! Your report has been received"
 
 help_admin: |
   📊 /info – View chat info & settings
@@ -129,11 +129,11 @@ info:
   disabled: "❌ Disabled"
 
 reply:
-  start: "✍️ Type your reply below (or /cancel to stop)"
+  start: "✍️ Type your reply below \\(or /cancel to stop\\)"
   success: "✅ Reply sent"
 
 announce:
-  start: "📢 What would you like to announce? (or /cancel to stop)"
+  start: "📢 What would you like to announce? \\(or /cancel to stop\\)"
   success: "✅ Announcement delivered"
 
 stats: |

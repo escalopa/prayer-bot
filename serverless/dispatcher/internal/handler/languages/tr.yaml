@@ -32,10 +32,10 @@ prayer:
   6: "Gije"
 
 prayer_date: "📅 Namaz wagtyny görmek üçin senäni saýlaň"
-prayer_soon: '⏳ *%s* soň *%s* (%s)'
+prayer_soon: '⏳ *%s* soň *%s* \(%s\)'
 
 remind:
-  start: "⏰ Näçe minut öň duýduryş isleýärsiňiz?"
+  start: "⏰ Näçe minut öň duýduryş isleýärsiňiz? \\(minutlarda\\)"
   success: "✅ Duýduryş wagty *%d* minut goýuldy"
 
 language:
@@ -43,8 +43,8 @@ language:
   success: "✅ Dil *%s* diýip üýtgedildi"
 
 remind_menu:
-  title_enabled: "⚙️ Duýduryşlar - Açyk ✅"
-  title_disabled: "⚙️ Duýduryşlar - Ýapyk 🔕"
+  title_enabled: "⚙️ Duýduryşlar \\- Açyk ✅"
+  title_disabled: "⚙️ Duýduryşlar \\- Ýapyk 🔕"
   enable: "🔔 Açmak"
   disable: "🔕 Ýapmak"
   tomorrow: "🌅 Ertir Syn"
@@ -57,8 +57,8 @@ remind_edit:
   title_soon: "⏰ Namaz Duýduryşy\n⏱ Her namaz wagtyndan öň ýatlatma"
 
 jamaat_menu:
-  title_enabled: "🕌 Jemgyýet Wagty - Açyk ✅\n(Diňe Toparlar)"
-  title_disabled: "🕌 Jemgyýet Wagty - Ýapyk 🔕\n(Diňe Toparlar)"
+  title_enabled: "🕌 Jemgyýet Wagty \\- Açyk ✅\n\\(Diňe Toparlar\\)"
+  title_disabled: "🕌 Jemgyýet Wagty \\- Ýapyk 🔕\n\\(Diňe Toparlar\\)"
   enable: "🔔 Açmak"
   disable: "🔕 Ýapmak"
 
@@ -87,12 +87,12 @@ help: |
   💬 /feedback – Pikiriňizi iberiň
 
 feedback:
-  start: "💬 Pikirleriňizi paýlaşyň! (ýa-da /cancel ýazyp duruzuň)"
-  success: "✅ Sag boluň! Pikirleriňiz ugradyldy"
+  start: "💬 Pikirleriňizi paýlaşyň\\! \\(ýa-da /cancel ýazyp duruzuň\\)"
+  success: "✅ Sag boluň\\! Pikirleriňiz ugradyldy"
 
 bug:
-  start: "🐞 Tapylan nädogrulygy düşündiriň (ýa-da /cancel ýazyp duruzuň)"
-  success: "✅ Sag boluň! Nädogrulyk hasaba alyndy"
+  start: "🐞 Tapylan nädogrulygy düşündiriň \\(ýa-da /cancel ýazyp duruzuň\\)"
+  success: "✅ Sag boluň\\! Nädogrulyk hasaba alyndy"
 
 help_admin: |
   📊 /info – Söhbetdeşlik maglumatlary we sazlamalary görmek
@@ -129,11 +129,11 @@ info:
   disabled: "❌ Ýapyk"
 
 reply:
-  start: "✍️ Jogabyňyzy aşakda ýazyň (ýa-da /cancel ýazyp duruzuň)"
+  start: "✍️ Jogabyňyzy aşakda ýazyň \\(ýa-da /cancel ýazyp duruzuň\\)"
   success: "✅ Jogap ugradyldy"
 
 announce:
-  start: "📢 Näme habar bermek isleýärsiňiz? (ýa-da /cancel ýazyp duruzuň)"
+  start: "📢 Näme habar bermek isleýärsiňiz? \\(ýa-da /cancel ýazyp duruzuň\\)"
   success: "✅ Habar ugradyldy"
 
 stats: |

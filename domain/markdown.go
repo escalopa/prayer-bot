@@ -1,47 +1,39 @@
 package domain
 
 import (
-	"fmt"
 	"strings"
+	"unicode/utf8"
 )
 
-// MarkdownRaw is markdown already produced by FormatMarkdown and must not be escaped again.
-type MarkdownRaw string
-
-// EscapeMarkdown escapes characters that are special in Telegram legacy Markdown.
-func EscapeMarkdown(s string) string {
+// StripMarkdown removes MarkdownV2 formatting for surfaces that do not support parse_mode (e.g. poll questions).
+func StripMarkdown(s string) string {
 	var b strings.Builder
 	b.Grow(len(s))
-	for _, r := range s {
-		switch r {
-		case '*', '_', '`', '[':
-			b.WriteByte('\\')
+
+	for i := 0; i < len(s); {
+		r, size := utf8.DecodeRuneInString(s[i:])
+		if r == '\\' && i+size < len(s) {
+			next, nextSize := utf8.DecodeRuneInString(s[i+size:])
+			if isMarkdownV2Reserved(next) {
+				b.WriteRune(next)
+				i += size + nextSize
+				continue
+			}
 		}
-		b.WriteRune(r)
+		if r != '*' && r != '_' && r != '`' {
+			b.WriteRune(r)
+		}
+		i += size
 	}
+
 	return b.String()
 }
 
-// FormatMarkdown applies a printf-style template after escaping string arguments for Markdown.
-func FormatMarkdown(template string, args ...any) string {
-	escaped := make([]any, len(args))
-	for i, arg := range args {
-		switch v := arg.(type) {
-		case MarkdownRaw:
-			escaped[i] = string(v)
-		case string:
-			escaped[i] = EscapeMarkdown(v)
-		default:
-			escaped[i] = arg
-		}
+func isMarkdownV2Reserved(r rune) bool {
+	switch r {
+	case '_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!', '\\':
+		return true
+	default:
+		return false
 	}
-	return fmt.Sprintf(template, escaped...)
-}
-
-// StripMarkdown removes Markdown formatting for surfaces that do not support parse_mode (e.g. poll questions).
-func StripMarkdown(s string) string {
-	s = strings.ReplaceAll(s, "*", "")
-	s = strings.ReplaceAll(s, `\(`, "(")
-	s = strings.ReplaceAll(s, `\)`, ")")
-	return s
 }

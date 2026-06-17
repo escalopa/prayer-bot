@@ -32,10 +32,10 @@ prayer:
   6: "Isha"
 
 prayer_date: "📅 Elige una fecha para ver los horarios de oración"
-prayer_soon: '⏳ *%s* después de *%s* (%s)'
+prayer_soon: '⏳ *%s* después de *%s* \(%s\)'
 
 remind:
-  start: "⏰ Elige cuántos minutos antes quieres ser recordado"
+  start: "⏰ Elige cuántos minutos antes quieres ser recordado \\(en minutos\\)"
   success: "✅ El recordatorio se ha establecido en *%d* minutos"
 
 language:
@@ -43,8 +43,8 @@ language:
   success: "✅ Idioma cambiado a *%s*"
 
 remind_menu:
-  title_enabled: "⚙️ Recordatorios - Habilitado ✅"
-  title_disabled: "⚙️ Recordatorios - Deshabilitado 🔕"
+  title_enabled: "⚙️ Recordatorios \\- Habilitado ✅"
+  title_disabled: "⚙️ Recordatorios \\- Deshabilitado 🔕"
   enable: "🔔 Habilitar"
   disable: "🔕 Deshabilitar"
   tomorrow: "🌅 Vista Previa de Mañana"
@@ -57,8 +57,8 @@ remind_edit:
   title_soon: "⏰ Alerta de Oración\n⏱ Recordar antes de cada oración"
 
 jamaat_menu:
-  title_enabled: "🕌 Horarios de Jamaat - Habilitado ✅\n(Solo Grupos)"
-  title_disabled: "🕌 Horarios de Jamaat - Deshabilitado 🔕\n(Solo Grupos)"
+  title_enabled: "🕌 Horarios de Jamaat \\- Habilitado ✅\n\\(Solo Grupos\\)"
+  title_disabled: "🕌 Horarios de Jamaat \\- Deshabilitado 🔕\n\\(Solo Grupos\\)"
   enable: "🔔 Habilitar"
   disable: "🔕 Deshabilitar"
 
@@ -87,12 +87,12 @@ help: |
   💬 /feedback – Enviar retroalimentación
 
 feedback:
-  start: "💬 ¡Comparte tu opinión! (o escribe /cancel para cancelar)"
-  success: "✅ ¡Gracias! Tu opinión ha sido enviada"
+  start: "💬 ¡Comparte tu opinión\\! \\(o escribe /cancel para cancelar\\)"
+  success: "✅ ¡Gracias\\! Tu opinión ha sido enviada"
 
 bug:
-  start: "🐞 Describe el error encontrado (o escribe /cancel para cancelar)"
-  success: "✅ ¡Gracias! Tu reporte ha sido recibido"
+  start: "🐞 Describe el error encontrado \\(o escribe /cancel para cancelar\\)"
+  success: "✅ ¡Gracias\\! Tu reporte ha sido recibido"
 
 help_admin: |
   📊 /info – Ver información y configuración del chat
@@ -129,11 +129,11 @@ info:
   disabled: "❌ Deshabilitado"
 
 reply:
-  start: "✍️ Escribe tu respuesta abajo (o escribe /cancel para cancelar)"
+  start: "✍️ Escribe tu respuesta abajo \\(o escribe /cancel para cancelar\\)"
   success: "✅ Respuesta enviada"
 
 announce:
-  start: "📢 ¿Qué deseas anunciar? (o escribe /cancel para cancelar)"
+  start: "📢 ¿Qué deseas anunciar? \\(o escribe /cancel para cancelar\\)"
   success: "✅ Anuncio enviado"
 
 stats: |

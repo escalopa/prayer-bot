@@ -2,16 +2,18 @@ package handler
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
 	"github.com/escalopa/prayer-bot/domain"
 	"github.com/escalopa/prayer-bot/log"
 	"github.com/go-telegram/bot"
+	"github.com/go-telegram/bot/models"
 )
 
 const (
-	prayerDayFormat  = "02.01.2006"
+	prayerDayFormat  = "02/01/2006"
 	prayerTimeFormat = "15:04"
 
 	prayerText = `
@@ -34,7 +36,7 @@ func (h *Handler) formatPrayerDay(botID int64, prayerDay *domain.PrayerDay, lang
 	loc := h.cfg[botID].Location.V()
 	text := h.lp.GetText(languageCode)
 
-	return domain.FormatMarkdown(prayerText,
+	return fmt.Sprintf(prayerText,
 		prayerDay.Date.Format(prayerDayFormat),
 		text.Prayer[int(domain.PrayerIDFajr)], prayerDay.Fajr.In(loc).Format(prayerTimeFormat),
 		text.Prayer[int(domain.PrayerIDShuruq)], prayerDay.Shuruq.In(loc).Format(prayerTimeFormat),
@@ -78,4 +80,12 @@ func deleteMessages(ctx context.Context, b *bot.Bot, chat *domain.Chat, ids ...i
 
 func isBlockedErr(err error) bool {
 	return strings.HasPrefix(err.Error(), bot.ErrorForbidden.Error())
+}
+
+func markdownMessage(chatID int64, text string) *bot.SendMessageParams {
+	return &bot.SendMessageParams{
+		ChatID:    chatID,
+		Text:      text,
+		ParseMode: models.ParseModeMarkdown,
+	}
 }

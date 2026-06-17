@@ -148,7 +148,7 @@ func (h *Handler) languageQuery(ctx context.Context, b *bot.Bot, update *models.
 	_, err = b.EditMessageText(ctx, markdownEditMessage(
 		chat.ChatID,
 		update.CallbackQuery.Message.Message.ID,
-		domain.FormatMarkdown(h.lp.GetText(languageCode).Language.Success, languageCode),
+		fmt.Sprintf(h.lp.GetText(languageCode).Language.Success, languageCode),
 	))
 	if err != nil {
 		logQuery("languageQuery: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
@@ -230,10 +230,10 @@ func (h *Handler) remindEditQuery(ctx context.Context, b *bot.Bot, update *model
 	switch reminderType {
 	case domain.ReminderTypeTomorrow:
 		offset = chat.Reminder.Tomorrow.Offset.Duration()
-		messageText = fmt.Sprintf("%s - %s", text.RemindEdit.TitleTomorrow, domain.FormatDuration(offset))
+		messageText = fmt.Sprintf("%s \\- %s", text.RemindEdit.TitleTomorrow, domain.FormatDuration(offset))
 	case domain.ReminderTypeSoon:
 		offset = chat.Reminder.Soon.Offset.Duration()
-		messageText = fmt.Sprintf("%s - %s", text.RemindEdit.TitleSoon, domain.FormatDuration(offset))
+		messageText = fmt.Sprintf("%s \\- %s", text.RemindEdit.TitleSoon, domain.FormatDuration(offset))
 	default:
 		logQuery("remindEditQuery: unknown reminder type",
 			log.BotID(chat.BotID),
@@ -394,7 +394,7 @@ func (h *Handler) remindJamaatEditQuery(ctx context.Context, b *bot.Bot, update 
 	prayerID := domain.ParsePrayerID(prayerName)
 
 	delay := chat.Reminder.Jamaat.Delay.GetDelayByPrayerID(prayerID)
-	messageText := domain.FormatMarkdown(text.JamaatEdit.Title, text.Prayer[int(prayerID)]) + " - " + domain.FormatDuration(delay)
+	messageText := fmt.Sprintf(text.JamaatEdit.Title, text.Prayer[int(prayerID)]) + " \\- " + domain.FormatDuration(delay)
 
 	_, err := b.EditMessageText(ctx, markdownEditMessageWithMarkup(
 		chat.ChatID,

@@ -16,7 +16,7 @@ import (
 const (
 	defaultLanguageCode = "en"
 
-	prayerDayFormat  = "02.01.2006"
+	prayerDayFormat  = "02/01/2006"
 	prayerTimeFormat = "15:04"
 	prayerText       = `
 🗓 %s,  %s
@@ -183,7 +183,7 @@ func (h *Handler) next(ctx context.Context, b *bot.Bot, _ *models.Update) error 
 	}
 
 	text := h.lp.GetText(chat.LanguageCode)
-	_, err = b.SendMessage(ctx, markdownMessage(chat.ChatID, domain.FormatMarkdown(text.PrayerSoon,
+	_, err = b.SendMessage(ctx, markdownMessage(chat.ChatID, fmt.Sprintf(text.PrayerSoon,
 		text.Prayer[int(prayerID)],
 		domain.FormatDuration(duration),
 		prayerTime.In(h.cfg[chat.BotID].Location.V()).Format(prayerTimeFormat),
@@ -310,7 +310,7 @@ func (h *Handler) info(ctx context.Context, b *bot.Bot, _ *models.Update) error 
 		if chat.Reminder.Jamaat.Enabled {
 			jamaatStatus = text.Info.Enabled
 		}
-		jamaatInfo = domain.FormatMarkdown(text.Info.Jamaat,
+		jamaatInfo = fmt.Sprintf(text.Info.Jamaat,
 			jamaatStatus,
 			domain.FormatDuration(chat.Reminder.Jamaat.Delay.Fajr.Duration()),
 			domain.FormatDuration(chat.Reminder.Jamaat.Delay.Dhuhr.Duration()),
@@ -320,7 +320,7 @@ func (h *Handler) info(ctx context.Context, b *bot.Bot, _ *models.Update) error 
 		)
 	}
 
-	message := domain.FormatMarkdown(text.Info.Default,
+	message := fmt.Sprintf(text.Info.Default,
 		fmt.Sprintf("%d", chat.ChatID),
 		chatType,
 		chat.LanguageCode,
@@ -328,7 +328,7 @@ func (h *Handler) info(ctx context.Context, b *bot.Bot, _ *models.Update) error 
 		subscriptionStatus,
 		domain.FormatDuration(chat.Reminder.Tomorrow.Offset.Duration()),
 		domain.FormatDuration(chat.Reminder.Soon.Offset.Duration()),
-		domain.MarkdownRaw(jamaatInfo),
+		jamaatInfo,
 	)
 
 	_, err := b.SendMessage(ctx, markdownMessage(chat.ChatID, message))
@@ -371,10 +371,10 @@ func (h *Handler) stats(ctx context.Context, b *bot.Bot, _ *models.Update) error
 
 	languagesStats := &strings.Builder{}
 	for _, lang := range h.lp.GetLanguages() {
-		languagesStats.WriteString(domain.FormatMarkdown("%s: %d\n", lang.Code, stats.LanguagesGrouped[lang.Code]))
+		languagesStats.WriteString(fmt.Sprintf("%s: %d\n", lang.Code, stats.LanguagesGrouped[lang.Code]))
 	}
 
-	message := domain.FormatMarkdown(h.lp.GetText(chat.LanguageCode).Stats,
+	message := fmt.Sprintf(h.lp.GetText(chat.LanguageCode).Stats,
 		stats.Users,
 		stats.Subscribed,
 		stats.Unsubscribed,

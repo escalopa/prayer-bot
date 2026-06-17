@@ -32,10 +32,10 @@ prayer:
   6: "Icha"
 
 prayer_date: "📅 Choisissez une date pour voir les horaires de prière"
-prayer_soon: '⏳ *%s* après *%s* (%s)'
+prayer_soon: '⏳ *%s* après *%s* \(%s\)'
 
 remind:
-  start: "⏰ Choisissez combien de minutes à l'avance vous souhaitez être rappelé"
+  start: "⏰ Choisissez combien de minutes à l'avance vous souhaitez être rappelé \\(en minutes\\)"
   success: "✅ Rappel réglé sur *%d* minutes"
 
 language:
@@ -43,8 +43,8 @@ language:
   success: "✅ Langue changée en *%s*"
 
 remind_menu:
-  title_enabled: "⚙️ Rappels - Activé ✅"
-  title_disabled: "⚙️ Rappels - Désactivé 🔕"
+  title_enabled: "⚙️ Rappels \\- Activé ✅"
+  title_disabled: "⚙️ Rappels \\- Désactivé 🔕"
   enable: "🔔 Activer"
   disable: "🔕 Désactiver"
   tomorrow: "🌅 Aperçu de Demain"
@@ -57,8 +57,8 @@ remind_edit:
   title_soon: "⏰ Alerte de Prière\n⏱ Rappel avant chaque prière"
 
 jamaat_menu:
-  title_enabled: "🕌 Horaires Jamaat - Activé ✅\n(Groupes Seulement)"
-  title_disabled: "🕌 Horaires Jamaat - Désactivé 🔕\n(Groupes Seulement)"
+  title_enabled: "🕌 Horaires Jamaat \\- Activé ✅\n\\(Groupes Seulement\\)"
+  title_disabled: "🕌 Horaires Jamaat \\- Désactivé 🔕\n\\(Groupes Seulement\\)"
   enable: "🔔 Activer"
   disable: "🔕 Désactiver"
 
@@ -87,12 +87,12 @@ help: |
   💬 /feedback – Envoyer un retour
 
 feedback:
-  start: "💬 Partagez vos commentaires ! (ou tapez /cancel pour arrêter)"
-  success: "✅ Merci ! Votre commentaire a été envoyé"
+  start: "💬 Partagez vos commentaires \\! \\(ou tapez /cancel pour arrêter\\)"
+  success: "✅ Merci \\! Votre commentaire a été envoyé"
 
 bug:
-  start: "🐞 Décrivez le bug rencontré (ou tapez /cancel pour arrêter)"
-  success: "✅ Merci ! Votre rapport a été reçu"
+  start: "🐞 Décrivez le bug rencontré \\(ou tapez /cancel pour arrêter\\)"
+  success: "✅ Merci \\! Votre rapport a été reçu"
 
 help_admin: |
   📊 /info – Voir les infos et paramètres du chat
@@ -129,11 +129,11 @@ info:
   disabled: "❌ Désactivé"
 
 reply:
-  start: "✍️ Tapez votre réponse ci-dessous (/cancel pour annuler)"
+  start: "✍️ Tapez votre réponse ci-dessous \\(/cancel pour annuler\\)"
   success: "✅ Réponse envoyée"
 
 announce:
-  start: "📢 Que souhaitez-vous annoncer? (/cancel pour annuler)"
+  start: "📢 Que souhaitez-vous annoncer? \\(/cancel pour annuler\\)"
   success: "✅ Annonce envoyée"
 
 stats: |

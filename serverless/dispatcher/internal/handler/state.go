@@ -74,6 +74,7 @@ func (h *Handler) bugState(ctx context.Context, b *bot.Bot, update *models.Updat
 	}
 
 	info := newReplyInfo(replyTypeBug, chat.ChatID, update.Message.ID, update.Message.From.Username)
+	// Plain text to owner (no parse_mode).
 	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID: h.cfg[chat.BotID].OwnerID,
 		Text:   info.JSON(),
@@ -106,6 +107,7 @@ func (h *Handler) feedbackState(ctx context.Context, b *bot.Bot, update *models.
 	}
 
 	info := newReplyInfo(replyTypeFeedback, chat.ChatID, update.Message.ID, update.Message.From.Username)
+	// Plain text to owner (no parse_mode).
 	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID: h.cfg[chat.BotID].OwnerID,
 		Text:   info.JSON(),
@@ -138,8 +140,8 @@ func (h *Handler) replyState(ctx context.Context, b *bot.Bot, update *models.Upd
 		return domain.ErrInternal
 	}
 
+	// Plain text passthrough to user (preserves Entities, no parse_mode).
 	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID: info.ChatID,
 		Text:   update.Message.Text,
 		ReplyParameters: &models.ReplyParameters{
 			MessageID:                info.MessageID,
@@ -174,6 +176,7 @@ func (h *Handler) announceState(ctx context.Context, b *bot.Bot, update *models.
 	for _, c := range chats {
 		c := c
 		g.Go(func() error {
+			// Plain text broadcast (no parse_mode).
 			_, err := b.SendMessage(ctx, &bot.SendMessageParams{
 				ChatID: c.ChatID,
 				Text:   update.Message.Text,

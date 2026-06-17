@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -38,7 +39,7 @@ func getContextChat(ctx context.Context) *domain.Chat {
 func (h *Handler) formatPrayerDay(botID int64, date *domain.PrayerDay, languageCode string) string {
 	loc := h.cfg[botID].Location.V()
 	text := h.lp.GetText(languageCode)
-	return domain.FormatMarkdown(prayerText,
+	return fmt.Sprintf(prayerText,
 		text.Weekday[int(date.Date.Weekday())], date.Date.Format(prayerDayFormat),
 		text.Prayer[int(domain.PrayerIDFajr)], date.Fajr.In(loc).Format(prayerTimeFormat),
 		text.Prayer[int(domain.PrayerIDShuruq)], date.Shuruq.In(loc).Format(prayerTimeFormat),

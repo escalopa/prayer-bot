@@ -5,13 +5,20 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/escalopa/prayer-bot/dispatcher/internal/botprofile"
 	"github.com/escalopa/prayer-bot/domain"
 	"github.com/go-telegram/bot"
+)
+
+const (
+	syncAttempts = 4
+	syncBackoff  = 500 * time.Millisecond
 )
 
 func main() {
@@ -52,7 +59,14 @@ func main() {
 			exit = 1
 			continue
 		}
-		if err := botprofile.Sync(ctx, b, botCfg.OwnerID); err != nil {
+		if err := botprofile.SyncWithRetry(ctx, b, botCfg.OwnerID, syncAttempts, syncBackoff); err != nil {
+			// Profile sync is best-effort: a transient Telegram/network failure
+			// (e.g. an empty API response) must not fail the deploy. Genuine
+			// errors (bad token, invalid params) still do.
+			if errors.Is(err, botprofile.ErrTransient) {
+				fmt.Fprintf(os.Stderr, "warning: profile sync skipped for bot_id %d after %d attempts: %v\n", id, syncAttempts, err)
+				continue
+			}
 			fmt.Fprintf(os.Stderr, "botprofile.Sync bot_id %d: %v\n", id, err)
 			exit = 1
 			continue

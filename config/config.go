@@ -15,12 +15,12 @@ func Load() (botConfig map[int64]*domain.BotConfig, _ error) {
 	// Decode base64-encoded config
 	data, err := base64.StdEncoding.DecodeString(encodedData)
 	if err != nil {
-		return nil, fmt.Errorf("decode base64 config: %v", err)
+		return nil, fmt.Errorf("decode base64 config: %w", err)
 	}
 
 	err = json.Unmarshal(data, &botConfig)
 	if err != nil {
-		return nil, fmt.Errorf("unmarshal bot config: %v", err)
+		return nil, fmt.Errorf("unmarshal bot config: %w", err)
 	}
 
 	return botConfig, nil

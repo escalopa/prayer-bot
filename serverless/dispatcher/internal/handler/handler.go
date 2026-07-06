@@ -45,7 +45,7 @@ type (
 func New(cfg map[int64]*domain.BotConfig, db DB) (*Handler, error) {
 	lp, err := newLanguageProvider()
 	if err != nil {
-		return nil, fmt.Errorf("create language provider: %v", err)
+		return nil, fmt.Errorf("create language provider: %w", err)
 	}
 
 	return &Handler{
@@ -164,17 +164,17 @@ func (h *Handler) Authenticate(headers map[string]string) (int64, error) {
 	return 0, fmt.Errorf("secret token mismatch")
 }
 
-func (h *Handler) Handel(ctx context.Context, botID int64, data string) error {
+func (h *Handler) Handle(ctx context.Context, botID int64, data string) error {
 	b, err := h.getBot(botID)
 	if err != nil {
-		logDispatcher("Handel.getBot", "failed to get telegram bot client", log.Err(err), log.BotID(botID), log.String("payload", data))
+		logDispatcher("Handle.getBot", "failed to get telegram bot client", log.Err(err), log.BotID(botID), log.String("payload", data))
 		return err
 	}
 
 	var update models.Update
 	err = json.Unmarshal([]byte(data), &update)
 	if err != nil {
-		logDispatcher("Handel.unmarshalUpdate", "failed to decode telegram update json", log.Err(err), log.String("payload", data))
+		logDispatcher("Handle.unmarshalUpdate", "failed to decode telegram update json", log.Err(err), log.String("payload", data))
 		return nil
 	}
 

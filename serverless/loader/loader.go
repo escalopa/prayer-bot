@@ -73,7 +73,7 @@ func LoaderCloudEvent(parentCtx context.Context, e cloudevents.Event) error {
 		return err
 	}
 
-	if err := h.Handel(ctx, data.Bucket, data.Name); err != nil {
+	if err := h.Handle(ctx, data.Bucket, data.Name); err != nil {
 		log.Error("loader.gcp.processObject: handler failed",
 			log.Op("processObject"),
 			log.Err(err),

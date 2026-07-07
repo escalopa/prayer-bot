@@ -16,21 +16,129 @@ A serverless Telegram bot that provides Muslim prayer times and sends notificati
 
 ## Architecture 🏗️
 
-The bot runs on **GCP Cloud Functions** with **Supabase Postgres** for data and **GCS** for prayer schedule CSV files.
+The project is a set of **stateless GCP Cloud Functions** written in Go, backed by
+**Supabase Postgres** for state and **GCS** for prayer-schedule CSV files. A single
+codebase serves **many bots** (one per city); everything is keyed by `bot_id` and the
+per-bot config (token, owner, timezone) is loaded from the base64-encoded `APP_CONFIG`
+environment variable.
+
+### System overview
 
 ```mermaid
 flowchart LR
-  Telegram --> Dispatcher
-  Scheduler --> Reminder
-  GCS --> Loader
+  subgraph clients [External triggers]
+    TG[Telegram users]
+    SCH[Cloud Scheduler]
+    UP[Prayer CSV upload]
+  end
 
-  Dispatcher --> Postgres[(Supabase Postgres)]
-  Reminder --> Postgres
-  Loader --> Postgres
-  Loader --> GCS
+  subgraph functions [GCP Cloud Functions]
+    D["dispatcher — HTTP webhook"]
+    R["reminder — HTTP / cron"]
+    L["loader — GCS CloudEvent"]
+  end
+
+  PG[(Supabase Postgres)]
+  GCS[(GCS data bucket)]
+
+  TG -->|webhook update| D
+  D -->|replies| TG
+  SCH -->|periodic POST| R
+  R -->|reminders| TG
+  UP --> GCS
+  GCS -->|object finalized| L
+
+  D --> PG
+  R --> PG
+  L --> PG
 ```
 
-Infrastructure is defined in [`infra/gcp/`](infra/gcp/).
+Each function is an independent Go module under [`serverless/`](serverless/) that depends on a
+shared root module for cross-cutting code.
+
+| Component | Trigger | Responsibility | Code |
+|-----------|---------|----------------|------|
+| **dispatcher** | Telegram webhook (HTTP `POST`) | Authenticates the request by secret header, resolves/creates the chat, and routes commands & inline callbacks | [`serverless/dispatcher`](serverless/dispatcher/) |
+| **reminder** | Cloud Scheduler (HTTP `POST`) | For every bot, evaluates each subscriber against the reminder rules and sends due notifications | [`serverless/reminder`](serverless/reminder/) |
+| **loader** | GCS object-finalized (CloudEvent) | Parses an uploaded `<bot_id>.csv` schedule and upserts it into Postgres | [`serverless/loader`](serverless/loader/) |
+| **domain** | — | Shared models & value types (`Chat`, `PrayerDay`, `Reminder`, `Duration`, errors) | [`domain`](domain/) |
+| **config** | — | Decodes `APP_CONFIG` into a per-bot config map | [`config`](config/) |
+| **internal/db** | — | `pgx`-based Postgres repository shared by all functions | [`internal/db`](internal/db/) |
+| **log** | — | Thin structured-logging wrapper over `log/slog` | [`log`](log/) |
+
+Infrastructure (functions, scheduler, buckets, IAM) is defined as Terraform in
+[`infra/gcp/`](infra/gcp/). Each directory has its own `README.md` with details.
+
+### Repository layout
+
+```text
+.
+├── domain/          # shared models & value types (root module)
+├── config/          # APP_CONFIG loader
+├── log/             # slog wrapper
+├── internal/db/     # Postgres repository (pgx)
+├── serverless/
+│   ├── dispatcher/  # Telegram webhook handler   (own go.mod)
+│   ├── reminder/    # scheduled reminder sender   (own go.mod)
+│   └── loader/      # CSV schedule loader         (own go.mod)
+├── migrations/      # Goose SQL migrations
+├── infra/gcp/       # Terraform (Cloud Functions, Scheduler, GCS)
+└── _scripts/        # local helper scripts
+```
+
+### Reminder flow
+
+The reminder function is the heart of the system. On each tick it fans out over bots and,
+within a bot, over subscribers (bounded to `maxConcurrentReminderSends`), evaluating three
+independent reminder types. State is stored per chat in the `reminder` JSONB column so a
+reminder is sent at most once, and stale reminders are skipped after downtime.
+
+```mermaid
+flowchart TD
+  A[Scheduler POST] --> B[for each bot]
+  B --> C[GetSubscribers]
+  C --> D[GetChatsByIDs + GetPrayerDay today/next]
+  D --> E["fan out per chat (≤ maxConcurrentReminderSends)"]
+  E --> F{evaluate reminder types}
+  F -->|Tomorrow| G[send next-day schedule]
+  F -->|Soon| H["send upcoming prayer (or jamaat poll in groups)"]
+  F -->|Arrive| I[send prayer-arrived notice]
+  G --> J[UpdateReminder: message id + last_at]
+  H --> J
+  I --> J
+```
+
+### Data model
+
+Two tables, both multi-tenant via a composite primary key that starts with `bot_id`.
+The flexible reminder configuration is stored as JSONB on `chats`.
+
+```mermaid
+erDiagram
+  chats {
+    bigint      bot_id        PK
+    bigint      chat_id       PK
+    text        language_code
+    text        state
+    jsonb       reminder
+    boolean     subscribed
+    timestamptz subscribed_at
+    timestamptz created_at
+  }
+  prayers {
+    bigint      bot_id       PK
+    date        prayer_date  PK
+    timestamptz fajr
+    timestamptz shuruq
+    timestamptz dhuhr
+    timestamptz asr
+    timestamptz maghrib
+    timestamptz isha
+  }
+```
+
+`chats` and `prayers` are linked logically by `bot_id` (and by date at read time); there is
+no foreign key, since the two tables are populated by different functions.
 
 ### Deployment
 

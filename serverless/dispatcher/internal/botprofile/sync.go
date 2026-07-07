@@ -6,12 +6,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
 )
+
+// ErrTransient marks a profile sync that failed only because of a transient
+// Telegram or network condition, after retries were exhausted. Callers may
+// treat it as non-fatal, since profile sync is best-effort at deploy time.
+var ErrTransient = errors.New("transient telegram failure")
 
 func isRateLimited(err error) bool {
 	if err == nil {
@@ -22,6 +29,69 @@ func isRateLimited(err error) bool {
 	}
 	var rateErr *bot.TooManyRequestsError
 	return errors.As(err, &rateErr)
+}
+
+// isTransient reports whether err is a temporary Telegram/network failure that
+// is worth retrying. Telegram occasionally answers with an empty 200 body,
+// which the client surfaces as a JSON decode error ("unexpected end of JSON
+// input"); network blips and rate limits are transient too.
+func isTransient(err error) bool {
+	if err == nil {
+		return false
+	}
+	if isRateLimited(err) {
+		return true
+	}
+	var netErr net.Error
+	if errors.As(err, &netErr) {
+		return true
+	}
+	msg := err.Error()
+	for _, marker := range []string{
+		"unexpected end of JSON input",
+		"unexpected EOF",
+		"connection reset",
+		"connection refused",
+		"i/o timeout",
+		"EOF",
+	} {
+		if strings.Contains(msg, marker) {
+			return true
+		}
+	}
+	return false
+}
+
+// SyncWithRetry runs Sync, retrying transient Telegram/network failures with a
+// linear backoff. Sync is idempotent (it only writes fields that differ), so
+// re-running it is safe. After exhausting attempts on a transient error it
+// returns an error wrapping ErrTransient; non-transient errors are returned
+// immediately without retrying.
+func SyncWithRetry(ctx context.Context, b *bot.Bot, ownerID int64, attempts int, backoff time.Duration) error {
+	if attempts < 1 {
+		attempts = 1
+	}
+
+	var err error
+	for attempt := 0; attempt < attempts; attempt++ {
+		err = Sync(ctx, b, ownerID)
+		if err == nil {
+			return nil
+		}
+		if !isTransient(err) {
+			return err
+		}
+		if attempt == attempts-1 {
+			break
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(backoff * time.Duration(attempt+1)):
+		}
+	}
+
+	return fmt.Errorf("%w: %v", ErrTransient, err)
 }
 
 func wrapProfileErr(step string, err error) error {

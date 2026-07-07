@@ -142,7 +142,7 @@ func (h *Handler) replyState(ctx context.Context, b *bot.Bot, update *models.Upd
 
 	// Plain text passthrough to user (preserves Entities, no parse_mode).
 	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
-		Text:   update.Message.Text,
+		Text: update.Message.Text,
 		ReplyParameters: &models.ReplyParameters{
 			MessageID:                info.MessageID,
 			AllowSendingWithoutReply: true,

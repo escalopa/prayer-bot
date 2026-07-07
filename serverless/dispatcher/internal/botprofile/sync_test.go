@@ -33,6 +33,33 @@ func TestWrapProfileErr(t *testing.T) {
 	}
 }
 
+func TestIsTransient(t *testing.T) {
+	transient := []error{
+		fmt.Errorf("getMyName: error decode response body for method getMyName, , unexpected end of JSON input"),
+		fmt.Errorf("read tcp: connection reset by peer"),
+		&bot.TooManyRequestsError{RetryAfter: 30},
+	}
+	for _, err := range transient {
+		if !isTransient(err) {
+			t.Fatalf("expected transient error: %v", err)
+		}
+	}
+
+	permanent := []error{
+		fmt.Errorf("bad request: chat not found"),
+		fmt.Errorf("owner id is required"),
+	}
+	for _, err := range permanent {
+		if isTransient(err) {
+			t.Fatalf("expected non-transient error: %v", err)
+		}
+	}
+
+	if isTransient(nil) {
+		t.Fatal("nil error must not be transient")
+	}
+}
+
 func TestCommandsEqual(t *testing.T) {
 	a := []models.BotCommand{{Command: "start", Description: "Start"}}
 	b := []models.BotCommand{{Command: "start", Description: "Start"}}

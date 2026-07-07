@@ -75,7 +75,7 @@ func ReminderHTTP(w http.ResponseWriter, r *http.Request) {
 	for botID := range botConfig {
 		botID := botID
 		errG.Go(func() error {
-			err := h.Handel(ctx, botID)
+			err := h.Handle(ctx, botID)
 			if err != nil {
 				log.Error("reminder.gcp.processBot: handler failed",
 					log.Op("processBot"), log.BotID(botID), log.Err(err))

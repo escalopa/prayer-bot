@@ -78,7 +78,7 @@ func DispatcherHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.Handel(ctx, botID, string(body)); err != nil {
+	if err := h.Handle(ctx, botID, string(body)); err != nil {
 		log.Error("dispatcher.gcp.processRequest: handler failed",
 			log.Op("processRequest"), log.Err(err))
 		http.Error(w, "process request", http.StatusInternalServerError)

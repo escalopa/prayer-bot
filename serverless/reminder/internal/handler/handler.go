@@ -12,6 +12,11 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+// maxConcurrentReminderSends bounds how many chats are processed in parallel
+// within a single bot. It caps goroutine fan-out and smooths bursts against
+// Telegram's per-bot rate limits when the subscriber count is large.
+const maxConcurrentReminderSends = 32
+
 type (
 	DB interface {
 		GetChatsByIDs(ctx context.Context, botID int64, chatIDs []int64) (chats []*domain.Chat, _ error)
@@ -65,22 +70,22 @@ func (h *Handler) getBot(botID int64) (*bot.Bot, error) {
 
 	botConfig, ok := h.cfg[botID]
 	if !ok {
-		return nil, fmt.Errorf("bot config not found")
+		return nil, fmt.Errorf("bot config not found for bot_id %d", botID)
 	}
 
 	b, err := bot.New(botConfig.Token)
 	if err != nil {
-		return nil, fmt.Errorf("create bot: %v", err)
+		return nil, fmt.Errorf("create bot for bot_id %d: %w", botID, err)
 	}
 
 	h.bots[botID] = b
 	return b, nil
 }
 
-func (h *Handler) Handel(ctx context.Context, botID int64) error {
+func (h *Handler) Handle(ctx context.Context, botID int64) error {
 	chatIDs, err := h.db.GetSubscribers(ctx, botID)
 	if err != nil {
-		logReminder("Handel.getSubscribers", "db GetSubscribers failed", log.Err(err), log.BotID(botID))
+		logReminder("Handle.getSubscribers", "db GetSubscribers failed", log.Err(err), log.BotID(botID))
 		return domain.ErrInternal
 	}
 
@@ -90,13 +95,13 @@ func (h *Handler) Handel(ctx context.Context, botID int64) error {
 
 	chats, err := h.db.GetChatsByIDs(ctx, botID, chatIDs)
 	if err != nil {
-		logReminder("Handel.getChatsByIDs", "db GetChatsByIDs failed", log.Err(err), log.BotID(botID))
+		logReminder("Handle.getChatsByIDs", "db GetChatsByIDs failed", log.Err(err), log.BotID(botID))
 		return domain.ErrInternal
 	}
 
 	b, err := h.getBot(botID)
 	if err != nil {
-		logReminder("Handel.getBot", "failed to get telegram bot client", log.Err(err), log.BotID(botID))
+		logReminder("Handle.getBot", "failed to get telegram bot client", log.Err(err), log.BotID(botID))
 		return domain.ErrInternal
 	}
 
@@ -106,7 +111,7 @@ func (h *Handler) Handel(ctx context.Context, botID int64) error {
 	date := time.Date(y, m, d, 0, 0, 0, 0, now.Location())
 	prayerDay, err := h.db.GetPrayerDay(ctx, botID, date)
 	if err != nil {
-		logReminder("Handel.getPrayerDay", "db GetPrayerDay failed", log.Err(err), log.BotID(botID))
+		logReminder("Handle.getPrayerDay", "db GetPrayerDay failed", log.Err(err), log.BotID(botID))
 		return domain.ErrInternal
 	}
 
@@ -121,6 +126,7 @@ func (h *Handler) Handel(ctx context.Context, botID int64) error {
 	}
 
 	errG := &errgroup.Group{}
+	errG.SetLimit(maxConcurrentReminderSends)
 	for _, chat := range chats {
 		chat := chat
 		errG.Go(func() error {
@@ -140,7 +146,7 @@ func (h *Handler) Handel(ctx context.Context, botID int64) error {
 						h.deleteChat(ctx, chat)
 						return nil
 					}
-					logReminder("Handel.sendReminder", "telegram send failed",
+					logReminder("Handle.sendReminder", "telegram send failed",
 						log.Err(err),
 						log.BotID(chat.BotID),
 						log.ChatID(chat.ChatID),
@@ -151,7 +157,7 @@ func (h *Handler) Handel(ctx context.Context, botID int64) error {
 
 				err = h.db.UpdateReminder(ctx, chat.BotID, chat.ChatID, reminder.Name(), messageID, now)
 				if err != nil {
-					logReminder("Handel.updateReminderState", "db UpdateReminder failed",
+					logReminder("Handle.updateReminderState", "db UpdateReminder failed",
 						log.Err(err),
 						log.BotID(chat.BotID),
 						log.ChatID(chat.ChatID),

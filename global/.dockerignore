@@ -1,0 +1,7 @@
+.git
+.terraform
+infra
+docs
+README.md
+Makefile
+*.tfstate*

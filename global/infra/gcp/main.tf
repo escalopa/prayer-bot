@@ -1,6 +1,7 @@
 locals {
   environment_code         = var.environment == "production" ? "prod" : "test"
   name                     = "global-prayer-${local.environment_code}"
+  database_schema          = "global_bot_${var.environment}"
   telegram_token_secret_id = var.telegram_token_secret_id != "" ? var.telegram_token_secret_id : "global-prayer-bot-token-${var.environment}"
   webhook_secret_secret_id = var.webhook_secret_secret_id != "" ? var.webhook_secret_secret_id : "global-prayer-bot-webhook-secret-${var.environment}"
   owner_id_secret_id       = var.owner_id_secret_id != "" ? var.owner_id_secret_id : "global-prayer-bot-owner-id-${var.environment}"
@@ -260,6 +261,10 @@ resource "google_cloud_run_v2_service" "webhook" {
         }
       }
       env {
+        name  = "GLOBAL_DB_SCHEMA"
+        value = local.database_schema
+      }
+      env {
         name = "GLOBAL_BOT_TOKEN"
         value_source {
           secret_key_ref {
@@ -337,6 +342,10 @@ resource "google_cloud_run_v2_service" "dispatch" {
         }
       }
       env {
+        name  = "GLOBAL_DB_SCHEMA"
+        value = local.database_schema
+      }
+      env {
         name  = "GCP_PROJECT_ID"
         value = var.project_id
       }
@@ -394,6 +403,10 @@ resource "google_cloud_run_v2_service" "sender" {
             version = "latest"
           }
         }
+      }
+      env {
+        name  = "GLOBAL_DB_SCHEMA"
+        value = local.database_schema
       }
       env {
         name = "GLOBAL_BOT_TOKEN"

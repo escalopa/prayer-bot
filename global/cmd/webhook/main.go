@@ -27,7 +27,7 @@ func main() {
 		logger.Error("configuration error", "error", err)
 		os.Exit(1)
 	}
-	storage, err := store.Open(context.Background(), cfg.DatabaseURL)
+	storage, err := store.Open(context.Background(), cfg.DatabaseURL, cfg.DatabaseSchema)
 	if err != nil {
 		logger.Error("database connection failed")
 		os.Exit(1)

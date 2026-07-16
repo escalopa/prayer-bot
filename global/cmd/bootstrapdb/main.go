@@ -6,7 +6,10 @@ import (
 	"os"
 	"strings"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/escalopa/prayer-bot/global/internal/database"
 )
 
 func main() {
@@ -14,13 +17,22 @@ func main() {
 	if databaseURL == "" {
 		fatal("DATABASE_URL is required")
 	}
-	pool, err := pgxpool.New(context.Background(), databaseURL)
+	databaseSchema := strings.TrimSpace(os.Getenv("GLOBAL_DB_SCHEMA"))
+	if err := database.ValidateSchema(databaseSchema); err != nil {
+		fatal("GLOBAL_DB_SCHEMA must select the testing or production global schema")
+	}
+	poolConfig, err := pgxpool.ParseConfig(databaseURL)
+	if err != nil {
+		fatal("database connection setup failed")
+	}
+	pool, err := pgxpool.NewWithConfig(context.Background(), poolConfig)
 	if err != nil {
 		fatal("database connection setup failed")
 	}
 	defer pool.Close()
-	if _, err := pool.Exec(context.Background(), `CREATE SCHEMA IF NOT EXISTS global_bot`); err != nil {
-		fatal("global_bot schema bootstrap failed")
+	query := fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s", pgx.Identifier{databaseSchema}.Sanitize())
+	if _, err := pool.Exec(context.Background(), query); err != nil {
+		fatal("global database schema bootstrap failed")
 	}
 }
 

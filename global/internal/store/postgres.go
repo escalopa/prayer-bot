@@ -5,21 +5,37 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/escalopa/prayer-bot/global/internal/database"
 	"github.com/escalopa/prayer-bot/global/internal/domain"
 )
 
 type Store struct {
-	pool *pgxpool.Pool
+	pool *schemaPool
+}
+
+type schemaPool struct {
+	pool   *pgxpool.Pool
+	schema string
+}
+
+type schemaTx struct {
+	pgx.Tx
+	schema string
 }
 
 func IsNotFound(err error) bool { return errors.Is(err, pgx.ErrNoRows) }
 
-func Open(ctx context.Context, databaseURL string) (*Store, error) {
+func Open(ctx context.Context, databaseURL, databaseSchema string) (*Store, error) {
+	if err := database.ValidateSchema(databaseSchema); err != nil {
+		return nil, fmt.Errorf("validate postgres schema: %w", err)
+	}
 	pool, err := pgxpool.New(ctx, databaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("open postgres: %w", err)
@@ -28,7 +44,46 @@ func Open(ctx context.Context, databaseURL string) (*Store, error) {
 		pool.Close()
 		return nil, fmt.Errorf("ping postgres: %w", err)
 	}
-	return &Store{pool: pool}, nil
+	return &Store{pool: &schemaPool{pool: pool, schema: databaseSchema}}, nil
+}
+
+func (p *schemaPool) Close() { p.pool.Close() }
+
+func (p *schemaPool) Exec(ctx context.Context, query string, args ...any) (pgconn.CommandTag, error) {
+	return p.pool.Exec(ctx, qualifySQL(query, p.schema), args...)
+}
+
+func (p *schemaPool) Query(ctx context.Context, query string, args ...any) (pgx.Rows, error) {
+	return p.pool.Query(ctx, qualifySQL(query, p.schema), args...)
+}
+
+func (p *schemaPool) QueryRow(ctx context.Context, query string, args ...any) pgx.Row {
+	return p.pool.QueryRow(ctx, qualifySQL(query, p.schema), args...)
+}
+
+func (p *schemaPool) Begin(ctx context.Context) (*schemaTx, error) {
+	tx, err := p.pool.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &schemaTx{Tx: tx, schema: p.schema}, nil
+}
+
+func (tx *schemaTx) Exec(ctx context.Context, query string, args ...any) (pgconn.CommandTag, error) {
+	return tx.Tx.Exec(ctx, qualifySQL(query, tx.schema), args...)
+}
+
+func (tx *schemaTx) Query(ctx context.Context, query string, args ...any) (pgx.Rows, error) {
+	return tx.Tx.Query(ctx, qualifySQL(query, tx.schema), args...)
+}
+
+func (tx *schemaTx) QueryRow(ctx context.Context, query string, args ...any) pgx.Row {
+	return tx.Tx.QueryRow(ctx, qualifySQL(query, tx.schema), args...)
+}
+
+func qualifySQL(query, schema string) string {
+	qualifiedSchema := pgx.Identifier{schema}.Sanitize()
+	return strings.ReplaceAll(query, "global_bot.", qualifiedSchema+".")
 }
 
 func (s *Store) Close() { s.pool.Close() }

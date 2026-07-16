@@ -26,7 +26,7 @@ variable "image" {
 variable "supabase_db_url" {
   type        = string
   sensitive   = true
-  description = "Existing Supabase/PostgreSQL connection URL. Data is isolated in the global_bot schema."
+  description = "Existing Supabase/PostgreSQL connection URL. Data is isolated in an environment-specific global_bot schema."
 }
 
 variable "telegram_token_secret_id" {

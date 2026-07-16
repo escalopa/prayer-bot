@@ -3,7 +3,7 @@
 ```mermaid
 flowchart LR
     T[Telegram] -->|secret-protected webhook| W[Cloud Run webhook]
-    W -->|profile and rules| P[(Existing PostgreSQL\nglobal_bot schema)]
+    W -->|profile and rules| P[(Existing PostgreSQL\nenvironment-specific global schema)]
     W -->|location changes only| G[Google Time Zone and Geocoding]
     C[Cloud Scheduler] -->|OIDC| D[Cloud Run dispatch]
     D -->|claim due schedules and outbox| P
@@ -15,7 +15,7 @@ flowchart LR
 
 ## Data ownership
 
-The legacy `public.chats` and `public.prayers` tables remain untouched. All global data is owned by `global_bot`, foreign keys cascade from `global_bot.chats`, and `/delete_me` deletes the chat root.
+The legacy `public.chats` and `public.prayers` tables remain untouched. Global testing data is owned by `global_bot_testing`, production data is owned by `global_bot_production`, foreign keys cascade from each schema's `chats` table, and `/delete_me` deletes the chat root.
 
 Raw coordinates exist only in the webhook request while resolving the timezone and approximate place. Persistence rounds them to three decimals. The reverse-geocoded city is displayed in the immediate reply but is not stored; only Google's Place ID is retained. A future user-entered label can be stored because it is user-provided content.
 

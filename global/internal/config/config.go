@@ -6,11 +6,14 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/escalopa/prayer-bot/global/internal/database"
 )
 
 type Config struct {
 	Port                     string
 	DatabaseURL              string
+	DatabaseSchema           string
 	TelegramToken            string
 	WebhookSecret            string
 	OwnerID                  int64
@@ -28,6 +31,7 @@ func Load(service string) (Config, error) {
 	cfg := Config{
 		Port:                     envOr("PORT", "8080"),
 		DatabaseURL:              strings.TrimSpace(os.Getenv("DATABASE_URL")),
+		DatabaseSchema:           strings.TrimSpace(os.Getenv("GLOBAL_DB_SCHEMA")),
 		TelegramToken:            strings.TrimSpace(os.Getenv("GLOBAL_BOT_TOKEN")),
 		WebhookSecret:            strings.TrimSpace(os.Getenv("GLOBAL_WEBHOOK_SECRET")),
 		GoogleMapsAPIKey:         strings.TrimSpace(os.Getenv("GOOGLE_MAPS_API_KEY")),
@@ -50,19 +54,19 @@ func Load(service string) (Config, error) {
 
 	switch service {
 	case "webhook":
-		if cfg.DatabaseURL == "" || cfg.TelegramToken == "" || cfg.WebhookSecret == "" || cfg.GoogleMapsAPIKey == "" || cfg.OwnerID == 0 {
-			return Config{}, fmt.Errorf("webhook requires DATABASE_URL, GLOBAL_BOT_TOKEN, GLOBAL_WEBHOOK_SECRET, GLOBAL_OWNER_ID, and GOOGLE_MAPS_API_KEY")
+		if cfg.DatabaseURL == "" || cfg.DatabaseSchema == "" || cfg.TelegramToken == "" || cfg.WebhookSecret == "" || cfg.GoogleMapsAPIKey == "" || cfg.OwnerID == 0 {
+			return Config{}, fmt.Errorf("webhook requires DATABASE_URL, GLOBAL_DB_SCHEMA, GLOBAL_BOT_TOKEN, GLOBAL_WEBHOOK_SECRET, GLOBAL_OWNER_ID, and GOOGLE_MAPS_API_KEY")
 		}
 		if !validWebhookSecret(cfg.WebhookSecret) {
 			return Config{}, fmt.Errorf("GLOBAL_WEBHOOK_SECRET must be 1-256 characters using only letters, numbers, underscore, or hyphen")
 		}
 	case "dispatch":
-		if cfg.DatabaseURL == "" || cfg.GCPProjectID == "" || cfg.SenderURL == "" || cfg.TaskCallerServiceAccount == "" {
-			return Config{}, fmt.Errorf("dispatch requires DATABASE_URL, GCP_PROJECT_ID, GLOBAL_SENDER_URL, and TASK_CALLER_SERVICE_ACCOUNT")
+		if cfg.DatabaseURL == "" || cfg.DatabaseSchema == "" || cfg.GCPProjectID == "" || cfg.SenderURL == "" || cfg.TaskCallerServiceAccount == "" {
+			return Config{}, fmt.Errorf("dispatch requires DATABASE_URL, GLOBAL_DB_SCHEMA, GCP_PROJECT_ID, GLOBAL_SENDER_URL, and TASK_CALLER_SERVICE_ACCOUNT")
 		}
 	case "send":
-		if cfg.DatabaseURL == "" || cfg.TelegramToken == "" {
-			return Config{}, fmt.Errorf("send requires DATABASE_URL and GLOBAL_BOT_TOKEN")
+		if cfg.DatabaseURL == "" || cfg.DatabaseSchema == "" || cfg.TelegramToken == "" {
+			return Config{}, fmt.Errorf("send requires DATABASE_URL, GLOBAL_DB_SCHEMA, and GLOBAL_BOT_TOKEN")
 		}
 	case "botprofile":
 		if cfg.TelegramToken == "" || cfg.WebhookSecret == "" {
@@ -73,6 +77,11 @@ func Load(service string) (Config, error) {
 		}
 	default:
 		return Config{}, fmt.Errorf("unknown service %q", service)
+	}
+	if cfg.DatabaseSchema != "" {
+		if err := database.ValidateSchema(cfg.DatabaseSchema); err != nil {
+			return Config{}, fmt.Errorf("GLOBAL_DB_SCHEMA: %w", err)
+		}
 	}
 	return cfg, nil
 }

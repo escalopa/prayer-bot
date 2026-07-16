@@ -17,7 +17,7 @@ Cloud Run secret references use `latest`; a new revision is still recommended af
 
 ## Database recovery
 
-Run Goose with `GOOSE_TABLE=global_bot.goose_db_version`. Never run global migrations with the legacy default migration table. The initial down migration drops only the `global_bot` schema, but production rollback should normally use a forward corrective migration rather than dropping user data.
+Set `GLOBAL_DB_SCHEMA` to `global_bot_testing` or `global_bot_production`, then run Goose with `-table="${GLOBAL_DB_SCHEMA}.goose_db_version"`. Never run global migrations with the legacy default migration table. The initial down migration drops only the selected global schema, but production rollback should normally use a forward corrective migration rather than dropping user data.
 
 ## Maps failure mode
 

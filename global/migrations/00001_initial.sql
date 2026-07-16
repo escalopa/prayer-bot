@@ -1,7 +1,8 @@
 -- +goose Up
-CREATE SCHEMA IF NOT EXISTS global_bot;
+-- +goose ENVSUB ON
+CREATE SCHEMA IF NOT EXISTS ${GLOBAL_DB_SCHEMA};
 
-CREATE TABLE global_bot.chats (
+CREATE TABLE ${GLOBAL_DB_SCHEMA}.chats (
     telegram_chat_id BIGINT PRIMARY KEY,
     chat_type TEXT NOT NULL CHECK (chat_type IN ('private', 'group', 'supergroup')),
     language_code TEXT NOT NULL DEFAULT 'en',
@@ -10,8 +11,8 @@ CREATE TABLE global_bot.chats (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE global_bot.prayer_profiles (
-    chat_id BIGINT PRIMARY KEY REFERENCES global_bot.chats(telegram_chat_id) ON DELETE CASCADE,
+CREATE TABLE ${GLOBAL_DB_SCHEMA}.prayer_profiles (
+    chat_id BIGINT PRIMARY KEY REFERENCES ${GLOBAL_DB_SCHEMA}.chats(telegram_chat_id) ON DELETE CASCADE,
     latitude NUMERIC(6, 3) NOT NULL CHECK (latitude BETWEEN -90 AND 90),
     longitude NUMERIC(7, 3) NOT NULL CHECK (longitude BETWEEN -180 AND 180),
     timezone_id TEXT NOT NULL,
@@ -26,9 +27,9 @@ CREATE TABLE global_bot.prayer_profiles (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE global_bot.reminder_rules (
+CREATE TABLE ${GLOBAL_DB_SCHEMA}.reminder_rules (
     id BIGSERIAL PRIMARY KEY,
-    chat_id BIGINT NOT NULL REFERENCES global_bot.chats(telegram_chat_id) ON DELETE CASCADE,
+    chat_id BIGINT NOT NULL REFERENCES ${GLOBAL_DB_SCHEMA}.chats(telegram_chat_id) ON DELETE CASCADE,
     kind TEXT NOT NULL CHECK (kind IN ('before', 'at', 'tomorrow')),
     prayer TEXT NOT NULL CHECK (prayer IN ('fajr', 'sunrise', 'dhuhr', 'asr', 'maghrib', 'isha')),
     offset_minutes INTEGER NOT NULL DEFAULT 0 CHECK (offset_minutes BETWEEN 0 AND 180),
@@ -39,10 +40,10 @@ CREATE TABLE global_bot.reminder_rules (
     UNIQUE (chat_id, kind, prayer, offset_minutes)
 );
 
-CREATE TABLE global_bot.reminder_schedules (
+CREATE TABLE ${GLOBAL_DB_SCHEMA}.reminder_schedules (
     id BIGSERIAL PRIMARY KEY,
-    rule_id BIGINT NOT NULL UNIQUE REFERENCES global_bot.reminder_rules(id) ON DELETE CASCADE,
-    chat_id BIGINT NOT NULL REFERENCES global_bot.chats(telegram_chat_id) ON DELETE CASCADE,
+    rule_id BIGINT NOT NULL UNIQUE REFERENCES ${GLOBAL_DB_SCHEMA}.reminder_rules(id) ON DELETE CASCADE,
+    chat_id BIGINT NOT NULL REFERENCES ${GLOBAL_DB_SCHEMA}.chats(telegram_chat_id) ON DELETE CASCADE,
     profile_version BIGINT NOT NULL,
     local_date DATE NOT NULL,
     prayer_at TIMESTAMPTZ NOT NULL,
@@ -52,12 +53,12 @@ CREATE TABLE global_bot.reminder_schedules (
 );
 
 CREATE INDEX reminder_schedules_due_idx
-    ON global_bot.reminder_schedules (next_run_at, id)
+    ON ${GLOBAL_DB_SCHEMA}.reminder_schedules (next_run_at, id)
     WHERE state = 'pending';
 
-CREATE TABLE global_bot.notification_deliveries (
+CREATE TABLE ${GLOBAL_DB_SCHEMA}.notification_deliveries (
     delivery_key TEXT PRIMARY KEY,
-    schedule_id BIGINT NOT NULL REFERENCES global_bot.reminder_schedules(id) ON DELETE CASCADE,
+    schedule_id BIGINT NOT NULL REFERENCES ${GLOBAL_DB_SCHEMA}.reminder_schedules(id) ON DELETE CASCADE,
     status TEXT NOT NULL CHECK (status IN ('processing', 'sent', 'failed', 'stale')),
     attempts INTEGER NOT NULL DEFAULT 1,
     lease_until TIMESTAMPTZ,
@@ -67,18 +68,18 @@ CREATE TABLE global_bot.notification_deliveries (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE global_bot.task_outbox (
+CREATE TABLE ${GLOBAL_DB_SCHEMA}.task_outbox (
     id BIGSERIAL PRIMARY KEY,
-    schedule_id BIGINT NOT NULL REFERENCES global_bot.reminder_schedules(id) ON DELETE CASCADE,
+    schedule_id BIGINT NOT NULL REFERENCES ${GLOBAL_DB_SCHEMA}.reminder_schedules(id) ON DELETE CASCADE,
     delivery_key TEXT NOT NULL UNIQUE,
     payload JSONB NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE INDEX task_outbox_pending_idx
-    ON global_bot.task_outbox (id);
+    ON ${GLOBAL_DB_SCHEMA}.task_outbox (id);
 
-CREATE TABLE global_bot.processed_updates (
+CREATE TABLE ${GLOBAL_DB_SCHEMA}.processed_updates (
     update_id BIGINT PRIMARY KEY,
     status TEXT NOT NULL CHECK (status IN ('processing', 'completed', 'failed')),
     attempts INTEGER NOT NULL DEFAULT 1,
@@ -89,12 +90,13 @@ CREATE TABLE global_bot.processed_updates (
 );
 
 CREATE INDEX processed_updates_retention_idx
-    ON global_bot.processed_updates (updated_at)
+    ON ${GLOBAL_DB_SCHEMA}.processed_updates (updated_at)
     WHERE status IN ('completed', 'failed');
 
 CREATE INDEX notification_deliveries_retention_idx
-    ON global_bot.notification_deliveries (updated_at)
+    ON ${GLOBAL_DB_SCHEMA}.notification_deliveries (updated_at)
     WHERE status IN ('sent', 'failed', 'stale');
 
 -- +goose Down
-DROP SCHEMA IF EXISTS global_bot CASCADE;
+DROP SCHEMA IF EXISTS ${GLOBAL_DB_SCHEMA} CASCADE;
+-- +goose ENVSUB OFF

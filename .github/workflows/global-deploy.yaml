@@ -112,10 +112,10 @@ jobs:
       - name: Migrate isolated PostgreSQL schema
         env:
           DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
-          GOOSE_TABLE: global_bot.goose_db_version
+          GLOBAL_DB_SCHEMA: global_bot_${{ inputs.environment }}
         run: |
           (cd global && go run ./cmd/bootstrapdb)
-          /tmp/goose -dir global/migrations postgres "$DATABASE_URL" up
+          /tmp/goose -dir global/migrations -table="${GLOBAL_DB_SCHEMA}.goose_db_version" postgres "$DATABASE_URL" up
 
       - name: Apply global infrastructure
         working-directory: global/infra/gcp

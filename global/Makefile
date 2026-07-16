@@ -12,8 +12,10 @@ build:
 	go build ./cmd/...
 
 migrate-up:
-	go run ./cmd/bootstrapdb
-	GOOSE_TABLE=global_bot.goose_db_version goose -dir migrations postgres "$(DATABASE_URL)" up
+	test -n "$(GLOBAL_DB_SCHEMA)"
+	GLOBAL_DB_SCHEMA="$(GLOBAL_DB_SCHEMA)" go run ./cmd/bootstrapdb
+	GLOBAL_DB_SCHEMA="$(GLOBAL_DB_SCHEMA)" goose -dir migrations -table="$(GLOBAL_DB_SCHEMA).goose_db_version" postgres "$(DATABASE_URL)" up
 
 migrate-down:
-	GOOSE_TABLE=global_bot.goose_db_version goose -dir migrations postgres "$(DATABASE_URL)" down
+	test -n "$(GLOBAL_DB_SCHEMA)"
+	GLOBAL_DB_SCHEMA="$(GLOBAL_DB_SCHEMA)" goose -dir migrations -table="$(GLOBAL_DB_SCHEMA).goose_db_version" postgres "$(DATABASE_URL)" down

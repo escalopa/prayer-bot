@@ -1,0 +1,46 @@
+name: Global bot CI
+
+on:
+  pull_request:
+    paths:
+      - 'global/**'
+      - '.github/workflows/global-*.yaml'
+  push:
+    branches: [main]
+    paths:
+      - 'global/**'
+      - '.github/workflows/global-*.yaml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: global
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.x'
+          cache-dependency-path: global/go.sum
+      - run: gofmt -d cmd internal | tee /tmp/gofmt.diff && test ! -s /tmp/gofmt.diff
+      - run: go vet ./...
+      - run: go test -race ./...
+      - run: docker build -t global-prayer-bot:test .
+
+  terraform:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: global/infra/gcp
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.13.3'
+      - run: terraform fmt -check -recursive
+      - run: terraform init -backend=false
+      - run: terraform validate

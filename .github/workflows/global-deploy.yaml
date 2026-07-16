@@ -1,0 +1,139 @@
+name: Deploy global prayer bot
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        required: true
+        type: choice
+        options: [testing, production]
+
+concurrency:
+  group: global-prayer-bot-${{ inputs.environment }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GCP_REGION: europe-west1
+  GCP_TFSTATE_BUCKET: ${{ secrets.GCP_TFSTATE_BUCKET }}
+  TF_VAR_project_id: ${{ secrets.GCP_PROJECT_ID }}
+  TF_VAR_region: europe-west1
+  TF_VAR_environment: ${{ inputs.environment }}
+  TF_VAR_supabase_db_url: ${{ secrets.SUPABASE_DB_URL }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.x'
+          cache-dependency-path: global/go.sum
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.13.3'
+
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Test global module
+        working-directory: global
+        run: go test ./...
+
+      - name: Initialize isolated Terraform state
+        working-directory: global/infra/gcp
+        run: |
+          terraform init \
+            -backend-config="bucket=${GCP_TFSTATE_BUCKET}" \
+            -backend-config="prefix=prayer-bot/global-${{ inputs.environment }}"
+
+      - name: Bootstrap APIs and image repository
+        working-directory: global/infra/gcp
+        env:
+          TF_VAR_image: bootstrap-image-not-used
+        run: |
+          terraform apply -auto-approve \
+            -target=google_project_service.required \
+            -target=google_artifact_registry_repository.global
+
+      - name: Sync environment-specific bot secrets to Secret Manager
+        env:
+          GLOBAL_BOT_TOKEN: ${{ secrets.GLOBAL_BOT_TOKEN }}
+          GLOBAL_WEBHOOK_SECRET: ${{ secrets.GLOBAL_WEBHOOK_SECRET }}
+          GLOBAL_OWNER_ID: ${{ secrets.GLOBAL_OWNER_ID }}
+        run: |
+          sync_secret() {
+            local secret_name="$1"
+            local secret_value="$2"
+            if [[ -z "$secret_value" ]]; then
+              echo "Missing required secret: $secret_name" >&2
+              exit 1
+            fi
+            if ! gcloud secrets describe "$secret_name" --project="$GCP_PROJECT_ID" >/dev/null 2>&1; then
+              gcloud secrets create "$secret_name" --replication-policy=automatic --project="$GCP_PROJECT_ID"
+            fi
+            local current_value=""
+            if current_value="$(gcloud secrets versions access latest --secret="$secret_name" --project="$GCP_PROJECT_ID" 2>/dev/null)" && [[ "$current_value" == "$secret_value" ]]; then
+              return
+            fi
+            printf '%s' "$secret_value" | gcloud secrets versions add "$secret_name" --data-file=- --project="$GCP_PROJECT_ID"
+          }
+
+          sync_secret "global-prayer-bot-token-${{ inputs.environment }}" "$GLOBAL_BOT_TOKEN"
+          sync_secret "global-prayer-bot-webhook-secret-${{ inputs.environment }}" "$GLOBAL_WEBHOOK_SECRET"
+          sync_secret "global-prayer-bot-owner-id-${{ inputs.environment }}" "$GLOBAL_OWNER_ID"
+
+      - name: Build and push immutable image
+        id: image
+        working-directory: global
+        run: |
+          gcloud auth configure-docker "${GCP_REGION}-docker.pkg.dev" --quiet
+          IMAGE="${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/global-prayer-bot/global-prayer:${GITHUB_SHA}"
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+          echo "uri=$IMAGE" >> "$GITHUB_OUTPUT"
+
+      - name: Install Goose
+        run: |
+          curl -fsSL "https://github.com/pressly/goose/releases/download/v3.27.1/goose_linux_x86_64" -o /tmp/goose
+          chmod +x /tmp/goose
+
+      - name: Migrate isolated PostgreSQL schema
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+          GOOSE_TABLE: global_bot.goose_db_version
+        run: |
+          (cd global && go run ./cmd/bootstrapdb)
+          /tmp/goose -dir global/migrations postgres "$DATABASE_URL" up
+
+      - name: Apply global infrastructure
+        working-directory: global/infra/gcp
+        env:
+          TF_VAR_image: ${{ steps.image.outputs.uri }}
+        run: terraform apply -auto-approve
+
+      - name: Configure Telegram webhook and commands
+        working-directory: global
+        run: |
+          export GLOBAL_BOT_TOKEN="$(gcloud secrets versions access latest --secret=global-prayer-bot-token-${{ inputs.environment }} --project="$GCP_PROJECT_ID")"
+          export GLOBAL_WEBHOOK_SECRET="$(gcloud secrets versions access latest --secret=global-prayer-bot-webhook-secret-${{ inputs.environment }} --project="$GCP_PROJECT_ID")"
+          export WEBHOOK_URL="$(terraform -chdir=infra/gcp output -raw webhook_url)"
+          go run ./cmd/botprofile
+
+      - name: Show deployment endpoints
+        working-directory: global/infra/gcp
+        run: |
+          echo "### Global prayer bot" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Webhook: $(terraform output -raw webhook_url)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Sender: $(terraform output -raw sender_url)" >> "$GITHUB_STEP_SUMMARY"

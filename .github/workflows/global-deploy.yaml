@@ -28,7 +28,7 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
+    environment: ${{ inputs.environment == 'testing' && 'dev' || 'prod' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -99,7 +99,8 @@ jobs:
         working-directory: global
         run: |
           gcloud auth configure-docker "${GCP_REGION}-docker.pkg.dev" --quiet
-          IMAGE="${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/global-prayer-bot/global-prayer:${GITHUB_SHA}"
+          REPOSITORY="$(terraform -chdir=infra/gcp output -raw artifact_registry_repository)"
+          IMAGE="${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${REPOSITORY}/global-prayer:${GITHUB_SHA}"
           docker build -t "$IMAGE" .
           docker push "$IMAGE"
           echo "uri=$IMAGE" >> "$GITHUB_OUTPUT"
@@ -111,7 +112,7 @@ jobs:
 
       - name: Migrate isolated PostgreSQL schema
         env:
-          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_DIRECT_URL }}
           GLOBAL_DB_SCHEMA: global_bot_${{ inputs.environment }}
         run: |
           (cd global && go run ./cmd/bootstrapdb)

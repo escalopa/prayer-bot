@@ -35,7 +35,7 @@ resource "google_project_service" "required" {
 
 resource "google_artifact_registry_repository" "global" {
   location      = var.region
-  repository_id = "global-prayer-bot"
+  repository_id = "global-prayer-bot-${local.environment_code}"
   description   = "Container images for the isolated global prayer bot"
   format        = "DOCKER"
   labels        = local.labels

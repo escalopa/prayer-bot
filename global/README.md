@@ -26,28 +26,29 @@ The three services use one immutable image and select `/webhook`, `/dispatch`, o
 
 ## Testing and production secrets
 
-The repository must have two GitHub environments named `testing` and `production`. Both environments use the same secret names, while GitHub supplies the value belonging to the selected environment:
+The global workflow reuses the existing GitHub environments: logical `testing` deployments read secrets from `dev`, and logical `production` deployments read secrets from `prod`. No duplicate infrastructure environments or credentials are required.
 
-| Secret | Testing value | Production value |
+| Secret | `dev` value for testing | `prod` value for production |
 | --- | --- | --- |
 | `GLOBAL_BOT_TOKEN` | Testing Telegram bot token | Production Telegram bot token |
 | `GLOBAL_WEBHOOK_SECRET` | Testing webhook secret | Production webhook secret |
 | `GLOBAL_OWNER_ID` | Testing owner ID | Production owner ID |
-| `GCP_PROJECT_ID` | Existing testing GCP project | Existing production GCP project |
-| `GCP_SA_KEY` | Testing deployment credentials | Production deployment credentials |
-| `GCP_TFSTATE_BUCKET` | Existing testing state bucket | Existing production state bucket |
+| `GCP_PROJECT_ID` | Existing dev value | Existing prod value |
+| `GCP_SA_KEY` | Existing dev value | Existing prod value |
+| `GCP_TFSTATE_BUCKET` | Existing dev value | Existing prod value |
 | `SUPABASE_DB_URL` | Existing database URL | Existing database URL |
+| `SUPABASE_DB_DIRECT_URL` | Existing direct database URL | Existing direct database URL |
 
-Add the three new values separately in both GitHub environments, for example:
+Only the three global-bot values are new; add them to the existing environments:
 
 ```sh
-gh secret set GLOBAL_BOT_TOKEN --env testing
-gh secret set GLOBAL_WEBHOOK_SECRET --env testing
-gh secret set GLOBAL_OWNER_ID --env testing
+gh secret set GLOBAL_BOT_TOKEN --env dev
+gh secret set GLOBAL_WEBHOOK_SECRET --env dev
+gh secret set GLOBAL_OWNER_ID --env dev
 
-gh secret set GLOBAL_BOT_TOKEN --env production
-gh secret set GLOBAL_WEBHOOK_SECRET --env production
-gh secret set GLOBAL_OWNER_ID --env production
+gh secret set GLOBAL_BOT_TOKEN --env prod
+gh secret set GLOBAL_WEBHOOK_SECRET --env prod
+gh secret set GLOBAL_OWNER_ID --env prod
 ```
 
 The webhook secret must be 1-256 characters and contain only letters, numbers, `_`, or `-`. During deployment, the workflow copies the selected values into environment-specific Secret Manager secrets such as `global-prayer-bot-token-testing` and `global-prayer-bot-token-production`; values are never shared between environments. Testing and production may reuse the same database URL because their tables and migration history live in separate schemas. The global workflow never uses the legacy `APP_CONFIG`.
@@ -70,7 +71,7 @@ terraform -chdir=infra/gcp init -backend=false
 terraform -chdir=infra/gcp validate
 ```
 
-For migrations, use the existing database connection but the global migration table:
+For migrations, use the existing direct database connection but the global migration table:
 
 ```sh
 export GLOBAL_DB_SCHEMA=global_bot_testing
@@ -84,4 +85,4 @@ The bootstrap command only creates the selected empty global schema. `GLOBAL_DB_
 
 Run the separate **Deploy global prayer bot** GitHub workflow and choose `testing` or `production`. It uses a distinct state prefix (`prayer-bot/global-testing` or `prayer-bot/global-production`), migrates the matching `global_bot_testing` or `global_bot_production` schema, builds the global image, provisions the global resources, and then configures the selected Telegram webhook.
 
-The workflow is intentionally manual until the new token, secrets, API quotas, privacy text, and prayer-time samples are approved in `testing`.
+The workflow is intentionally manual until the new token, secrets, API quotas, privacy text, and prayer-time samples are approved through the logical `testing` deployment.

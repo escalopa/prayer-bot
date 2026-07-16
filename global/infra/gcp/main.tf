@@ -248,7 +248,8 @@ resource "google_cloud_run_v2_service" "webhook" {
       command = ["/webhook"]
 
       resources {
-        limits = { cpu = "1", memory = "256Mi" }
+        limits   = { cpu = "1", memory = "256Mi" }
+        cpu_idle = true
       }
 
       env {
@@ -329,7 +330,8 @@ resource "google_cloud_run_v2_service" "dispatch" {
       command = ["/dispatch"]
 
       resources {
-        limits = { cpu = "1", memory = "256Mi" }
+        limits   = { cpu = "1", memory = "256Mi" }
+        cpu_idle = true
       }
 
       env {
@@ -392,7 +394,8 @@ resource "google_cloud_run_v2_service" "sender" {
       command = ["/send"]
 
       resources {
-        limits = { cpu = "1", memory = "256Mi" }
+        limits   = { cpu = "1", memory = "256Mi" }
+        cpu_idle = true
       }
 
       env {

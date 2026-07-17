@@ -88,6 +88,10 @@ func reminderText(rule domain.ReminderRule, schedule domain.ReminderSchedule, pr
 	name := locale.Prayer(rule.Prayer)
 	timeText := schedule.PrayerAt.In(mustLocation(profile.Timezone)).Format("15:04")
 	switch rule.Kind {
+	case domain.ReminderWeeklyFasting:
+		return locale.Message("reminder_fasting")
+	case domain.ReminderWeeklyKahf:
+		return locale.Message("reminder_kahf")
 	case domain.ReminderBefore:
 		return fmt.Sprintf(locale.Message("reminder_before"), name, rule.OffsetMinutes, timeText)
 	case domain.ReminderTomorrow:

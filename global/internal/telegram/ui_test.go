@@ -43,9 +43,21 @@ func TestFormatScheduleUsesLocalizedNamesAndHTMLTimes(t *testing.T) {
 	}}
 	profile := domain.PrayerProfile{Timezone: "Africa/Cairo", Method: domain.MethodEgyptian}
 	text := formatSchedule("مواقيت صلاة اليوم", schedule, profile, i18n.Resolve("ar"))
-	for _, expected := range []string{"<b>مواقيت صلاة اليوم</b>", "17 يوليو 2026", "الفجر", "<code>04:12</code>", "الظهر", "Africa/Cairo"} {
+	for _, expected := range []string{"<b>مواقيت صلاة اليوم</b>", "17 يوليو 2026", "هـ", "أم القرى", "الفجر", "<code>04:12</code>", "الظهر", "Africa/Cairo"} {
 		if !strings.Contains(text, expected) {
 			t.Errorf("formatted schedule missing %q:\n%s", expected, text)
+		}
+	}
+}
+
+func TestHijriKeyboardOffersSafeRegionalCorrections(t *testing.T) {
+	keyboard := hijriKeyboard(1, i18n.Resolve("en"))
+	if len(keyboard.InlineKeyboard) != 2 || len(keyboard.InlineKeyboard[0]) != 5 {
+		t.Fatalf("unexpected Hijri keyboard shape: %+v", keyboard.InlineKeyboard)
+	}
+	for _, button := range keyboard.InlineKeyboard[0] {
+		if !strings.HasPrefix(button.CallbackData, "hijri:") {
+			t.Errorf("unexpected Hijri callback %q", button.CallbackData)
 		}
 	}
 }

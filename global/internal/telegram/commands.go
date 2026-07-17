@@ -10,6 +10,7 @@ import (
 	"github.com/go-telegram/bot/models"
 
 	"github.com/escalopa/prayer-bot/global/internal/domain"
+	"github.com/escalopa/prayer-bot/global/internal/hijri"
 	"github.com/escalopa/prayer-bot/global/internal/i18n"
 	"github.com/escalopa/prayer-bot/global/internal/location"
 	"github.com/escalopa/prayer-bot/global/internal/store"
@@ -40,6 +41,7 @@ func (h *Handler) handleLocation(ctx context.Context, message *models.Message, l
 		profile.Madhab = current.Madhab
 		profile.HighLatitudeRule = current.HighLatitudeRule
 		profile.Adjustments = current.Adjustments
+		profile.HijriAdjustment = current.HijriAdjustment
 		profile.LocationLabel = current.LocationLabel
 	} else if !store.IsNotFound(err) {
 		return fmt.Errorf("load current profile: %w", err)
@@ -198,11 +200,11 @@ func (h *Handler) sendReminders(ctx context.Context, chatID int64, locale i18n.L
 	if _, ok, err := h.profileOrPrompt(ctx, chatID, locale); err != nil || !ok {
 		return err
 	}
-	rules, err := h.store.EnabledRules(ctx, chatID)
+	state, err := h.loadReminderState(ctx, chatID)
 	if err != nil {
 		return err
 	}
-	return h.send(ctx, chatID, formatReminders(len(rules) > 0, locale), remindersKeyboard(len(rules) > 0, locale))
+	return h.send(ctx, chatID, formatReminders(state, locale), remindersKeyboard(state, locale))
 }
 
 func (h *Handler) setReminders(ctx context.Context, chatID int64, argument string, locale i18n.Locale) error {
@@ -217,12 +219,12 @@ func (h *Handler) setReminders(ctx context.Context, chatID int64, argument strin
 		if err := h.planner.RebuildChat(ctx, chatID, h.now()); err != nil {
 			return err
 		}
-		return h.send(ctx, chatID, locale.Message("reminders_enabled"), remindersKeyboard(true, locale))
+		return h.sendReminders(ctx, chatID, locale)
 	case "off":
 		if err := h.store.DisableRules(ctx, chatID); err != nil {
 			return err
 		}
-		return h.send(ctx, chatID, locale.Message("reminders_disabled"), remindersKeyboard(false, locale))
+		return h.sendReminders(ctx, chatID, locale)
 	default:
 		return h.sendReminders(ctx, chatID, locale)
 	}
@@ -264,7 +266,12 @@ func (h *Handler) updateProfile(ctx context.Context, chatID int64, locale i18n.L
 
 func formatSchedule(heading string, schedule domain.DaySchedule, profile domain.PrayerProfile, locale i18n.Locale) string {
 	var builder strings.Builder
-	fmt.Fprintf(&builder, "<b>%s</b> 🕌\n%s\n", escape(heading), localizedDate(schedule.Date, locale))
+	fmt.Fprintf(&builder, "<b>%s</b> 🕌\n📅 %s", escape(heading), localizedDate(schedule.Date, locale))
+	if hijriDate, err := hijri.FromGregorian(schedule.Date, profile.HijriAdjustment); err == nil {
+		fmt.Fprintf(&builder, "\n🌙 %d %s %d %s <i>(%s)</i>", hijriDate.Day,
+			escape(locale.HijriMonth(hijriDate.Month)), hijriDate.Year, escape(locale.Message("hijri_era")), escape(locale.Message("hijri_note")))
+	}
+	builder.WriteString("\n")
 	for _, prayer := range allPrayers() {
 		if at, ok := schedule.At(prayer); ok {
 			fmt.Fprintf(&builder, "\n%s %s  <code>%s</code>", prayerEmoji(prayer), escape(locale.Prayer(prayer)), at.Format("15:04"))
@@ -275,12 +282,13 @@ func formatSchedule(heading string, schedule domain.DaySchedule, profile domain.
 }
 
 func formatSettings(profile domain.PrayerProfile, locale i18n.Locale) string {
-	return fmt.Sprintf("%s\n\n🌍 <b>%s:</b> %s\n🧭 <b>%s:</b> %s\n🕌 <b>%s:</b> %s\n🌙 <b>%s:</b> %s\n⏱ <b>%s:</b> %s",
+	return fmt.Sprintf("%s\n\n🌍 <b>%s:</b> %s\n🧭 <b>%s:</b> %s\n🕌 <b>%s:</b> %s\n🌙 <b>%s:</b> %s\n⏱ <b>%s:</b> %s\n🌙 <b>%s:</b> %s",
 		locale.Message("settings_title"), escape(locale.Message("timezone")), escape(profile.Timezone),
 		escape(locale.Message("method")), escape(locale.Method(profile.Method)),
 		escape(locale.Message("madhab")), escape(locale.Madhab(profile.Madhab)),
 		escape(locale.Message("highlat")), escape(locale.HighLatitudeRule(profile.HighLatitudeRule)),
 		escape(locale.Message("adjustments")), formatAdjustmentSummary(profile.Adjustments, locale),
+		escape(locale.Message("hijri_date")), fmt.Sprintf(locale.Message("hijri_setting"), profile.HijriAdjustment),
 	)
 }
 
@@ -292,12 +300,42 @@ func formatAdjustmentSummary(adjustments domain.Adjustments, locale i18n.Locale)
 	return strings.Join(parts, " · ")
 }
 
-func formatReminders(enabled bool, locale i18n.Locale) string {
-	status := locale.Message("reminders_off")
-	if enabled {
-		status = locale.Message("reminders_on")
+type reminderState struct {
+	Prayer  bool
+	Fasting bool
+	Kahf    bool
+}
+
+func (h *Handler) loadReminderState(ctx context.Context, chatID int64) (reminderState, error) {
+	rules, err := h.store.EnabledRules(ctx, chatID)
+	if err != nil {
+		return reminderState{}, err
 	}
-	return locale.Message("reminders_title") + "\n\n" + status
+	var state reminderState
+	for _, rule := range rules {
+		switch rule.Kind {
+		case domain.ReminderWeeklyFasting:
+			state.Fasting = true
+		case domain.ReminderWeeklyKahf:
+			state.Kahf = true
+		default:
+			state.Prayer = true
+		}
+	}
+	return state, nil
+}
+
+func formatReminders(state reminderState, locale i18n.Locale) string {
+	status := func(enabled bool) string {
+		if enabled {
+			return "✅ " + escape(locale.Message("enabled"))
+		}
+		return "○ " + escape(locale.Message("disabled"))
+	}
+	return fmt.Sprintf("%s\n\n🔔 <b>%s</b> · %s\n\n🌙 <b>%s</b> · %s\n   %s\n\n📖 <b>%s</b> · %s\n   %s",
+		locale.Message("reminders_title"), escape(locale.Button("prayer_reminders")), status(state.Prayer),
+		escape(locale.Button("fasting_reminders")), status(state.Fasting), escape(locale.Message("fasting_schedule")),
+		escape(locale.Button("kahf_reminders")), status(state.Kahf), escape(locale.Message("kahf_schedule")))
 }
 
 func localizedDate(date time.Time, locale i18n.Locale) string {

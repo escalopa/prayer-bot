@@ -37,6 +37,7 @@ type Locale struct {
 	Madhabs          map[domain.Madhab]string
 	HighLatitude     map[domain.HighLatitudeRule]string
 	Months           []string
+	HijriMonths      []string
 }
 
 func (l Locale) Button(action string) string { return l.Buttons[action] }
@@ -79,6 +80,16 @@ func (l Locale) HighLatitudeRule(rule domain.HighLatitudeRule) string {
 func (l Locale) Month(number int) string {
 	if number >= 1 && number <= len(l.Months) {
 		return l.Months[number-1]
+	}
+	return ""
+}
+
+func (l Locale) HijriMonth(number int) string {
+	if number >= 1 && number <= len(l.HijriMonths) {
+		return l.HijriMonths[number-1]
+	}
+	if number >= 1 && number <= len(locales["en"].HijriMonths) {
+		return locales["en"].HijriMonths[number-1]
 	}
 	return ""
 }

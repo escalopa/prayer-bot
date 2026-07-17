@@ -33,6 +33,7 @@ func TestLocalizedFormatStringsAcceptExpectedArguments(t *testing.T) {
 		"reminder_at":       {"Fajr"},
 		"reminder_before":   {"Fajr", 10, "04:15"},
 		"reminder_tomorrow": {"Fajr", "04:15"},
+		"hijri_setting":     {1},
 	}
 	for _, locale := range Supported() {
 		for key, arguments := range samples {
@@ -46,7 +47,8 @@ func TestLocalizedFormatStringsAcceptExpectedArguments(t *testing.T) {
 
 func TestLocalesAreCompleteAndWithinTelegramLimits(t *testing.T) {
 	buttonKeys := append(append([]string{}, mainActions...),
-		"share_location", "method", "madhab", "highlat", "adjustments", "back", "close", "enable", "disable", "main_menu")
+		"share_location", "method", "madhab", "highlat", "adjustments", "hijri", "back", "close", "enable", "disable", "main_menu",
+		"prayer_reminders", "fasting_reminders", "kahf_reminders")
 	textKeys := []string{
 		"welcome", "location_prompt", "location_group", "location_set", "invalid_location", "need_location",
 		"today_title", "tomorrow_title", "next_prayer", "settings_title", "timezone", "method", "madhab",
@@ -54,7 +56,8 @@ func TestLocalesAreCompleteAndWithinTelegramLimits(t *testing.T) {
 		"adjust_prayer", "method_saved", "madhab_saved", "highlat_saved", "adjust_saved", "reminders_title",
 		"reminders_on", "reminders_off", "reminders_enabled", "reminders_disabled", "choose_language",
 		"language_saved", "admin_only", "unknown", "deleted", "help", "privacy", "reminder_at",
-		"reminder_before", "reminder_tomorrow",
+		"reminder_before", "reminder_tomorrow", "enabled", "disabled", "fasting_schedule", "kahf_schedule",
+		"hijri_date", "hijri_era", "hijri_setting", "hijri_note", "choose_hijri", "reminder_fasting", "reminder_kahf",
 	}
 	commandKeys := []string{"location", "today", "tomorrow", "next", "settings", "remind", "language", "privacy", "help"}
 	prayers := []domain.Prayer{domain.PrayerFajr, domain.PrayerSunrise, domain.PrayerDhuhr, domain.PrayerAsr, domain.PrayerMaghrib, domain.PrayerIsha}
@@ -76,6 +79,9 @@ func TestLocalesAreCompleteAndWithinTelegramLimits(t *testing.T) {
 		}
 		if len(locale.Months) != 12 {
 			t.Errorf("%s has %d months", locale.Code, len(locale.Months))
+		}
+		if len(locale.HijriMonths) != 12 {
+			t.Errorf("%s has %d Hijri months", locale.Code, len(locale.HijriMonths))
 		}
 		for _, key := range buttonKeys {
 			if locale.Button(key) == "" {

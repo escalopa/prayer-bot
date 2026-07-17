@@ -25,6 +25,8 @@ The welcome illustration is embedded in the webhook binary and sent with the loc
 
 Set `GLOBAL_DB_SCHEMA` to `global_bot_testing` or `global_bot_production`, then run Goose with `-table="${GLOBAL_DB_SCHEMA}.goose_db_version"`. Never run global migrations with the legacy default migration table. The initial down migration drops only the selected global schema, but production rollback should normally use a forward corrective migration rather than dropping user data.
 
+Migration `00002` adds the per-chat Hijri correction and the two weekly reminder kinds. The normal global deployment runs it before the new webhook and sender revisions are applied, so old revisions never see reminder kinds they do not understand.
+
 ## Maps failure mode
 
 Existing profiles and prayer calculations continue working if Google Maps is unavailable. Only new location setup or a location change fails, and Telegram retries the webhook after a server error. No Maps API is called for `/today`, `/tomorrow`, `/next`, or reminder delivery.

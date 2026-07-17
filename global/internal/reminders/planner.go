@@ -52,6 +52,9 @@ func (p *Planner) Next(ctx context.Context, profile domain.PrayerProfile, rule d
 	if err != nil {
 		return domain.ReminderSchedule{}, err
 	}
+	if rule.Kind.Weekly() {
+		return nextWeekly(profile, rule, after, location)
+	}
 	localAfter := after.In(location)
 	for dayOffset := 0; dayOffset < 8; dayOffset++ {
 		date := localAfter.AddDate(0, 0, dayOffset)
@@ -87,6 +90,47 @@ func (p *Planner) Next(ctx context.Context, profile domain.PrayerProfile, rule d
 		}, nil
 	}
 	return domain.ReminderSchedule{}, fmt.Errorf("no valid occurrence found in the next eight days")
+}
+
+func nextWeekly(profile domain.PrayerProfile, rule domain.ReminderRule, after time.Time, location *time.Location) (domain.ReminderSchedule, error) {
+	hour, minute, err := parseLocalTime(rule.LocalTime)
+	if err != nil {
+		return domain.ReminderSchedule{}, err
+	}
+	localAfter := after.In(location)
+	for dayOffset := 0; dayOffset < 15; dayOffset++ {
+		candidate := localAfter.AddDate(0, 0, dayOffset)
+		target := time.Date(candidate.Year(), candidate.Month(), candidate.Day(), 0, 0, 0, 0, location)
+		var nextRun time.Time
+		switch rule.Kind {
+		case domain.ReminderWeeklyFasting:
+			if target.Weekday() != time.Monday && target.Weekday() != time.Thursday {
+				continue
+			}
+			previous := target.AddDate(0, 0, -1)
+			nextRun = time.Date(previous.Year(), previous.Month(), previous.Day(), hour, minute, 0, 0, location)
+		case domain.ReminderWeeklyKahf:
+			if target.Weekday() != time.Friday {
+				continue
+			}
+			nextRun = time.Date(target.Year(), target.Month(), target.Day(), hour, minute, 0, 0, location)
+		default:
+			return domain.ReminderSchedule{}, fmt.Errorf("unsupported weekly reminder kind %q", rule.Kind)
+		}
+		if !nextRun.After(after) {
+			continue
+		}
+		prayerAt := target
+		if rule.Kind == domain.ReminderWeeklyKahf {
+			prayerAt = nextRun
+		}
+		return domain.ReminderSchedule{
+			RuleID: rule.ID, ChatID: rule.ChatID, ProfileVersion: profile.Version,
+			LocalDate: target.Format("2006-01-02"), PrayerAt: prayerAt,
+			NextRunAt: nextRun.UTC(), State: "pending",
+		}, nil
+	}
+	return domain.ReminderSchedule{}, fmt.Errorf("no valid weekly occurrence found in the next fifteen days")
 }
 
 func parseLocalTime(value string) (int, int, error) {

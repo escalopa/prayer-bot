@@ -28,6 +28,7 @@ func settingsKeyboard(locale i18n.Locale) *models.InlineKeyboardMarkup {
 		[]models.InlineKeyboardButton{callbackButton(locale.Button("madhab"), "settings:madhab")},
 		[]models.InlineKeyboardButton{callbackButton(locale.Button("highlat"), "settings:highlat")},
 		[]models.InlineKeyboardButton{callbackButton(locale.Button("adjustments"), "settings:adjustments")},
+		[]models.InlineKeyboardButton{callbackButton(locale.Button("hijri"), "settings:hijri")},
 		[]models.InlineKeyboardButton{callbackButton(locale.Button("close"), "close")},
 	)
 }
@@ -98,13 +99,30 @@ func adjustmentDetailKeyboard(prayer domain.Prayer, locale i18n.Locale) *models.
 	)
 }
 
-func remindersKeyboard(enabled bool, locale i18n.Locale) *models.InlineKeyboardMarkup {
-	button := callbackButton(locale.Button("enable"), "reminders:on")
-	if enabled {
-		button = callbackButton(locale.Button("disable"), "reminders:off")
+func hijriKeyboard(current int, locale i18n.Locale) *models.InlineKeyboardMarkup {
+	row := make([]models.InlineKeyboardButton, 0, 5)
+	for value := -2; value <= 2; value++ {
+		label := fmt.Sprintf("%+d", value)
+		row = append(row, callbackButton(selectedLabel(label, value == current), fmt.Sprintf("hijri:%d", value)))
 	}
 	return inlineKeyboard(
-		[]models.InlineKeyboardButton{button},
+		row,
+		[]models.InlineKeyboardButton{callbackButton(locale.Button("back"), "settings")},
+	)
+}
+
+func remindersKeyboard(state reminderState, locale i18n.Locale) *models.InlineKeyboardMarkup {
+	toggle := func(label, kind string, enabled bool) models.InlineKeyboardButton {
+		action, prefix := "on", "○ "
+		if enabled {
+			action, prefix = "off", "✓ "
+		}
+		return callbackButton(prefix+label, "reminders:"+kind+":"+action)
+	}
+	return inlineKeyboard(
+		[]models.InlineKeyboardButton{toggle(locale.Button("prayer_reminders"), "prayer", state.Prayer)},
+		[]models.InlineKeyboardButton{toggle(locale.Button("fasting_reminders"), "fasting", state.Fasting)},
+		[]models.InlineKeyboardButton{toggle(locale.Button("kahf_reminders"), "kahf", state.Kahf)},
 		[]models.InlineKeyboardButton{callbackButton(locale.Button("close"), "close")},
 	)
 }

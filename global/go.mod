@@ -5,6 +5,7 @@ go 1.25.0
 require (
 	cloud.google.com/go/cloudtasks v1.13.6
 	github.com/go-telegram/bot v1.21.0
+	github.com/hablullah/go-hijri v1.0.2
 	github.com/hablullah/go-prayer v1.1.1
 	github.com/jackc/pgx/v5 v5.10.0
 	google.golang.org/grpc v1.71.1

@@ -62,7 +62,7 @@ func (h *Handler) handleCallback(ctx context.Context, query *models.CallbackQuer
 			return err
 		}
 		return h.edit(ctx, message.Chat.ID, message.ID, formatSettings(profile, locale), settingsKeyboard(locale))
-	case "settings:method", "settings:madhab", "settings:highlat", "settings:adjustments":
+	case "settings:method", "settings:madhab", "settings:highlat", "settings:adjustments", "settings:hijri":
 		profile, ok, err := h.profileOrPrompt(ctx, message.Chat.ID, locale)
 		if err != nil || !ok {
 			return err
@@ -74,6 +74,8 @@ func (h *Handler) handleCallback(ctx context.Context, query *models.CallbackQuer
 			return h.edit(ctx, message.Chat.ID, message.ID, locale.Message("choose_madhab"), madhabKeyboard(profile.Madhab, locale))
 		case "settings:highlat":
 			return h.edit(ctx, message.Chat.ID, message.ID, locale.Message("choose_highlat"), highLatitudeKeyboard(profile.HighLatitudeRule, locale))
+		case "settings:hijri":
+			return h.edit(ctx, message.Chat.ID, message.ID, locale.Message("choose_hijri"), hijriKeyboard(profile.HijriAdjustment, locale))
 		default:
 			return h.edit(ctx, message.Chat.ID, message.ID, locale.Message("choose_adjustment"), adjustmentKeyboard(profile, locale))
 		}
@@ -127,25 +129,69 @@ func (h *Handler) handleCallback(ctx context.Context, query *models.CallbackQuer
 		), adjustmentDetailKeyboard(prayer, locale))
 	case strings.HasPrefix(query.Data, "adjust_delta:"), strings.HasPrefix(query.Data, "adjust_set:"):
 		return h.handleAdjustmentCallback(ctx, message, query.Data, locale)
-	case query.Data == "reminders:on":
-		if _, ok, err := h.profileOrPrompt(ctx, message.Chat.ID, locale); err != nil || !ok {
+	case strings.HasPrefix(query.Data, "hijri:"):
+		adjustment, err := strconv.Atoi(strings.TrimPrefix(query.Data, "hijri:"))
+		if err != nil || adjustment < -2 || adjustment > 2 {
+			return nil
+		}
+		profile, ok, err := h.updateProfile(ctx, message.Chat.ID, locale, func(profile *domain.PrayerProfile) {
+			profile.HijriAdjustment = adjustment
+		})
+		if err != nil || !ok {
 			return err
 		}
-		if err := h.store.EnableDefaultRules(ctx, message.Chat.ID); err != nil {
-			return err
-		}
-		if err := h.planner.RebuildChat(ctx, message.Chat.ID, h.now()); err != nil {
-			return err
-		}
-		return h.edit(ctx, message.Chat.ID, message.ID, formatReminders(true, locale), remindersKeyboard(true, locale))
-	case query.Data == "reminders:off":
-		if err := h.store.DisableRules(ctx, message.Chat.ID); err != nil {
-			return err
-		}
-		return h.edit(ctx, message.Chat.ID, message.ID, formatReminders(false, locale), remindersKeyboard(false, locale))
+		return h.edit(ctx, message.Chat.ID, message.ID, formatSettings(profile, locale), settingsKeyboard(locale))
+	case strings.HasPrefix(query.Data, "reminders:"):
+		return h.handleReminderCallback(ctx, message, query.Data, locale)
 	default:
 		return nil
 	}
+}
+
+func (h *Handler) handleReminderCallback(ctx context.Context, message *models.Message, data string, locale i18n.Locale) error {
+	parts := strings.Split(data, ":")
+	if len(parts) == 2 { // Backward-compatible buttons from the first UX build.
+		parts = []string{"reminders", "prayer", parts[1]}
+	}
+	if len(parts) != 3 || (parts[2] != "on" && parts[2] != "off") {
+		return nil
+	}
+	enabled := parts[2] == "on"
+	if enabled {
+		if _, ok, err := h.profileOrPrompt(ctx, message.Chat.ID, locale); err != nil || !ok {
+			return err
+		}
+	}
+	switch parts[1] {
+	case "prayer":
+		if enabled {
+			if err := h.store.EnableDefaultRules(ctx, message.Chat.ID); err != nil {
+				return err
+			}
+		} else if err := h.store.DisableRules(ctx, message.Chat.ID); err != nil {
+			return err
+		}
+	case "fasting":
+		if err := h.store.SetWeeklyRule(ctx, message.Chat.ID, domain.ReminderWeeklyFasting, enabled); err != nil {
+			return err
+		}
+	case "kahf":
+		if err := h.store.SetWeeklyRule(ctx, message.Chat.ID, domain.ReminderWeeklyKahf, enabled); err != nil {
+			return err
+		}
+	default:
+		return nil
+	}
+	if enabled {
+		if err := h.planner.RebuildChat(ctx, message.Chat.ID, h.now()); err != nil {
+			return err
+		}
+	}
+	state, err := h.loadReminderState(ctx, message.Chat.ID)
+	if err != nil {
+		return err
+	}
+	return h.edit(ctx, message.Chat.ID, message.ID, formatReminders(state, locale), remindersKeyboard(state, locale))
 }
 
 func (h *Handler) handleAdjustmentCallback(ctx context.Context, message *models.Message, data string, locale i18n.Locale) error {

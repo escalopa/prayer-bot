@@ -21,3 +21,12 @@ func TestReminderTextUsesSelectedLocale(t *testing.T) {
 		}
 	}
 }
+
+func TestWeeklyReminderTextUsesSelectedLocale(t *testing.T) {
+	profile := domain.PrayerProfile{Timezone: "UTC"}
+	locale := i18n.Resolve("tr")
+	text := reminderText(domain.ReminderRule{Kind: domain.ReminderWeeklyKahf}, domain.ReminderSchedule{}, profile, locale)
+	if !strings.Contains(text, "Kehf") || !strings.Contains(text, "Cuma") {
+		t.Fatalf("unexpected Turkish Al-Kahf reminder: %s", text)
+	}
+}

@@ -11,11 +11,15 @@ This directory is a separate application derived from the existing city bots. It
 - A persistent two-column Telegram menu for today, tomorrow, the next prayer, location, settings, reminders, language, and help.
 - Inline button pickers for calculation method, madhab, high-latitude rule, per-prayer adjustments, reminder state, and language. The equivalent typed commands remain available.
 - Localized interface, prayer names, dates, command menus, profile descriptions, and reminder deliveries in English, Arabic, Spanish, French, Russian, Turkish, Uzbek, and Tatar.
+- Gregorian and calculated Umm al-Qura Hijri dates on every daily schedule, with a per-chat moon-sighting correction from -2 to +2 days.
+- Opt-in weekly reminders for Monday/Thursday voluntary fasting (20:00 on the preceding evening) and reading Surah Al-Kahf on Friday (09:00), scheduled in the saved local timezone.
 - An embedded welcome illustration sent on `/start` and a generated bot avatar installed during profile synchronization.
 - Indexed reminder scheduling through Cloud Scheduler, an outbox, Cloud Tasks, a private sender service, leases, and delivery idempotency keys.
 - Dedicated `global_bot_testing` and `global_bot_production` PostgreSQL schemas, each with its own Goose migration table.
 
 The initial UI language follows the user's Telegram language when supported and otherwise falls back to English. A language selected inside the bot is persisted and is not overwritten by later Telegram updates.
+
+Hijri dates use the calculated Umm al-Qura calendar. Because official local moon-sighting dates can differ by a day or two, users can correct the displayed date under **Settings → Hijri date correction**. The correction is applied only to the Hijri display; it never shifts prayer calculations.
 
 ## Services
 

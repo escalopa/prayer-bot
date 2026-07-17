@@ -7,9 +7,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"image"
+	"image/jpeg"
 	"io"
+	"math/bits"
 	"mime/multipart"
 	"net/http"
+	"strings"
 	"time"
 
 	botapi "github.com/go-telegram/bot"
@@ -31,6 +35,8 @@ var startDescriptions = map[string]string{
 }
 
 var profileSyncDelay = 50 * time.Millisecond
+
+const profilePhotoHashTolerance = 16
 
 // Sync applies one stable Telegram-facing identity and removes old localized
 // profile variants. User-selected languages belong to chat data and must never
@@ -61,7 +67,18 @@ func Sync(ctx context.Context, client *botapi.Bot, token, miniAppURL string) err
 	if err != nil {
 		return fmt.Errorf("get bot profile photos: %w", err)
 	}
-	if photos.TotalCount == 0 {
+	photoMatches := false
+	if photos.TotalCount > 0 {
+		currentPhoto, err := downloadCurrentProfilePhoto(ctx, client, token, photos)
+		if err != nil {
+			return err
+		}
+		photoMatches, err = profilePhotosEqual(currentPhoto, assets.ProfilePhoto)
+		if err != nil {
+			return fmt.Errorf("compare bot profile photo: %w", err)
+		}
+	}
+	if !photoMatches {
 		if err := setProfilePhoto(ctx, token, assets.ProfilePhoto); err != nil {
 			return err
 		}
@@ -243,6 +260,88 @@ func commands(locale i18n.Locale) []models.BotCommand {
 		result = append(result, models.BotCommand{Command: command, Description: description})
 	}
 	return result
+}
+
+func downloadCurrentProfilePhoto(ctx context.Context, client *botapi.Bot, token string, photos *models.UserProfilePhotos) ([]byte, error) {
+	if len(photos.Photos) == 0 || len(photos.Photos[0]) == 0 {
+		return nil, fmt.Errorf("get bot profile photos returned no photo sizes")
+	}
+	largest := photos.Photos[0][0]
+	for _, candidate := range photos.Photos[0][1:] {
+		if candidate.Width*candidate.Height > largest.Width*largest.Height {
+			largest = candidate
+		}
+	}
+	file, err := client.GetFile(ctx, &botapi.GetFileParams{FileID: largest.FileID})
+	if err != nil {
+		return nil, fmt.Errorf("get bot profile photo file: %w", err)
+	}
+	if strings.TrimSpace(file.FilePath) == "" {
+		return nil, fmt.Errorf("get bot profile photo file returned an empty path")
+	}
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet,
+		"https://api.telegram.org/file/bot"+token+"/"+strings.TrimLeft(file.FilePath, "/"), nil)
+	if err != nil {
+		return nil, fmt.Errorf("create bot profile photo download: %w", err)
+	}
+	response, err := (&http.Client{Timeout: 30 * time.Second}).Do(request)
+	if err != nil {
+		return nil, fmt.Errorf("download bot profile photo: %w", err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("download bot profile photo returned HTTP %d", response.StatusCode)
+	}
+	data, err := io.ReadAll(io.LimitReader(response.Body, 10<<20))
+	if err != nil {
+		return nil, fmt.Errorf("read bot profile photo: %w", err)
+	}
+	return data, nil
+}
+
+func profilePhotosEqual(current, desired []byte) (bool, error) {
+	currentHash, err := profilePhotoHash(current)
+	if err != nil {
+		return false, fmt.Errorf("decode current photo: %w", err)
+	}
+	desiredHash, err := profilePhotoHash(desired)
+	if err != nil {
+		return false, fmt.Errorf("decode desired photo: %w", err)
+	}
+	return bits.OnesCount64(currentHash^desiredHash) <= profilePhotoHashTolerance, nil
+}
+
+// profilePhotoHash calculates a difference hash from normalized sample points.
+// Telegram may recompress an uploaded JPEG, so comparing source bytes would
+// incorrectly treat the same visible avatar as a change on every deployment.
+func profilePhotoHash(data []byte) (uint64, error) {
+	decoded, err := jpeg.Decode(bytes.NewReader(data))
+	if err != nil {
+		return 0, err
+	}
+	return differenceHash(decoded), nil
+}
+
+func differenceHash(source image.Image) uint64 {
+	bounds := source.Bounds()
+	var hash uint64
+	var bit uint
+	for y := 0; y < 8; y++ {
+		sampleY := bounds.Min.Y + (2*y+1)*bounds.Dy()/16
+		for x := 0; x < 8; x++ {
+			leftX := bounds.Min.X + (2*x+1)*bounds.Dx()/18
+			rightX := bounds.Min.X + (2*x+3)*bounds.Dx()/18
+			if grayscale(source.At(leftX, sampleY).RGBA()) > grayscale(source.At(rightX, sampleY).RGBA()) {
+				hash |= 1 << bit
+			}
+			bit++
+		}
+	}
+	return hash
+}
+
+func grayscale(red, green, blue, _ uint32) uint32 {
+	return (299*red + 587*green + 114*blue) / 1000
 }
 
 func setProfilePhoto(ctx context.Context, token string, photo []byte) error {

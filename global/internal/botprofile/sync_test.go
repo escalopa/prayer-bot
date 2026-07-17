@@ -1,15 +1,18 @@
 package botprofile
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"image/jpeg"
 	"testing"
 	"unicode/utf8"
 
 	botapi "github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
 
+	"github.com/escalopa/prayer-bot/global/internal/assets"
 	"github.com/escalopa/prayer-bot/global/internal/i18n"
 )
 
@@ -134,6 +137,32 @@ func TestRateLimitRetryAfterRecognizesWrappedTelegramError(t *testing.T) {
 	}
 	if _, ok := RateLimitRetryAfter(fmt.Errorf("unauthorized")); ok {
 		t.Fatal("non-rate-limit error was classified as rate limited")
+	}
+}
+
+func TestProfilePhotoComparisonAllowsJPEGRecompression(t *testing.T) {
+	decoded, err := jpeg.Decode(bytes.NewReader(assets.ProfilePhoto))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var recompressed bytes.Buffer
+	if err := jpeg.Encode(&recompressed, decoded, &jpeg.Options{Quality: 65}); err != nil {
+		t.Fatal(err)
+	}
+	equal, err := profilePhotosEqual(recompressed.Bytes(), assets.ProfilePhoto)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !equal {
+		t.Fatal("JPEG recompression should not trigger another profile photo upload")
+	}
+
+	equal, err = profilePhotosEqual(assets.WelcomePhoto, assets.ProfilePhoto)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if equal {
+		t.Fatal("visually different images should trigger a profile photo update")
 	}
 }
 

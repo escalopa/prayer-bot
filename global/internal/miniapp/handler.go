@@ -73,6 +73,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	})
 	mux.HandleFunc("POST /api/miniapp/bootstrap", h.api(h.bootstrap))
 	mux.HandleFunc("PUT /api/miniapp/location", h.api(h.updateLocation))
+	mux.HandleFunc("PUT /api/miniapp/preferences", h.api(h.updatePreferences))
 	mux.HandleFunc("PUT /api/miniapp/settings", h.api(h.updateSettings))
 	mux.HandleFunc("PUT /api/miniapp/reminders", h.api(h.updateReminders))
 }
@@ -185,17 +186,9 @@ func (h *Handler) updateSettings(w http.ResponseWriter, r *http.Request, identit
 	if err := decodeJSON(w, r, &request); err != nil {
 		return badRequest("invalid_request")
 	}
-	locale, ok := supportedLocale(request.Language)
-	if !ok || !request.Method.Valid() || !request.Madhab.Valid() {
-		return badRequest("invalid_settings")
-	}
-	highLatitude := domain.HighLatitudeRule(request.HighLatitudeRule)
-	if !highLatitude.Valid() || request.HijriAdjustment < -2 || request.HijriAdjustment > 2 {
-		return badRequest("invalid_settings")
-	}
-	adjustments, err := parseAdjustments(request.Adjustments)
+	validated, err := validateSettings(request)
 	if err != nil {
-		return badRequest("invalid_adjustments")
+		return err
 	}
 	profile, err := h.store.Profile(r.Context(), identity.UserID)
 	if store.IsNotFound(err) {
@@ -206,10 +199,10 @@ func (h *Handler) updateSettings(w http.ResponseWriter, r *http.Request, identit
 	}
 	profile.Method = request.Method
 	profile.Madhab = request.Madhab
-	profile.HighLatitudeRule = highLatitude
+	profile.HighLatitudeRule = validated.highLatitude
 	profile.HijriAdjustment = request.HijriAdjustment
-	profile.Adjustments = adjustments
-	if err := h.store.SetLanguage(r.Context(), identity.UserID, locale.Code); err != nil {
+	profile.Adjustments = validated.adjustments
+	if err := h.store.SetLanguage(r.Context(), identity.UserID, validated.locale.Code); err != nil {
 		return fmt.Errorf("save language: %w", err)
 	}
 	if _, err := h.store.UpsertProfile(r.Context(), profile); err != nil {
@@ -218,7 +211,7 @@ func (h *Handler) updateSettings(w http.ResponseWriter, r *http.Request, identit
 	if err := h.planner.RebuildChat(r.Context(), identity.UserID, h.now()); err != nil {
 		return fmt.Errorf("rebuild reminders: %w", err)
 	}
-	data, err := h.build(r.Context(), Identity{UserID: identity.UserID, FirstName: identity.FirstName, LanguageCode: locale.Code})
+	data, err := h.build(r.Context(), Identity{UserID: identity.UserID, FirstName: identity.FirstName, LanguageCode: validated.locale.Code})
 	if err != nil {
 		return err
 	}
@@ -231,45 +224,101 @@ type remindersRequest struct {
 	Kahf    *bool `json:"kahf"`
 }
 
+type preferencesRequest struct {
+	Settings  settingsRequest  `json:"settings"`
+	Reminders remindersRequest `json:"reminders"`
+}
+
+type validatedSettings struct {
+	locale       i18n.Locale
+	highLatitude domain.HighLatitudeRule
+	adjustments  domain.Adjustments
+}
+
+func validateSettings(request settingsRequest) (validatedSettings, error) {
+	locale, ok := supportedLocale(request.Language)
+	highLatitude := domain.HighLatitudeRule(request.HighLatitudeRule)
+	if !ok || !request.Method.Valid() || !request.Madhab.Valid() || !highLatitude.Valid() ||
+		request.HijriAdjustment < -2 || request.HijriAdjustment > 2 {
+		return validatedSettings{}, badRequest("invalid_settings")
+	}
+	adjustments, err := parseAdjustments(request.Adjustments)
+	if err != nil {
+		return validatedSettings{}, badRequest("invalid_adjustments")
+	}
+	return validatedSettings{locale: locale, highLatitude: highLatitude, adjustments: adjustments}, nil
+}
+
+func validateReminders(request remindersRequest) error {
+	if request.Prayer == nil || request.Fasting == nil || request.Kahf == nil {
+		return badRequest("invalid_request")
+	}
+	return nil
+}
+
+func (h *Handler) updatePreferences(w http.ResponseWriter, r *http.Request, identity Identity) error {
+	var request preferencesRequest
+	if err := decodeJSON(w, r, &request); err != nil {
+		return badRequest("invalid_request")
+	}
+	validated, err := validateSettings(request.Settings)
+	if err != nil {
+		return err
+	}
+	if err := validateReminders(request.Reminders); err != nil {
+		return err
+	}
+	profile, err := h.store.Profile(r.Context(), identity.UserID)
+	if store.IsNotFound(err) {
+		return conflict("location_required")
+	}
+	if err != nil {
+		return fmt.Errorf("load profile: %w", err)
+	}
+	profile.Method = request.Settings.Method
+	profile.Madhab = request.Settings.Madhab
+	profile.HighLatitudeRule = validated.highLatitude
+	profile.HijriAdjustment = request.Settings.HijriAdjustment
+	profile.Adjustments = validated.adjustments
+	if err := h.store.SetLanguage(r.Context(), identity.UserID, validated.locale.Code); err != nil {
+		return fmt.Errorf("save language: %w", err)
+	}
+	if _, err := h.store.UpsertProfile(r.Context(), profile); err != nil {
+		return fmt.Errorf("save profile: %w", err)
+	}
+	if _, _, err := h.applyReminders(r.Context(), identity.UserID, request.Reminders); err != nil {
+		return err
+	}
+	if err := h.planner.RebuildChat(r.Context(), identity.UserID, h.now()); err != nil {
+		return fmt.Errorf("rebuild reminders: %w", err)
+	}
+	data, err := h.build(r.Context(), Identity{
+		UserID: identity.UserID, FirstName: identity.FirstName, LanguageCode: validated.locale.Code,
+	})
+	if err != nil {
+		return err
+	}
+	return writeJSON(w, data)
+}
+
 func (h *Handler) updateReminders(w http.ResponseWriter, r *http.Request, identity Identity) error {
 	var request remindersRequest
 	if err := decodeJSON(w, r, &request); err != nil {
 		return badRequest("invalid_request")
 	}
-	if request.Prayer == nil || request.Fasting == nil || request.Kahf == nil {
-		return badRequest("invalid_request")
+	if err := validateReminders(request); err != nil {
+		return err
 	}
 	if _, err := h.store.Profile(r.Context(), identity.UserID); store.IsNotFound(err) {
 		return conflict("location_required")
 	} else if err != nil {
 		return fmt.Errorf("load profile: %w", err)
 	}
-	current, err := h.reminderState(r.Context(), identity.UserID)
+	changed, desired, err := h.applyReminders(r.Context(), identity.UserID, request)
 	if err != nil {
 		return err
 	}
-	if current.Prayer != *request.Prayer {
-		if *request.Prayer {
-			err = h.store.EnableDefaultRules(r.Context(), identity.UserID)
-		} else {
-			err = h.store.DisableRules(r.Context(), identity.UserID)
-		}
-		if err != nil {
-			return fmt.Errorf("update prayer reminders: %w", err)
-		}
-	}
-	if current.Fasting != *request.Fasting {
-		if err := h.store.SetWeeklyRule(r.Context(), identity.UserID, domain.ReminderWeeklyFasting, *request.Fasting); err != nil {
-			return fmt.Errorf("update fasting reminders: %w", err)
-		}
-	}
-	if current.Kahf != *request.Kahf {
-		if err := h.store.SetWeeklyRule(r.Context(), identity.UserID, domain.ReminderWeeklyKahf, *request.Kahf); err != nil {
-			return fmt.Errorf("update Al-Kahf reminders: %w", err)
-		}
-	}
-	changed := current != (reminderResponse{Prayer: *request.Prayer, Fasting: *request.Fasting, Kahf: *request.Kahf})
-	if changed && (*request.Prayer || *request.Fasting || *request.Kahf) {
+	if changed && (desired.Prayer || desired.Fasting || desired.Kahf) {
 		if err := h.planner.RebuildChat(r.Context(), identity.UserID, h.now()); err != nil {
 			return fmt.Errorf("rebuild reminders: %w", err)
 		}
@@ -279,6 +328,35 @@ func (h *Handler) updateReminders(w http.ResponseWriter, r *http.Request, identi
 		return err
 	}
 	return writeJSON(w, data)
+}
+
+func (h *Handler) applyReminders(ctx context.Context, chatID int64, request remindersRequest) (bool, reminderResponse, error) {
+	current, err := h.reminderState(ctx, chatID)
+	if err != nil {
+		return false, reminderResponse{}, err
+	}
+	desired := reminderResponse{Prayer: *request.Prayer, Fasting: *request.Fasting, Kahf: *request.Kahf}
+	if current.Prayer != desired.Prayer {
+		if *request.Prayer {
+			err = h.store.EnableDefaultRules(ctx, chatID)
+		} else {
+			err = h.store.DisableRules(ctx, chatID)
+		}
+		if err != nil {
+			return false, reminderResponse{}, fmt.Errorf("update prayer reminders: %w", err)
+		}
+	}
+	if current.Fasting != desired.Fasting {
+		if err := h.store.SetWeeklyRule(ctx, chatID, domain.ReminderWeeklyFasting, desired.Fasting); err != nil {
+			return false, reminderResponse{}, fmt.Errorf("update fasting reminders: %w", err)
+		}
+	}
+	if current.Kahf != desired.Kahf {
+		if err := h.store.SetWeeklyRule(ctx, chatID, domain.ReminderWeeklyKahf, desired.Kahf); err != nil {
+			return false, reminderResponse{}, fmt.Errorf("update Al-Kahf reminders: %w", err)
+		}
+	}
+	return current != desired, desired, nil
 }
 
 type bootstrapResponse struct {

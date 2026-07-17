@@ -6,7 +6,7 @@
   <meta name="color-scheme" content="light dark">
   <title>Prayer Times</title>
   <link rel="stylesheet" href="./app.css">
-  <script src="https://telegram.org/js/telegram-web-app.js?59"></script>
+  <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
   <script src="./app.js" defer></script>
 </head>
 <body>
@@ -28,6 +28,7 @@
     <section id="standalone" class="state-card hidden">
       <div class="state-icon" aria-hidden="true">↗</div>
       <p id="standalone-text">Open this page from the bot inside Telegram.</p>
+      <button id="retry-app" class="primary-button state-action hidden" type="button">Try again</button>
     </section>
 
     <section id="location-gate" class="location-card hidden">
@@ -59,10 +60,7 @@
 
       <section class="panel">
         <div class="panel-heading">
-          <div>
-            <p class="section-kicker">🔔</p>
-            <h2 id="reminders-title">Reminders</h2>
-          </div>
+          <h2 id="reminders-title">Reminders</h2>
         </div>
         <label class="toggle-row">
           <span><strong id="prayer-reminders-label">Prayer times</strong></span>
@@ -83,10 +81,7 @@
 
       <section class="panel settings-panel">
         <div class="panel-heading">
-          <div>
-            <p class="section-kicker">⚙️</p>
-            <h2 id="settings-title">Settings</h2>
-          </div>
+          <h2 id="settings-title">Settings</h2>
           <button id="location-secondary" class="text-button" type="button">Update location</button>
         </div>
 
@@ -102,9 +97,11 @@
           <summary id="adjustments-label">Prayer adjustments</summary>
           <div id="adjustment-grid" class="adjustment-grid"></div>
         </details>
-
-        <button id="save-settings" class="primary-button" type="button">Save changes</button>
       </section>
+
+      <div id="save-bar" class="save-bar hidden">
+        <button id="save-preferences" class="primary-button" type="button">Save changes</button>
+      </div>
     </div>
   </main>
 

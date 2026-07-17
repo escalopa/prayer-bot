@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"image/jpeg"
+	"net/http"
 	"testing"
 	"unicode/utf8"
 
@@ -137,6 +138,17 @@ func TestRateLimitRetryAfterRecognizesWrappedTelegramError(t *testing.T) {
 	}
 	if _, ok := RateLimitRetryAfter(fmt.Errorf("unauthorized")); ok {
 		t.Fatal("non-rate-limit error was classified as rate limited")
+	}
+}
+
+func TestProfilePhotoRateLimitIsRecognized(t *testing.T) {
+	result := profilePhotoAPIResponse{Description: "Too Many Requests"}
+	result.Parameters.RetryAfter = 3600
+	err := profilePhotoResponseError(http.StatusTooManyRequests, result)
+
+	retryAfter, ok := RateLimitRetryAfter(err)
+	if !ok || retryAfter != 3600 {
+		t.Fatalf("RateLimitRetryAfter() = %d, %t", retryAfter, ok)
 	}
 }
 

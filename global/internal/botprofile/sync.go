@@ -38,6 +38,14 @@ var profileSyncDelay = 50 * time.Millisecond
 
 const profilePhotoHashTolerance = 16
 
+type profilePhotoAPIResponse struct {
+	OK          bool   `json:"ok"`
+	Description string `json:"description"`
+	Parameters  struct {
+		RetryAfter int `json:"retry_after"`
+	} `json:"parameters"`
+}
+
 // Sync applies one stable Telegram-facing identity and removes old localized
 // profile variants. User-selected languages belong to chat data and must never
 // mutate global bot metadata. The avatar is uploaded only when the bot does not
@@ -376,15 +384,22 @@ func setProfilePhoto(ctx context.Context, token string, photo []byte) error {
 	if err != nil {
 		return fmt.Errorf("read profile photo response: %w", err)
 	}
-	var result struct {
-		OK          bool   `json:"ok"`
-		Description string `json:"description"`
-	}
+	var result profilePhotoAPIResponse
 	if err := json.Unmarshal(data, &result); err != nil {
 		return fmt.Errorf("decode profile photo response (status %d): %w", response.StatusCode, err)
 	}
 	if response.StatusCode != http.StatusOK || !result.OK {
-		return fmt.Errorf("set bot profile photo failed (status %d): %s", response.StatusCode, result.Description)
+		return profilePhotoResponseError(response.StatusCode, result)
 	}
 	return nil
+}
+
+func profilePhotoResponseError(status int, result profilePhotoAPIResponse) error {
+	if status == http.StatusTooManyRequests {
+		return fmt.Errorf("set bot profile photo: %w", &botapi.TooManyRequestsError{
+			Message:    result.Description,
+			RetryAfter: result.Parameters.RetryAfter,
+		})
+	}
+	return fmt.Errorf("set bot profile photo failed (status %d): %s", status, result.Description)
 }

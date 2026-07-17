@@ -15,9 +15,17 @@ Useful alerts are Cloud Run 5xx rate, Cloud Tasks oldest task age, queue retry c
 
 Cloud Run secret references use `latest`; a new revision is still recommended after rotation so startup behavior is explicit and auditable.
 
+## Telegram profile synchronization
+
+The final deployment step runs `cmd/botprofile`. It registers both message and callback-query webhook updates, installs the default and localized command menus, names and descriptions, and uploads the embedded avatar when the bot has no profile photo. Re-running the deployment is safe; an existing avatar is left in place.
+
+The welcome illustration is embedded in the webhook binary and sent with the localized `/start` caption. Updating either JPEG requires a normal application deployment; updating an already configured avatar also requires removing the old photo in Telegram before rerunning profile synchronization.
+
 ## Database recovery
 
 Set `GLOBAL_DB_SCHEMA` to `global_bot_testing` or `global_bot_production`, then run Goose with `-table="${GLOBAL_DB_SCHEMA}.goose_db_version"`. Never run global migrations with the legacy default migration table. The initial down migration drops only the selected global schema, but production rollback should normally use a forward corrective migration rather than dropping user data.
+
+Migration `00002` adds the per-chat Hijri correction and the two weekly reminder kinds. The normal global deployment runs it before the new webhook and sender revisions are applied, so old revisions never see reminder kinds they do not understand.
 
 ## Maps failure mode
 

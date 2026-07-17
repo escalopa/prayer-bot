@@ -86,6 +86,7 @@ type PrayerProfile struct {
 	Madhab           Madhab
 	HighLatitudeRule HighLatitudeRule
 	Adjustments      Adjustments
+	HijriAdjustment  int
 	Version          int64
 	UpdatedAt        time.Time
 }
@@ -105,6 +106,9 @@ func (p PrayerProfile) Validate() error {
 	}
 	if !p.HighLatitudeRule.Valid() {
 		return fmt.Errorf("unsupported high-latitude rule %q", p.HighLatitudeRule)
+	}
+	if p.HijriAdjustment < -2 || p.HijriAdjustment > 2 {
+		return fmt.Errorf("hijri adjustment must be between -2 and 2")
 	}
 	_, err := time.LoadLocation(p.Timezone)
 	return err
@@ -150,10 +154,16 @@ func (s DaySchedule) At(prayer Prayer) (time.Time, bool) {
 type ReminderKind string
 
 const (
-	ReminderBefore   ReminderKind = "before"
-	ReminderAt       ReminderKind = "at"
-	ReminderTomorrow ReminderKind = "tomorrow"
+	ReminderBefore        ReminderKind = "before"
+	ReminderAt            ReminderKind = "at"
+	ReminderTomorrow      ReminderKind = "tomorrow"
+	ReminderWeeklyFasting ReminderKind = "weekly_fasting"
+	ReminderWeeklyKahf    ReminderKind = "weekly_kahf"
 )
+
+func (kind ReminderKind) Weekly() bool {
+	return kind == ReminderWeeklyFasting || kind == ReminderWeeklyKahf
+}
 
 type ReminderRule struct {
 	ID            int64

@@ -123,8 +123,25 @@ func (s *Store) UpsertChat(ctx context.Context, chat domain.Chat) error {
 		INSERT INTO global_bot.chats (telegram_chat_id, chat_type, language_code)
 		VALUES ($1, $2, $3)
 		ON CONFLICT (telegram_chat_id) DO UPDATE SET
-			chat_type = excluded.chat_type, language_code = excluded.language_code,
+			chat_type = excluded.chat_type,
 			blocked_at = NULL, updated_at = now()`, chat.TelegramChatID, chat.Type, chat.LanguageCode)
+	return err
+}
+
+func (s *Store) Chat(ctx context.Context, chatID int64) (domain.Chat, error) {
+	var chat domain.Chat
+	err := s.pool.QueryRow(ctx, `
+		SELECT telegram_chat_id, chat_type, language_code, blocked_at
+		FROM global_bot.chats WHERE telegram_chat_id = $1`, chatID).Scan(
+		&chat.TelegramChatID, &chat.Type, &chat.LanguageCode, &chat.BlockedAt,
+	)
+	return chat, err
+}
+
+func (s *Store) SetLanguage(ctx context.Context, chatID int64, languageCode string) error {
+	_, err := s.pool.Exec(ctx, `
+		UPDATE global_bot.chats SET language_code = $2, updated_at = now()
+		WHERE telegram_chat_id = $1`, chatID, languageCode)
 	return err
 }
 
@@ -158,11 +175,11 @@ func (s *Store) Profile(ctx context.Context, chatID int64) (domain.PrayerProfile
 	err := s.pool.QueryRow(ctx, `
 		SELECT chat_id, latitude::float8, longitude::float8, timezone_id,
 		       google_place_id, user_location_label, method, madhab,
-		       high_latitude_rule, adjustments, version, updated_at
+		       high_latitude_rule, adjustments, hijri_adjustment, version, updated_at
 		FROM global_bot.prayer_profiles WHERE chat_id = $1`, chatID).Scan(
 		&profile.ChatID, &profile.Latitude, &profile.Longitude, &profile.Timezone,
 		&profile.PlaceID, &profile.LocationLabel, &method, &madhab,
-		&highLatitude, &adjustments, &profile.Version, &profile.UpdatedAt,
+		&highLatitude, &adjustments, &profile.HijriAdjustment, &profile.Version, &profile.UpdatedAt,
 	)
 	if err != nil {
 		return domain.PrayerProfile{}, err
@@ -187,18 +204,18 @@ func (s *Store) UpsertProfile(ctx context.Context, profile domain.PrayerProfile)
 	err = s.pool.QueryRow(ctx, `
 		INSERT INTO global_bot.prayer_profiles
 			(chat_id, latitude, longitude, timezone_id, google_place_id, user_location_label,
-			 method, madhab, high_latitude_rule, adjustments)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+			 method, madhab, high_latitude_rule, adjustments, hijri_adjustment)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		ON CONFLICT (chat_id) DO UPDATE SET
 			latitude = excluded.latitude, longitude = excluded.longitude,
 			timezone_id = excluded.timezone_id, google_place_id = excluded.google_place_id,
 			user_location_label = excluded.user_location_label, method = excluded.method,
 			madhab = excluded.madhab, high_latitude_rule = excluded.high_latitude_rule,
-			adjustments = excluded.adjustments,
+			adjustments = excluded.adjustments, hijri_adjustment = excluded.hijri_adjustment,
 			version = global_bot.prayer_profiles.version + 1, updated_at = now()
 		RETURNING version, updated_at`, profile.ChatID, profile.Latitude, profile.Longitude,
 		profile.Timezone, profile.PlaceID, profile.LocationLabel, profile.Method,
-		profile.Madhab, profile.HighLatitudeRule, adjustments).Scan(&profile.Version, &profile.UpdatedAt)
+		profile.Madhab, profile.HighLatitudeRule, adjustments, profile.HijriAdjustment).Scan(&profile.Version, &profile.UpdatedAt)
 	if err != nil {
 		return domain.PrayerProfile{}, err
 	}
@@ -233,11 +250,50 @@ func (s *Store) DisableRules(ctx context.Context, chatID int64) error {
 		return err
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck
-	if _, err = tx.Exec(ctx, `UPDATE global_bot.reminder_rules SET enabled = false, updated_at = now() WHERE chat_id = $1`, chatID); err != nil {
+	if _, err = tx.Exec(ctx, `UPDATE global_bot.reminder_rules SET enabled = false, updated_at = now()
+		WHERE chat_id = $1 AND kind IN ('before', 'at', 'tomorrow')`, chatID); err != nil {
 		return err
 	}
-	if _, err = tx.Exec(ctx, `DELETE FROM global_bot.reminder_schedules WHERE chat_id = $1`, chatID); err != nil {
+	if _, err = tx.Exec(ctx, `DELETE FROM global_bot.reminder_schedules s
+		USING global_bot.reminder_rules r
+		WHERE s.rule_id = r.id AND r.chat_id = $1 AND r.kind IN ('before', 'at', 'tomorrow')`, chatID); err != nil {
 		return err
+	}
+	return tx.Commit(ctx)
+}
+
+func (s *Store) SetWeeklyRule(ctx context.Context, chatID int64, kind domain.ReminderKind, enabled bool) error {
+	if !kind.Weekly() {
+		return fmt.Errorf("unsupported weekly reminder kind %q", kind)
+	}
+	localTime := "20:00"
+	if kind == domain.ReminderWeeklyKahf {
+		localTime = "09:00"
+	}
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+	if enabled {
+		if _, err = tx.Exec(ctx, `
+			INSERT INTO global_bot.reminder_rules (chat_id, kind, prayer, local_time, enabled)
+			VALUES ($1, $2, 'fajr', $3, true)
+			ON CONFLICT (chat_id, kind, prayer, offset_minutes) DO UPDATE SET
+				local_time = excluded.local_time, enabled = true, updated_at = now()`,
+			chatID, kind, localTime); err != nil {
+			return err
+		}
+	} else {
+		if _, err = tx.Exec(ctx, `UPDATE global_bot.reminder_rules SET enabled = false, updated_at = now()
+			WHERE chat_id = $1 AND kind = $2`, chatID, kind); err != nil {
+			return err
+		}
+		if _, err = tx.Exec(ctx, `DELETE FROM global_bot.reminder_schedules s
+			USING global_bot.reminder_rules r
+			WHERE s.rule_id = r.id AND r.chat_id = $1 AND r.kind = $2`, chatID, kind); err != nil {
+			return err
+		}
 	}
 	return tx.Commit(ctx)
 }

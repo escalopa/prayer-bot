@@ -1,16 +1,19 @@
 package telegram
 
 import (
+	"bytes"
 	"context"
 	"fmt"
-	"strconv"
+	"html"
 	"strings"
 	"time"
 
 	botapi "github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
 
+	"github.com/escalopa/prayer-bot/global/internal/assets"
 	"github.com/escalopa/prayer-bot/global/internal/domain"
+	"github.com/escalopa/prayer-bot/global/internal/i18n"
 	"github.com/escalopa/prayer-bot/global/internal/location"
 	"github.com/escalopa/prayer-bot/global/internal/prayertime"
 	"github.com/escalopa/prayer-bot/global/internal/reminders"
@@ -19,6 +22,9 @@ import (
 
 type Bot interface {
 	SendMessage(context.Context, *botapi.SendMessageParams) (*models.Message, error)
+	SendPhoto(context.Context, *botapi.SendPhotoParams) (*models.Message, error)
+	EditMessageText(context.Context, *botapi.EditMessageTextParams) (*models.Message, error)
+	AnswerCallbackQuery(context.Context, *botapi.AnswerCallbackQueryParams) (bool, error)
 	GetChatMember(context.Context, *botapi.GetChatMemberParams) (*models.ChatMember, error)
 }
 
@@ -37,72 +43,100 @@ func NewHandler(bot Bot, storage *store.Store, resolver location.Resolver, calcu
 }
 
 func (h *Handler) Handle(ctx context.Context, update models.Update) error {
+	if update.CallbackQuery != nil {
+		return h.handleCallback(ctx, update.CallbackQuery)
+	}
 	message := update.Message
 	if message == nil || message.Chat.Type == models.ChatTypeChannel {
 		return nil
 	}
-	language := "en"
+	languageHint := "en"
 	if message.From != nil && message.From.LanguageCode != "" {
-		language = message.From.LanguageCode
+		languageHint = message.From.LanguageCode
 	}
 	if err := h.store.UpsertChat(ctx, domain.Chat{
 		TelegramChatID: message.Chat.ID,
 		Type:           string(message.Chat.Type),
-		LanguageCode:   language,
+		LanguageCode:   i18n.Resolve(languageHint).Code,
 	}); err != nil {
 		return fmt.Errorf("save chat: %w", err)
 	}
+	locale, err := h.chatLocale(ctx, message.Chat.ID, languageHint)
+	if err != nil {
+		return err
+	}
 
 	if message.Location != nil {
-		return h.handleLocation(ctx, message)
+		return h.handleLocation(ctx, message, locale)
 	}
 	command, argument := parseCommand(message.Text)
 	if command == "" {
+		command = i18n.ActionForText(message.Text)
+	}
+	if command == "" {
+		if message.Chat.Type == models.ChatTypePrivate && strings.TrimSpace(message.Text) != "" {
+			return h.send(ctx, message.Chat.ID, locale.Message("unknown"), mainKeyboard(locale))
+		}
 		return nil
 	}
 
 	switch command {
 	case "start":
-		if ok, err := h.canConfigure(ctx, message); err != nil || !ok {
+		if ok, err := h.canConfigure(ctx, message, locale); err != nil || !ok {
 			return err
 		}
-		return h.requestLocation(ctx, message.Chat)
-	case "location":
-		if ok, err := h.canConfigure(ctx, message); err != nil || !ok {
+		if err := h.sendWelcome(ctx, message.Chat.ID, locale); err != nil {
 			return err
 		}
-		return h.requestLocation(ctx, message.Chat)
-	case "today":
-		return h.sendSchedule(ctx, message.Chat.ID, h.now(), "Today's prayer times")
-	case "tomorrow":
-		return h.sendSchedule(ctx, message.Chat.ID, h.now().AddDate(0, 0, 1), "Tomorrow's prayer times")
-	case "next":
-		return h.sendNext(ctx, message.Chat.ID)
-	case "settings":
-		return h.sendSettings(ctx, message.Chat.ID)
-	case "method", "madhab", "highlat", "adjust", "remind", "delete_me":
-		ok, err := h.canConfigure(ctx, message)
+		if _, err := h.store.Profile(ctx, message.Chat.ID); store.IsNotFound(err) {
+			return h.requestLocation(ctx, message.Chat, locale)
+		} else {
+			return err
+		}
+	case i18n.ActionLocation:
+		if ok, err := h.canConfigure(ctx, message, locale); err != nil || !ok {
+			return err
+		}
+		return h.requestLocation(ctx, message.Chat, locale)
+	case i18n.ActionToday:
+		return h.sendSchedule(ctx, message.Chat.ID, h.now(), locale.Message("today_title"), locale)
+	case i18n.ActionTomorrow:
+		return h.sendSchedule(ctx, message.Chat.ID, h.now().AddDate(0, 0, 1), locale.Message("tomorrow_title"), locale)
+	case i18n.ActionNext:
+		return h.sendNext(ctx, message.Chat.ID, locale)
+	case i18n.ActionSettings:
+		return h.sendSettings(ctx, message.Chat.ID, locale)
+	case i18n.ActionReminders, "remind":
+		if argument == "" {
+			return h.sendReminders(ctx, message.Chat.ID, locale)
+		}
+		if ok, err := h.canConfigure(ctx, message, locale); err != nil || !ok {
+			return err
+		}
+		return h.setReminders(ctx, message.Chat.ID, argument, locale)
+	case i18n.ActionLanguage:
+		return h.send(ctx, message.Chat.ID, locale.Message("choose_language"), languageKeyboard(locale.Code))
+	case "method", "madhab", "highlat", "adjust", "delete_me":
+		ok, err := h.canConfigure(ctx, message, locale)
 		if err != nil || !ok {
 			return err
 		}
 		switch command {
 		case "method":
-			return h.setMethod(ctx, message.Chat.ID, argument)
+			return h.setMethod(ctx, message.Chat.ID, argument, locale)
 		case "madhab":
-			return h.setMadhab(ctx, message.Chat.ID, argument)
+			return h.setMadhab(ctx, message.Chat.ID, argument, locale)
 		case "highlat":
-			return h.setHighLatitude(ctx, message.Chat.ID, argument)
+			return h.setHighLatitude(ctx, message.Chat.ID, argument, locale)
 		case "adjust":
-			return h.setAdjustment(ctx, message.Chat.ID, argument)
-		case "remind":
-			return h.setReminders(ctx, message.Chat.ID, argument)
+			return h.setAdjustment(ctx, message.Chat.ID, argument, locale)
 		default:
-			return h.deleteChat(ctx, message.Chat.ID)
+			return h.deleteChat(ctx, message.Chat.ID, locale)
 		}
 	case "privacy":
-		return h.send(ctx, message.Chat.ID, privacyText, nil)
-	case "help":
-		return h.send(ctx, message.Chat.ID, helpText, nil)
+		return h.send(ctx, message.Chat.ID, locale.Message("privacy"), mainKeyboard(locale))
+	case i18n.ActionHelp:
+		return h.send(ctx, message.Chat.ID, locale.Message("help"), mainKeyboard(locale))
 	case "status":
 		if h.ownerID == 0 || message.From == nil || message.From.ID != h.ownerID {
 			return nil
@@ -112,256 +146,84 @@ func (h *Handler) Handle(ctx context.Context, update models.Update) error {
 			return err
 		}
 		return h.send(ctx, message.Chat.ID, fmt.Sprintf(
-			"Global bot status\nChats: %d\nProfiles: %d\nEnabled reminder rules: %d\nPending schedules: %d",
+			"<b>Global bot status</b>\nChats: %d\nProfiles: %d\nEnabled reminder rules: %d\nPending schedules: %d",
 			stats.Chats, stats.Profiles, stats.EnabledRules, stats.PendingSchedules), nil)
 	default:
-		return h.send(ctx, message.Chat.ID, "Unknown command. Use /help to see available commands.", nil)
+		return h.send(ctx, message.Chat.ID, locale.Message("unknown"), mainKeyboard(locale))
 	}
 }
 
-func (h *Handler) handleLocation(ctx context.Context, message *models.Message) error {
-	ok, err := h.canConfigure(ctx, message)
-	if err != nil || !ok {
-		return err
+func (h *Handler) chatLocale(ctx context.Context, chatID int64, fallback string) (i18n.Locale, error) {
+	chat, err := h.store.Chat(ctx, chatID)
+	if store.IsNotFound(err) {
+		return i18n.Resolve(fallback), nil
 	}
-	latitude, longitude := message.Location.Latitude, message.Location.Longitude
-	if latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180 {
-		return h.send(ctx, message.Chat.ID, "That location is invalid. Please try again.", nil)
-	}
-	resolved, err := h.resolver.Resolve(ctx, latitude, longitude)
 	if err != nil {
-		return fmt.Errorf("resolve location: %w", err)
+		return i18n.Locale{}, fmt.Errorf("load chat language: %w", err)
 	}
-	latitude, longitude = domain.RoundedCoordinates(latitude, longitude)
-	profile := domain.PrayerProfile{
-		ChatID: message.Chat.ID, Latitude: latitude, Longitude: longitude,
-		Timezone: resolved.Timezone, PlaceID: resolved.PlaceID,
-		Method: location.RecommendedMethod(resolved.CountryCode), Madhab: domain.MadhabShafii,
-		HighLatitudeRule: domain.HighLatitudeAngleBased,
-	}
-	if current, err := h.store.Profile(ctx, message.Chat.ID); err == nil {
-		profile.Method = current.Method
-		profile.Madhab = current.Madhab
-		profile.HighLatitudeRule = current.HighLatitudeRule
-		profile.Adjustments = current.Adjustments
-		profile.LocationLabel = current.LocationLabel
-	} else if !store.IsNotFound(err) {
-		return fmt.Errorf("load current profile: %w", err)
-	}
-	profile, err = h.store.UpsertProfile(ctx, profile)
+	return i18n.Resolve(chat.LanguageCode), nil
+}
+
+func (h *Handler) sendWelcome(ctx context.Context, chatID int64, locale i18n.Locale) error {
+	_, err := h.bot.SendPhoto(ctx, &botapi.SendPhotoParams{
+		ChatID: chatID,
+		Photo: &models.InputFileUpload{
+			Filename: "welcome.jpg",
+			Data:     bytes.NewReader(assets.WelcomePhoto),
+		},
+		Caption:     locale.Message("welcome"),
+		ParseMode:   models.ParseModeHTML,
+		ReplyMarkup: mainKeyboard(locale),
+	})
 	if err != nil {
-		return fmt.Errorf("save prayer profile: %w", err)
+		return fmt.Errorf("Telegram welcome send failed")
 	}
-	if err := h.planner.RebuildChat(ctx, message.Chat.ID, h.now()); err != nil {
-		return fmt.Errorf("rebuild reminders: %w", err)
-	}
-	city := resolved.City
-	if city == "" {
-		city = resolved.Timezone
-	}
-	return h.send(ctx, message.Chat.ID,
-		fmt.Sprintf("Location set to %s (%s). Calculation method: %s. Use /today to see prayer times.", city, resolved.Timezone, profile.Method),
-		&models.ReplyKeyboardRemove{RemoveKeyboard: true})
+	return nil
 }
 
-func (h *Handler) requestLocation(ctx context.Context, chat models.Chat) error {
-	if chat.Type != models.ChatTypePrivate {
-		return h.send(ctx, chat.ID, "Telegram only offers the location-request button in private chats. As a group admin, attach a location to a message here to set the group's prayer location.", nil)
-	}
-	keyboard := &models.ReplyKeyboardMarkup{
-		Keyboard:       [][]models.KeyboardButton{{{Text: "Share my location", RequestLocation: true}}},
-		ResizeKeyboard: true, OneTimeKeyboard: true,
-	}
-	return h.send(ctx, chat.ID, "Share your location so I can resolve your timezone and calculate local prayer times. Only rounded coordinates will be stored.", keyboard)
+func (h *Handler) canConfigure(ctx context.Context, message *models.Message, locale i18n.Locale) (bool, error) {
+	return h.canConfigureActor(ctx, message.Chat, message.From, locale)
 }
 
-func (h *Handler) canConfigure(ctx context.Context, message *models.Message) (bool, error) {
-	if message.Chat.Type == models.ChatTypePrivate {
+func (h *Handler) canConfigureActor(ctx context.Context, chat models.Chat, user *models.User, locale i18n.Locale) (bool, error) {
+	if chat.Type == models.ChatTypePrivate {
 		return true, nil
 	}
-	if message.From == nil {
-		return false, h.send(ctx, message.Chat.ID, "Only a group administrator can change prayer settings.", nil)
+	if user == nil {
+		return false, h.send(ctx, chat.ID, locale.Message("admin_only"), nil)
 	}
-	member, err := h.bot.GetChatMember(ctx, &botapi.GetChatMemberParams{ChatID: message.Chat.ID, UserID: message.From.ID})
+	member, err := h.bot.GetChatMember(ctx, &botapi.GetChatMemberParams{ChatID: chat.ID, UserID: user.ID})
 	if err != nil {
 		return false, fmt.Errorf("Telegram administrator check failed")
 	}
 	if member.Type != models.ChatMemberTypeOwner && member.Type != models.ChatMemberTypeAdministrator {
-		return false, h.send(ctx, message.Chat.ID, "Only a group administrator can change prayer settings.", nil)
+		return false, h.send(ctx, chat.ID, locale.Message("admin_only"), nil)
 	}
 	return true, nil
 }
 
-func (h *Handler) sendSchedule(ctx context.Context, chatID int64, date time.Time, heading string) error {
-	profile, err := h.store.Profile(ctx, chatID)
-	if store.IsNotFound(err) {
-		return h.send(ctx, chatID, "I need a location first. Use /location.", nil)
-	}
-	if err != nil {
-		return err
-	}
-	schedule, err := h.calculator.Day(ctx, date, profile)
-	if err != nil {
-		return err
-	}
-	return h.send(ctx, chatID, formatSchedule(heading, schedule, profile), nil)
-}
-
-func (h *Handler) sendNext(ctx context.Context, chatID int64) error {
-	profile, err := h.store.Profile(ctx, chatID)
-	if store.IsNotFound(err) {
-		return h.send(ctx, chatID, "I need a location first. Use /location.", nil)
-	}
-	if err != nil {
-		return err
-	}
-	now := h.now()
-	for day := 0; day < 2; day++ {
-		schedule, err := h.calculator.Day(ctx, now.AddDate(0, 0, day), profile)
-		if err != nil {
-			return err
-		}
-		for _, prayer := range []domain.Prayer{domain.PrayerFajr, domain.PrayerDhuhr, domain.PrayerAsr, domain.PrayerMaghrib, domain.PrayerIsha} {
-			at, ok := schedule.At(prayer)
-			if ok && at.After(now) {
-				return h.send(ctx, chatID, fmt.Sprintf("Next prayer: %s at %s (%s).", title(prayer), at.Format("15:04"), profile.Timezone), nil)
-			}
-		}
-	}
-	return fmt.Errorf("could not find the next prayer")
-}
-
-func (h *Handler) sendSettings(ctx context.Context, chatID int64) error {
-	profile, err := h.store.Profile(ctx, chatID)
-	if store.IsNotFound(err) {
-		return h.send(ctx, chatID, "I need a location first. Use /location.", nil)
-	}
-	if err != nil {
-		return err
-	}
-	text := fmt.Sprintf("Settings\nTimezone: %s\nMethod: %s\nMadhab: %s\nHigh-latitude rule: %s\nAdjustments (minutes): Fajr %+d, Sunrise %+d, Dhuhr %+d, Asr %+d, Maghrib %+d, Isha %+d",
-		profile.Timezone, profile.Method, profile.Madhab, profile.HighLatitudeRule,
-		profile.Adjustments.Fajr, profile.Adjustments.Sunrise, profile.Adjustments.Dhuhr,
-		profile.Adjustments.Asr, profile.Adjustments.Maghrib, profile.Adjustments.Isha)
-	return h.send(ctx, chatID, text, nil)
-}
-
-func (h *Handler) setMethod(ctx context.Context, chatID int64, argument string) error {
-	method := domain.Method(strings.ToLower(argument))
-	if !method.Valid() {
-		values := make([]string, 0, len(domain.SupportedMethods()))
-		for _, supported := range domain.SupportedMethods() {
-			values = append(values, string(supported))
-		}
-		return h.send(ctx, chatID, "Usage: /method <"+strings.Join(values, "|")+">", nil)
-	}
-	return h.updateProfile(ctx, chatID, func(profile *domain.PrayerProfile) { profile.Method = method }, "Calculation method updated to "+string(method)+".")
-}
-
-func (h *Handler) setMadhab(ctx context.Context, chatID int64, argument string) error {
-	madhab := domain.Madhab(strings.ToLower(argument))
-	if !madhab.Valid() {
-		return h.send(ctx, chatID, "Usage: /madhab <shafii|hanafi>", nil)
-	}
-	return h.updateProfile(ctx, chatID, func(profile *domain.PrayerProfile) { profile.Madhab = madhab }, "Madhab updated to "+string(madhab)+".")
-}
-
-func (h *Handler) setHighLatitude(ctx context.Context, chatID int64, argument string) error {
-	rule := domain.HighLatitudeRule(strings.ToLower(argument))
-	if !rule.Valid() {
-		return h.send(ctx, chatID, "Usage: /highlat <angle_based|middle_of_night|one_seventh>", nil)
-	}
-	return h.updateProfile(ctx, chatID, func(profile *domain.PrayerProfile) { profile.HighLatitudeRule = rule }, "High-latitude rule updated to "+string(rule)+".")
-}
-
-func (h *Handler) setAdjustment(ctx context.Context, chatID int64, argument string) error {
-	fields := strings.Fields(argument)
-	if len(fields) != 2 {
-		return h.send(ctx, chatID, "Usage: /adjust <fajr|sunrise|dhuhr|asr|maghrib|isha> <minutes from -30 to 30>", nil)
-	}
-	minutes, err := strconv.Atoi(fields[1])
-	if err != nil || minutes < -30 || minutes > 30 {
-		return h.send(ctx, chatID, "Adjustment must be a whole number from -30 to 30.", nil)
-	}
-	prayer := domain.Prayer(strings.ToLower(fields[0]))
-	if !prayer.Valid() {
-		return h.send(ctx, chatID, "Unknown prayer name.", nil)
-	}
-	return h.updateProfile(ctx, chatID, func(profile *domain.PrayerProfile) {
-		switch prayer {
-		case domain.PrayerFajr:
-			profile.Adjustments.Fajr = minutes
-		case domain.PrayerSunrise:
-			profile.Adjustments.Sunrise = minutes
-		case domain.PrayerDhuhr:
-			profile.Adjustments.Dhuhr = minutes
-		case domain.PrayerAsr:
-			profile.Adjustments.Asr = minutes
-		case domain.PrayerMaghrib:
-			profile.Adjustments.Maghrib = minutes
-		case domain.PrayerIsha:
-			profile.Adjustments.Isha = minutes
-		}
-	}, fmt.Sprintf("%s adjustment updated to %+d minutes.", title(prayer), minutes))
-}
-
-func (h *Handler) updateProfile(ctx context.Context, chatID int64, update func(*domain.PrayerProfile), confirmation string) error {
-	profile, err := h.store.Profile(ctx, chatID)
-	if store.IsNotFound(err) {
-		return h.send(ctx, chatID, "I need a location first. Use /location.", nil)
-	}
-	if err != nil {
-		return err
-	}
-	update(&profile)
-	if _, err := h.store.UpsertProfile(ctx, profile); err != nil {
-		return err
-	}
-	if err := h.planner.RebuildChat(ctx, chatID, h.now()); err != nil {
-		return err
-	}
-	return h.send(ctx, chatID, confirmation, nil)
-}
-
-func (h *Handler) setReminders(ctx context.Context, chatID int64, argument string) error {
-	switch strings.ToLower(argument) {
-	case "on":
-		if _, err := h.store.Profile(ctx, chatID); store.IsNotFound(err) {
-			return h.send(ctx, chatID, "I need a location first. Use /location.", nil)
-		} else if err != nil {
-			return err
-		}
-		if err := h.store.EnableDefaultRules(ctx, chatID); err != nil {
-			return err
-		}
-		if err := h.planner.RebuildChat(ctx, chatID, h.now()); err != nil {
-			return err
-		}
-		return h.send(ctx, chatID, "Prayer-time reminders are enabled.", nil)
-	case "off":
-		if err := h.store.DisableRules(ctx, chatID); err != nil {
-			return err
-		}
-		return h.send(ctx, chatID, "Prayer-time reminders are disabled.", nil)
-	default:
-		return h.send(ctx, chatID, "Usage: /remind <on|off>", nil)
-	}
-}
-
-func (h *Handler) deleteChat(ctx context.Context, chatID int64) error {
-	if err := h.store.DeleteChat(ctx, chatID); err != nil {
-		return err
-	}
-	return h.send(ctx, chatID, "Your saved location, settings, reminders, and delivery history have been deleted.", nil)
-}
-
 func (h *Handler) send(ctx context.Context, chatID int64, text string, markup models.ReplyMarkup) error {
-	_, err := h.bot.SendMessage(ctx, &botapi.SendMessageParams{ChatID: chatID, Text: text, ReplyMarkup: markup})
+	_, err := h.bot.SendMessage(ctx, &botapi.SendMessageParams{
+		ChatID: chatID, Text: text, ParseMode: models.ParseModeHTML, ReplyMarkup: markup,
+	})
 	if err != nil {
 		return fmt.Errorf("Telegram send failed")
 	}
 	return nil
 }
+
+func (h *Handler) edit(ctx context.Context, chatID int64, messageID int, text string, markup models.ReplyMarkup) error {
+	_, err := h.bot.EditMessageText(ctx, &botapi.EditMessageTextParams{
+		ChatID: chatID, MessageID: messageID, Text: text,
+		ParseMode: models.ParseModeHTML, ReplyMarkup: markup,
+	})
+	if err != nil {
+		return fmt.Errorf("Telegram message edit failed")
+	}
+	return nil
+}
+
+func escape(value string) string { return html.EscapeString(value) }
 
 func parseCommand(text string) (string, string) {
 	fields := strings.Fields(strings.TrimSpace(text))
@@ -378,51 +240,3 @@ func parseCommand(text string) (string, string) {
 	}
 	return strings.ToLower(command), argument
 }
-
-func formatSchedule(heading string, schedule domain.DaySchedule, profile domain.PrayerProfile) string {
-	var builder strings.Builder
-	builder.WriteString(heading)
-	builder.WriteString(" — ")
-	builder.WriteString(schedule.Date.Format("2 January 2006"))
-	for _, prayer := range []domain.Prayer{domain.PrayerFajr, domain.PrayerSunrise, domain.PrayerDhuhr, domain.PrayerAsr, domain.PrayerMaghrib, domain.PrayerIsha} {
-		if at, ok := schedule.At(prayer); ok {
-			fmt.Fprintf(&builder, "\n%s: %s", title(prayer), at.Format("15:04"))
-		}
-	}
-	fmt.Fprintf(&builder, "\n%s · %s", profile.Timezone, profile.Method)
-	return builder.String()
-}
-
-func title(prayer domain.Prayer) string {
-	switch prayer {
-	case domain.PrayerFajr:
-		return "Fajr"
-	case domain.PrayerSunrise:
-		return "Sunrise"
-	case domain.PrayerDhuhr:
-		return "Dhuhr"
-	case domain.PrayerAsr:
-		return "Asr"
-	case domain.PrayerMaghrib:
-		return "Maghrib"
-	case domain.PrayerIsha:
-		return "Isha"
-	default:
-		return string(prayer)
-	}
-}
-
-const helpText = `Commands
-/location — set or replace the location
-/today, /tomorrow, /next — prayer times
-/settings — current calculation settings
-/method <name> — calculation convention
-/madhab <shafii|hanafi> — Asr convention
-/highlat <angle_based|middle_of_night|one_seventh>
-/adjust <prayer> <minutes> — per-prayer correction
-/remind <on|off> — prayer-time reminders
-/privacy — stored data and deletion
-/delete_me — delete this chat's global-bot data`
-
-const privacyText = `Privacy
-The bot uses a shared location only to resolve its timezone and an approximate place. It stores coordinates rounded to three decimal places, the timezone, Google Place ID, and your calculation/reminder settings. It does not store Google's formatted address or the full Telegram update. Use /delete_me to remove this chat's data.`

@@ -113,6 +113,21 @@ func TestLocalesAreCompleteAndWithinTelegramLimits(t *testing.T) {
 	}
 }
 
+func TestWelcomeMessagesUseReadableSteps(t *testing.T) {
+	for _, locale := range Supported() {
+		welcome := locale.Message("welcome")
+		if strings.Count(welcome, "\n\n") < 2 {
+			t.Errorf("%s welcome message should contain separate paragraphs", locale.Code)
+		}
+		if !strings.Contains(welcome, "📍") {
+			t.Errorf("%s welcome message is missing the location step emoji", locale.Code)
+		}
+		if !strings.Contains(welcome, "⚙️") {
+			t.Errorf("%s welcome message is missing the settings step emoji", locale.Code)
+		}
+	}
+}
+
 func TestActionForTextRecognizesEveryLocalizedMainButton(t *testing.T) {
 	labels := make(map[string]string)
 	for _, locale := range Supported() {

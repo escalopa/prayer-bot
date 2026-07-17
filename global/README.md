@@ -2,6 +2,14 @@
 
 This directory is a separate application derived from the existing city bots. It has its own Go module, container image, Cloud Run services, Terraform state, Telegram token, Secret Manager entries, and PostgreSQL schema. Nothing under `global/` imports or changes the legacy runtime.
 
+## Engineering documentation
+
+Start with [`docs/README.md`](docs/README.md) before changing the global bot. It
+links the system architecture, package ownership, request flows, data model,
+reminder delivery semantics, runtime/deployment topology, and operational
+runbook. Architectural or persistence changes should update the owning document
+in the same pull request.
+
 ## What is implemented
 
 - Location onboarding from Telegram coordinates, with group changes restricted to group administrators.

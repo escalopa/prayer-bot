@@ -1,5 +1,9 @@
 # Architecture and rollout
 
+This document defines the global system boundary and major trust relationships.
+For package ownership, state, detailed flows, and operations, use the
+[engineering guide](README.md).
+
 ```mermaid
 flowchart LR
     T[Telegram] -->|secret-protected webhook| W[Cloud Run webhook]
@@ -51,6 +55,10 @@ Telegram only permits message deletion for messages sent less than 48 hours ago.
 Outbox rows are removed after Cloud Tasks accepts them. A daily authenticated maintenance request deletes processed update keys after 7 days and terminal delivery records after 30 days, in bounded batches.
 
 This prevents ordinary duplicate deliveries. A process crash after Telegram accepts a message but before PostgreSQL records it can still cause a retry because Telegram's Bot API has no idempotency parameter; delivery is therefore at-least-once in that narrow failure window.
+
+The exact delivery state machine, cleanup categories, and required compensation
+for post-send failures are documented in
+[Reminder delivery](reminder-delivery.md).
 
 ## Rollout gates
 

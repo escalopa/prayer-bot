@@ -4,6 +4,11 @@ A serverless Telegram bot that provides Muslim prayer times and sends notificati
 
 The global bot's solar equations, supported calculation methods, high-latitude rules, and Gregorian--Hijri conversion are documented on the public [calculation methodology site](https://escalopa.github.io/prayer-bot/). The versioned [LaTeX source](docs/calculation-methods.tex) is maintained in this repository.
 
+The separate worldwide bot under [`global/`](global/) has its own
+[engineering and architecture guide](global/docs/README.md). Use that guide for
+the global runtime, Mini App, reminder pipeline, database schemas, and GCP
+deployment; the architecture below describes only the legacy city bots.
+
 [![wakatime](https://wakatime.com/badge/user/965e81db-2a88-4564-b236-537c4a901130/project/635dffc4-6a06-4e43-9a87-5bb977437cdb.svg)](https://wakatime.com/badge/user/965e81db-2a88-4564-b236-537c4a901130/project/635dffc4-6a06-4e43-9a87-5bb977437cdb)
 [![Report card](https://goreportcard.com/badge/github.com/escalopa/gopray)](https://goreportcard.com/report/github.com/escalopa/gopray)
 

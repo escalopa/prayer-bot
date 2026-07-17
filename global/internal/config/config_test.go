@@ -44,3 +44,17 @@ func TestLoadAcceptsEnvironmentDatabaseSchema(t *testing.T) {
 		t.Fatalf("expected %q, got %q", database.TestingSchema, cfg.DatabaseSchema)
 	}
 }
+
+func TestBotProfileRequiresSecureMiniAppURL(t *testing.T) {
+	t.Setenv("GLOBAL_BOT_TOKEN", "token")
+	t.Setenv("GLOBAL_WEBHOOK_SECRET", "secret")
+	t.Setenv("MINI_APP_URL", "http://example.com/app/")
+
+	if _, err := Load("botprofile"); err == nil || !strings.Contains(err.Error(), "HTTPS") {
+		t.Fatalf("expected insecure Mini App URL error, got %v", err)
+	}
+	t.Setenv("MINI_APP_URL", "https://example.com/app/")
+	if _, err := Load("botprofile"); err != nil {
+		t.Fatalf("load secure Mini App config: %v", err)
+	}
+}

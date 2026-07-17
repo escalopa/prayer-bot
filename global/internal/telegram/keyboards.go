@@ -16,6 +16,7 @@ func mainKeyboard(locale i18n.Locale) *models.ReplyKeyboardMarkup {
 			{{Text: locale.Button(i18n.ActionNext)}, {Text: locale.Button(i18n.ActionLocation)}},
 			{{Text: locale.Button(i18n.ActionSettings)}, {Text: locale.Button(i18n.ActionReminders)}},
 			{{Text: locale.Button(i18n.ActionLanguage)}, {Text: locale.Button(i18n.ActionHelp)}},
+			{{Text: locale.Button(i18n.ActionFeedback)}},
 		},
 		IsPersistent:   true,
 		ResizeKeyboard: true,

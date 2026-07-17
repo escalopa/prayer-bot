@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -18,6 +19,7 @@ type Config struct {
 	WebhookSecret            string
 	OwnerID                  int64
 	GoogleMapsAPIKey         string
+	MiniAppURL               string
 	GCPProjectID             string
 	GCPRegion                string
 	CloudTasksQueue          string
@@ -35,6 +37,7 @@ func Load(service string) (Config, error) {
 		TelegramToken:            strings.TrimSpace(os.Getenv("GLOBAL_BOT_TOKEN")),
 		WebhookSecret:            strings.TrimSpace(os.Getenv("GLOBAL_WEBHOOK_SECRET")),
 		GoogleMapsAPIKey:         strings.TrimSpace(os.Getenv("GOOGLE_MAPS_API_KEY")),
+		MiniAppURL:               strings.TrimSpace(os.Getenv("MINI_APP_URL")),
 		GCPProjectID:             strings.TrimSpace(os.Getenv("GCP_PROJECT_ID")),
 		GCPRegion:                envOr("GCP_REGION", "europe-west1"),
 		CloudTasksQueue:          envOr("CLOUD_TASKS_QUEUE", "global-prayer-notifications"),
@@ -69,11 +72,14 @@ func Load(service string) (Config, error) {
 			return Config{}, fmt.Errorf("send requires DATABASE_URL, GLOBAL_DB_SCHEMA, and GLOBAL_BOT_TOKEN")
 		}
 	case "botprofile":
-		if cfg.TelegramToken == "" || cfg.WebhookSecret == "" {
-			return Config{}, fmt.Errorf("botprofile requires GLOBAL_BOT_TOKEN and GLOBAL_WEBHOOK_SECRET")
+		if cfg.TelegramToken == "" || cfg.WebhookSecret == "" || cfg.MiniAppURL == "" {
+			return Config{}, fmt.Errorf("botprofile requires GLOBAL_BOT_TOKEN, GLOBAL_WEBHOOK_SECRET, and MINI_APP_URL")
 		}
 		if !validWebhookSecret(cfg.WebhookSecret) {
 			return Config{}, fmt.Errorf("GLOBAL_WEBHOOK_SECRET must be 1-256 characters using only letters, numbers, underscore, or hyphen")
+		}
+		if !validMiniAppURL(cfg.MiniAppURL) {
+			return Config{}, fmt.Errorf("MINI_APP_URL must be an HTTPS URL")
 		}
 	default:
 		return Config{}, fmt.Errorf("unknown service %q", service)
@@ -84,6 +90,11 @@ func Load(service string) (Config, error) {
 		}
 	}
 	return cfg, nil
+}
+
+func validMiniAppURL(value string) bool {
+	parsed, err := url.Parse(value)
+	return err == nil && parsed.Scheme == "https" && parsed.Host != "" && parsed.User == nil && parsed.Fragment == ""
 }
 
 func validWebhookSecret(value string) bool {

@@ -130,6 +130,7 @@ jobs:
           export GLOBAL_BOT_TOKEN="$(gcloud secrets versions access latest --secret=global-prayer-bot-token-${{ inputs.environment }} --project="$GCP_PROJECT_ID")"
           export GLOBAL_WEBHOOK_SECRET="$(gcloud secrets versions access latest --secret=global-prayer-bot-webhook-secret-${{ inputs.environment }} --project="$GCP_PROJECT_ID")"
           export WEBHOOK_URL="$(terraform -chdir=infra/gcp output -raw webhook_url)"
+          export MINI_APP_URL="${WEBHOOK_URL}/app/"
           go run ./cmd/botprofile
 
       - name: Show deployment endpoints
@@ -137,4 +138,5 @@ jobs:
         run: |
           echo "### Global prayer bot" >> "$GITHUB_STEP_SUMMARY"
           echo "- Webhook: $(terraform output -raw webhook_url)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Mini App: $(terraform output -raw webhook_url)/app/" >> "$GITHUB_STEP_SUMMARY"
           echo "- Sender: $(terraform output -raw sender_url)" >> "$GITHUB_STEP_SUMMARY"

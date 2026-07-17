@@ -33,7 +33,7 @@ func main() {
 	}); err != nil {
 		fatal(fmt.Errorf("set webhook failed"))
 	}
-	if err := profile.Sync(ctx, client, cfg.TelegramToken); err != nil {
+	if err := profile.Sync(ctx, client, cfg.TelegramToken, cfg.MiniAppURL); err != nil {
 		fatal(fmt.Errorf("sync bot profile failed: %w", err))
 	}
 }

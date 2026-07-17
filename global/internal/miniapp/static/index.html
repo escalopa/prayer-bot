@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>Prayer Times</title>
+  <link rel="stylesheet" href="./app.css">
+  <script src="https://telegram.org/js/telegram-web-app.js?59"></script>
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <main class="app-shell">
+    <header class="hero">
+      <div class="brand-mark" aria-hidden="true">☾</div>
+      <div>
+        <p id="eyebrow" class="eyebrow">Prayer companion</p>
+        <h1 id="app-title">Prayer Times</h1>
+        <p id="user-name" class="muted"></p>
+      </div>
+    </header>
+
+    <div id="loading" class="state-card" role="status">
+      <span class="spinner" aria-hidden="true"></span>
+      <span id="loading-text">Loading prayer times…</span>
+    </div>
+
+    <section id="standalone" class="state-card hidden">
+      <div class="state-icon" aria-hidden="true">↗</div>
+      <p id="standalone-text">Open this page from the bot inside Telegram.</p>
+    </section>
+
+    <section id="location-gate" class="location-card hidden">
+      <div class="state-icon" aria-hidden="true">⌖</div>
+      <h2 id="location-title">Set location</h2>
+      <p id="location-help">Share your location to calculate accurate local prayer times.</p>
+      <button id="location-primary" class="primary-button" type="button">Share location</button>
+    </section>
+
+    <div id="dashboard" class="hidden">
+      <section class="schedule-section">
+        <div class="segmented" role="tablist" aria-label="Prayer schedule date">
+          <button id="today-tab" class="segment active" type="button" role="tab" aria-selected="true">Today</button>
+          <button id="tomorrow-tab" class="segment" type="button" role="tab" aria-selected="false">Tomorrow</button>
+        </div>
+
+        <article class="schedule-card">
+          <div class="schedule-heading">
+            <div>
+              <p id="gregorian-date" class="date-primary"></p>
+              <p id="hijri-date" class="date-secondary"></p>
+            </div>
+            <span id="timezone" class="timezone-pill"></span>
+          </div>
+          <div id="prayer-grid" class="prayer-grid"></div>
+          <p id="calculation-note" class="card-note"></p>
+        </article>
+      </section>
+
+      <section class="panel">
+        <div class="panel-heading">
+          <div>
+            <p class="section-kicker">🔔</p>
+            <h2 id="reminders-title">Reminders</h2>
+          </div>
+        </div>
+        <label class="toggle-row">
+          <span><strong id="prayer-reminders-label">Prayer times</strong></span>
+          <input id="prayer-reminders" type="checkbox">
+          <span class="toggle" aria-hidden="true"></span>
+        </label>
+        <label class="toggle-row">
+          <span><strong id="fasting-reminders-label">Monday &amp; Thursday fasting</strong><small id="fasting-schedule"></small></span>
+          <input id="fasting-reminders" type="checkbox">
+          <span class="toggle" aria-hidden="true"></span>
+        </label>
+        <label class="toggle-row">
+          <span><strong id="kahf-reminders-label">Friday Al-Kahf</strong><small id="kahf-schedule"></small></span>
+          <input id="kahf-reminders" type="checkbox">
+          <span class="toggle" aria-hidden="true"></span>
+        </label>
+      </section>
+
+      <section class="panel settings-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="section-kicker">⚙️</p>
+            <h2 id="settings-title">Settings</h2>
+          </div>
+          <button id="location-secondary" class="text-button" type="button">Update location</button>
+        </div>
+
+        <div class="form-grid">
+          <label><span id="language-label">Language</span><select id="language"></select></label>
+          <label><span id="method-label">Calculation method</span><select id="method"></select></label>
+          <label><span id="madhab-label">Madhab</span><select id="madhab"></select></label>
+          <label><span id="highlat-label">High latitude rule</span><select id="highlat"></select></label>
+          <label><span id="hijri-label">Hijri date correction</span><select id="hijri-adjustment"></select></label>
+        </div>
+
+        <details class="adjustments">
+          <summary id="adjustments-label">Prayer adjustments</summary>
+          <div id="adjustment-grid" class="adjustment-grid"></div>
+        </details>
+
+        <button id="save-settings" class="primary-button" type="button">Save changes</button>
+      </section>
+    </div>
+  </main>
+
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+</body>
+</html>

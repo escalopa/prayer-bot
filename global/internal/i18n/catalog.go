@@ -15,11 +15,12 @@ const (
 	ActionReminders = "reminders"
 	ActionLanguage  = "language"
 	ActionHelp      = "help"
+	ActionFeedback  = "feedback"
 )
 
 var mainActions = []string{
 	ActionToday, ActionTomorrow, ActionNext, ActionLocation,
-	ActionSettings, ActionReminders, ActionLanguage, ActionHelp,
+	ActionSettings, ActionReminders, ActionLanguage, ActionHelp, ActionFeedback,
 }
 
 // Locale contains all user-visible copy for one Telegram language.

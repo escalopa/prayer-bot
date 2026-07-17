@@ -2,10 +2,12 @@ package botprofile
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 	"unicode/utf8"
 
 	botapi "github.com/go-telegram/bot"
+	"github.com/go-telegram/bot/models"
 
 	"github.com/escalopa/prayer-bot/global/internal/i18n"
 )
@@ -32,8 +34,16 @@ func TestLocalizedCommandsAreCompleteAndWithinTelegramLimits(t *testing.T) {
 
 func TestMiniAppMenuButtonUsesDeploymentURL(t *testing.T) {
 	button := miniAppMenuButton("https://example.run.app/app/")
-	if button.Text != "🕌 Prayer App" || button.WebApp.URL != "https://example.run.app/app/" {
+	if button.Type != models.MenuButtonTypeWebApp || button.Text != "🕌 Prayer App" || button.WebApp.URL != "https://example.run.app/app/" {
 		t.Fatalf("unexpected Mini App menu button: %+v", button)
+	}
+	payload, err := json.Marshal(button)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `{"type":"web_app","text":"🕌 Prayer App","web_app":{"url":"https://example.run.app/app/"}}`
+	if string(payload) != want {
+		t.Fatalf("Mini App menu button JSON = %s, want %s", payload, want)
 	}
 }
 

@@ -62,7 +62,10 @@ func Sync(ctx context.Context, client *botapi.Bot, token, miniAppURL string) err
 }
 
 func miniAppMenuButton(url string) models.MenuButtonWebApp {
-	return models.MenuButtonWebApp{Text: "🕌 Prayer App", WebApp: models.WebAppInfo{URL: url}}
+	return models.MenuButtonWebApp{
+		Type: models.MenuButtonTypeWebApp,
+		Text: "🕌 Prayer App", WebApp: models.WebAppInfo{URL: url},
+	}
 }
 
 type identityClient interface {

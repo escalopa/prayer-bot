@@ -1,0 +1,11 @@
+{
+  "generator": "Tectonic 0.16.9",
+  "source": {
+    "path": "docs/calculation-methods.tex",
+    "sha256": "3c252274cde5bf80b1476e3080fee2f70ed5c780b608b5c6d5488b06889bd68d"
+  },
+  "pdf": {
+    "path": "output/pdf/prayer-time-calculations.pdf",
+    "sha256": "a84e6d33f379d6173e4466f1cd7125c681799d13f2e9beabb4799914b6b7af7c"
+  }
+}

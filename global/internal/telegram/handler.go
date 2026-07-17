@@ -143,17 +143,11 @@ func (h *Handler) Handle(ctx context.Context, update models.Update) error {
 		return h.send(ctx, message.Chat.ID, locale.Message("privacy"), mainKeyboard(locale))
 	case i18n.ActionHelp:
 		return h.send(ctx, message.Chat.ID, locale.Message("help"), mainKeyboard(locale))
-	case "status":
-		if h.ownerID == 0 || message.From == nil || message.From.ID != h.ownerID {
+	case "admin", "status":
+		if !h.isOwner(message.Chat, message.From) {
 			return nil
 		}
-		stats, err := h.store.Stats(ctx)
-		if err != nil {
-			return err
-		}
-		return h.send(ctx, message.Chat.ID, fmt.Sprintf(
-			"<b>Global bot status</b>\nChats: %d\nProfiles: %d\nEnabled reminder rules: %d\nPending schedules: %d",
-			stats.Chats, stats.Profiles, stats.EnabledRules, stats.PendingSchedules), nil)
+		return h.sendAdminDashboard(ctx, message.Chat.ID, adminViewOverview)
 	default:
 		return h.send(ctx, message.Chat.ID, locale.Message("unknown"), mainKeyboard(locale))
 	}

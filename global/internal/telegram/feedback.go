@@ -45,11 +45,14 @@ func deliverFeedback(ctx context.Context, sender feedbackSender, ownerID int64, 
 		username = "@" + message.From.Username
 	}
 	header := fmt.Sprintf(
-		"<b>New bot feedback</b> 💬\nFrom: <a href=\"tg://user?id=%d\">%s</a>\nUsername: %s\nUser ID: <code>%d</code>\nBot language: <code>%s</code>",
+		"<b>New bot feedback</b> 💬\nFrom: <a href=\"tg://user?id=%d\">%s</a>\nUsername: %s\nUser ID: <code>%d</code>\nBot language: <code>%s</code>\n\n<i>Use the button below to contact this user directly. Replying inside the bot chat will not forward your message.</i>",
 		message.From.ID, escape(name), escape(username), message.From.ID, escape(languageCode),
 	)
 	notification, err := sender.SendMessage(ctx, &botapi.SendMessageParams{
 		ChatID: ownerID, Text: header, ParseMode: models.ParseModeHTML,
+		ReplyMarkup: inlineKeyboard([]models.InlineKeyboardButton{{
+			Text: "✉️ Contact user", URL: fmt.Sprintf("tg://user?id=%d", message.From.ID),
+		}}),
 	})
 	if err != nil {
 		return fmt.Errorf("send feedback metadata: %w", err)

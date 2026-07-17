@@ -38,6 +38,14 @@ func TestDeliverFeedbackSendsPrivateContextAndCopiesOriginal(t *testing.T) {
 	if sender.sent == nil || sender.sent.ChatID != int64(1234) || !strings.Contains(sender.sent.Text, "Amina &lt;Admin&gt;") || !strings.Contains(sender.sent.Text, "<code>99</code>") {
 		t.Fatalf("unexpected owner notification: %+v", sender.sent)
 	}
+	if !strings.Contains(sender.sent.Text, "will not forward") {
+		t.Fatalf("owner notification does not explain how replies work: %q", sender.sent.Text)
+	}
+	markup, ok := sender.sent.ReplyMarkup.(*models.InlineKeyboardMarkup)
+	if !ok || len(markup.InlineKeyboard) != 1 || len(markup.InlineKeyboard[0]) != 1 ||
+		markup.InlineKeyboard[0][0].URL != "tg://user?id=99" {
+		t.Fatalf("owner notification is missing the direct-contact button: %+v", sender.sent.ReplyMarkup)
+	}
 	if sender.copied == nil || sender.copied.ChatID != int64(1234) || sender.copied.FromChatID != int64(42) || sender.copied.MessageID != 77 {
 		t.Fatalf("unexpected copied feedback: %+v", sender.copied)
 	}

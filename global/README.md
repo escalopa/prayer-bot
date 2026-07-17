@@ -33,7 +33,7 @@ Hijri dates use the calculated Umm al-Qura calendar. Because official local moon
 
 The three services use one immutable image and select `/webhook`, `/dispatch`, or `/send` as the command. The webhook binary embeds the Mini App and serves it at `/app/`, so the feature does not add another Cloud Run service, container image, database, migration, or secret.
 
-The interactive webhook keeps one minimum Cloud Run instance warm by default, in both testing and production, so the first Telegram interaction after an idle period does not wait for a container cold start. Dispatch and sender services still scale to zero. Set the Terraform input `webhook_min_instances` (or `TF_VAR_webhook_min_instances`) to `0` only when minimizing idle cost is more important than first-response latency.
+All three services scale to zero by default, including the interactive webhook. This avoids fixed idle-instance charges, at the cost of an occasional cold start on the first Telegram interaction after inactivity. A future deployment can explicitly set the Terraform input `webhook_min_instances` (or `TF_VAR_webhook_min_instances`) to `1` if lower first-response latency becomes worth the additional monthly cost.
 
 ## Testing and production secrets
 

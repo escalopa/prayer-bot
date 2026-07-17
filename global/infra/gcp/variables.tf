@@ -60,8 +60,8 @@ variable "max_instances" {
 
 variable "webhook_min_instances" {
   type        = number
-  default     = 1
-  description = "Minimum number of warm webhook instances. Keep at 1 for responsive Telegram interactions; set to 0 to allow cold starts and minimize idle cost."
+  default     = 0
+  description = "Minimum number of warm webhook instances. Defaults to 0 to avoid fixed idle cost; set to 1 only when explicitly accepting that cost to reduce cold starts."
 
   validation {
     condition     = var.webhook_min_instances >= 0 && floor(var.webhook_min_instances) == var.webhook_min_instances

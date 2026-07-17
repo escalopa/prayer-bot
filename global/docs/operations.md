@@ -6,7 +6,7 @@ All services expose `GET /healthz`. Application logs include update IDs or deliv
 
 Useful alerts are Cloud Run 5xx rate, Cloud Tasks oldest task age, queue retry count, Scheduler failures, PostgreSQL connection errors, and Google Time Zone/Geocoding non-`OK` statuses.
 
-The webhook defaults to one minimum instance so interactive Telegram requests avoid scale-from-zero latency. Dispatch and sender continue to scale to zero. A deployment can override `webhook_min_instances`; setting it to `0` removes the idle-instance charge but reintroduces cold starts after inactivity.
+The webhook, dispatch, and sender default to zero minimum instances, so they incur no fixed idle-instance charge. The first interactive request after inactivity may wait for a cold start. A deployment can explicitly set `webhook_min_instances` to `1` later if lower first-response latency becomes worth the additional monthly cost.
 
 ## Secret rotation
 

@@ -9,6 +9,7 @@ import (
 	"io"
 	"io/fs"
 	"log/slog"
+	"math"
 	"net/http"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/escalopa/prayer-bot/global/internal/i18n"
 	"github.com/escalopa/prayer-bot/global/internal/location"
 	"github.com/escalopa/prayer-bot/global/internal/prayertime"
+	"github.com/escalopa/prayer-bot/global/internal/qibla"
 	"github.com/escalopa/prayer-bot/global/internal/store"
 )
 
@@ -77,6 +79,8 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("PUT /api/miniapp/preferences", h.api(h.updatePreferences))
 	mux.HandleFunc("PUT /api/miniapp/settings", h.api(h.updateSettings))
 	mux.HandleFunc("PUT /api/miniapp/reminders", h.api(h.updateReminders))
+	mux.HandleFunc("POST /api/miniapp/calendar-link", h.api(h.calendarLink))
+	mux.HandleFunc("GET /api/miniapp/calendar.ics", h.calendarDownload)
 }
 
 type endpoint func(http.ResponseWriter, *http.Request, Identity) error
@@ -372,6 +376,7 @@ type bootstrapResponse struct {
 	Profile       *profileResponse  `json:"profile,omitempty"`
 	Today         *scheduleResponse `json:"today,omitempty"`
 	Tomorrow      *scheduleResponse `json:"tomorrow,omitempty"`
+	Qibla         *qiblaResponse    `json:"qibla,omitempty"`
 	Reminders     reminderResponse  `json:"reminders"`
 	Options       optionsResponse   `json:"options"`
 	Labels        map[string]string `json:"labels"`
@@ -403,6 +408,11 @@ type prayerResponse struct {
 	Name  string        `json:"name"`
 	Emoji string        `json:"emoji"`
 	Time  string        `json:"time"`
+}
+
+type qiblaResponse struct {
+	BearingDegrees     float64 `json:"bearing_degrees"`
+	DistanceKilometres int     `json:"distance_kilometres"`
 }
 
 type reminderResponse struct {
@@ -454,6 +464,14 @@ func (h *Handler) build(ctx context.Context, identity Identity) (bootstrapRespon
 		Timezone: profile.Timezone, Method: profile.Method, Madhab: profile.Madhab,
 		HighLatitudeRule: string(profile.HighLatitudeRule), HijriAdjustment: profile.HijriAdjustment,
 		Adjustments: adjustmentMap(profile.Adjustments),
+	}
+	direction, err := qibla.Calculate(profile.Latitude, profile.Longitude)
+	if err != nil {
+		return bootstrapResponse{}, fmt.Errorf("calculate Qibla direction: %w", err)
+	}
+	response.Qibla = &qiblaResponse{
+		BearingDegrees:     math.Round(direction.BearingDegrees*10) / 10,
+		DistanceKilometres: int(math.Round(direction.DistanceKilometres)),
 	}
 	response.LocationName = profile.Timezone
 	now := h.now()
@@ -647,22 +665,129 @@ func labels(locale i18n.Locale) map[string]string {
 		"open_in_telegram": copy.OpenInTelegram, "temporary_failure": copy.TemporaryFailure,
 		"calculated_locally": copy.CalculatedLocally, "companion": copy.Companion,
 		"update_location": copy.UpdateLocation,
+		"tools":           copy.Tools, "qibla_title": copy.QiblaTitle, "qibla_help": copy.QiblaHelp,
+		"qibla_bearing": copy.QiblaBearing, "qibla_distance": copy.QiblaDistance,
+		"compass_start": copy.CompassStart, "compass_active": copy.CompassActive,
+		"compass_unavailable": copy.CompassUnavailable,
+		"calendar_title":      copy.CalendarTitle, "calendar_help": copy.CalendarHelp,
+		"export_week": copy.ExportWeek, "export_month": copy.ExportMonth,
+		"export_preparing": copy.ExportPreparing, "export_ready": copy.ExportReady,
 	}
 }
 
 type miniAppCopy struct {
-	Save, Saved, Loading, LocationHelp, LocationError   string
-	OpenInTelegram, TemporaryFailure, CalculatedLocally string
-	Companion, UpdateLocation                           string
+	Save, Saved, Loading, LocationHelp, LocationError     string
+	OpenInTelegram, TemporaryFailure, CalculatedLocally   string
+	Companion, UpdateLocation                             string
+	Tools, QiblaTitle, QiblaHelp, QiblaBearing            string
+	QiblaDistance, CompassStart, CompassActive            string
+	CompassUnavailable, CalendarTitle, CalendarHelp       string
+	ExportWeek, ExportMonth, ExportPreparing, ExportReady string
 }
 
 var miniCopy = map[string]miniAppCopy{
-	"en": {"Save changes", "Saved", "Loading prayer times…", "Share your location to calculate accurate local prayer times.", "Location access failed. Check Telegram's location permission and try again.", "Open this page from the bot inside Telegram.", "Something went wrong. Please try again.", "Calculated locally for your saved timezone", "Prayer companion", "Update location"},
-	"ar": {"حفظ التغييرات", "تم الحفظ", "جارٍ تحميل مواقيت الصلاة…", "شارك موقعك لحساب مواقيت الصلاة المحلية بدقة.", "تعذر الوصول إلى الموقع. تحقق من إذن الموقع في تيليجرام وحاول مجددًا.", "افتح هذه الصفحة من داخل البوت في تيليجرام.", "حدث خطأ. حاول مرة أخرى.", "محسوبة محليًا حسب منطقتك الزمنية", "رفيق الصلاة", "تحديث الموقع"},
-	"es": {"Guardar cambios", "Guardado", "Cargando horarios de oración…", "Comparte tu ubicación para calcular horarios locales precisos.", "No se pudo obtener la ubicación. Revisa el permiso de Telegram e inténtalo de nuevo.", "Abre esta página desde el bot en Telegram.", "Algo salió mal. Inténtalo de nuevo.", "Calculado localmente para tu zona horaria", "Compañero de oración", "Actualizar ubicación"},
-	"fr": {"Enregistrer", "Enregistré", "Chargement des horaires de prière…", "Partagez votre position pour calculer des horaires locaux précis.", "Impossible d'accéder à la position. Vérifiez l'autorisation Telegram et réessayez.", "Ouvrez cette page depuis le bot dans Telegram.", "Une erreur est survenue. Réessayez.", "Calculé localement pour votre fuseau horaire", "Compagnon de prière", "Actualiser le lieu"},
-	"ru": {"Сохранить", "Сохранено", "Загружаем время намаза…", "Поделитесь геопозицией для точного расчёта местного времени намаза.", "Не удалось получить геопозицию. Проверьте разрешение Telegram и повторите попытку.", "Откройте эту страницу из бота в Telegram.", "Произошла ошибка. Попробуйте ещё раз.", "Рассчитано локально для вашего часового пояса", "Помощник для намаза", "Обновить геопозицию"},
-	"tr": {"Değişiklikleri kaydet", "Kaydedildi", "Namaz vakitleri yükleniyor…", "Doğru yerel namaz vakitleri için konumunuzu paylaşın.", "Konum alınamadı. Telegram konum iznini kontrol edip tekrar deneyin.", "Bu sayfayı Telegram içindeki bottan açın.", "Bir hata oluştu. Lütfen tekrar deneyin.", "Kayıtlı saat diliminiz için yerel olarak hesaplandı", "Namaz yardımcısı", "Konumu güncelle"},
-	"uz": {"O‘zgarishlarni saqlash", "Saqlandi", "Namoz vaqtlari yuklanmoqda…", "Aniq mahalliy namoz vaqtlari uchun joylashuvingizni ulashing.", "Joylashuv olinmadi. Telegram ruxsatini tekshirib, qayta urinib ko‘ring.", "Bu sahifani Telegram ichidagi botdan oching.", "Xatolik yuz berdi. Qayta urinib ko‘ring.", "Saqlangan vaqt mintaqangiz uchun mahalliy hisoblandi", "Namoz yordamchisi", "Joylashuvni yangilash"},
-	"tt": {"Үзгәрешләрне саклау", "Сакланды", "Намаз вакытлары йөкләнә…", "Төгәл җирле намаз вакытлары өчен урыныгызны бүлешегез.", "Урынны алып булмады. Telegram рөхсәтен тикшереп, кабатлап карагыз.", "Бу битне Telegram эчендәге боттан ачыгыз.", "Хата чыкты. Кабатлап карагыз.", "Сакланган сәгать поясы өчен җирле исәпләнде", "Намаз ярдәмчесе", "Урынны яңарту"},
+	"en": {
+		Save: "Save changes", Saved: "Saved", Loading: "Loading prayer times…",
+		LocationHelp:   "Share your location to calculate accurate local prayer times.",
+		LocationError:  "Location access failed. Check Telegram's location permission and try again.",
+		OpenInTelegram: "Open this page from the bot inside Telegram.", TemporaryFailure: "Something went wrong. Please try again.",
+		CalculatedLocally: "Calculated locally for your saved timezone", Companion: "Prayer companion", UpdateLocation: "Update location",
+		Tools: "Tools", QiblaTitle: "Qibla direction", QiblaHelp: "The arrow points from north toward the Kaaba.",
+		QiblaBearing: "{bearing}° from north", QiblaDistance: "Approximately {distance} km to the Kaaba",
+		CompassStart: "Use live compass", CompassActive: "Live compass active",
+		CompassUnavailable: "An absolute compass is unavailable on this device. Use the bearing above.",
+		CalendarTitle:      "Prayer calendar", CalendarHelp: "Export prayer times to Apple, Google, Outlook, or another calendar.",
+		ExportWeek: "Export 7 days", ExportMonth: "Export 30 days", ExportPreparing: "Preparing calendar…", ExportReady: "Calendar ready",
+	},
+	"ar": {
+		Save: "حفظ التغييرات", Saved: "تم الحفظ", Loading: "جارٍ تحميل مواقيت الصلاة…",
+		LocationHelp:   "شارك موقعك لحساب مواقيت الصلاة المحلية بدقة.",
+		LocationError:  "تعذر الوصول إلى الموقع. تحقق من إذن الموقع في تيليجرام وحاول مجددًا.",
+		OpenInTelegram: "افتح هذه الصفحة من داخل البوت في تيليجرام.", TemporaryFailure: "حدث خطأ. حاول مرة أخرى.",
+		CalculatedLocally: "محسوبة محليًا حسب منطقتك الزمنية", Companion: "رفيق الصلاة", UpdateLocation: "تحديث الموقع",
+		Tools: "الأدوات", QiblaTitle: "اتجاه القبلة", QiblaHelp: "يشير السهم من الشمال نحو الكعبة.",
+		QiblaBearing: "{bearing}° من الشمال", QiblaDistance: "حوالي {distance} كم إلى الكعبة",
+		CompassStart: "استخدام البوصلة المباشرة", CompassActive: "البوصلة المباشرة مفعّلة",
+		CompassUnavailable: "البوصلة المطلقة غير متاحة على هذا الجهاز. استخدم الزاوية الموضحة أعلاه.",
+		CalendarTitle:      "تقويم الصلاة", CalendarHelp: "صدّر مواقيت الصلاة إلى تقويم Apple أو Google أو Outlook أو أي تقويم آخر.",
+		ExportWeek: "تصدير 7 أيام", ExportMonth: "تصدير 30 يومًا", ExportPreparing: "جارٍ إعداد التقويم…", ExportReady: "التقويم جاهز",
+	},
+	"es": {
+		Save: "Guardar cambios", Saved: "Guardado", Loading: "Cargando horarios de oración…",
+		LocationHelp:   "Comparte tu ubicación para calcular horarios locales precisos.",
+		LocationError:  "No se pudo obtener la ubicación. Revisa el permiso de Telegram e inténtalo de nuevo.",
+		OpenInTelegram: "Abre esta página desde el bot en Telegram.", TemporaryFailure: "Algo salió mal. Inténtalo de nuevo.",
+		CalculatedLocally: "Calculado localmente para tu zona horaria", Companion: "Compañero de oración", UpdateLocation: "Actualizar ubicación",
+		Tools: "Herramientas", QiblaTitle: "Dirección de la alquibla", QiblaHelp: "La flecha apunta desde el norte hacia la Kaaba.",
+		QiblaBearing: "{bearing}° desde el norte", QiblaDistance: "Aproximadamente {distance} km hasta la Kaaba",
+		CompassStart: "Usar brújula en vivo", CompassActive: "Brújula en vivo activa",
+		CompassUnavailable: "Este dispositivo no ofrece una brújula absoluta. Usa el ángulo indicado arriba.",
+		CalendarTitle:      "Calendario de oración", CalendarHelp: "Exporta los horarios a Apple, Google, Outlook u otro calendario.",
+		ExportWeek: "Exportar 7 días", ExportMonth: "Exportar 30 días", ExportPreparing: "Preparando calendario…", ExportReady: "Calendario listo",
+	},
+	"fr": {
+		Save: "Enregistrer", Saved: "Enregistré", Loading: "Chargement des horaires de prière…",
+		LocationHelp:   "Partagez votre position pour calculer des horaires locaux précis.",
+		LocationError:  "Impossible d'accéder à la position. Vérifiez l'autorisation Telegram et réessayez.",
+		OpenInTelegram: "Ouvrez cette page depuis le bot dans Telegram.", TemporaryFailure: "Une erreur est survenue. Réessayez.",
+		CalculatedLocally: "Calculé localement pour votre fuseau horaire", Companion: "Compagnon de prière", UpdateLocation: "Actualiser le lieu",
+		Tools: "Outils", QiblaTitle: "Direction de la Qibla", QiblaHelp: "La flèche indique la direction de la Kaaba depuis le nord.",
+		QiblaBearing: "{bearing}° depuis le nord", QiblaDistance: "Environ {distance} km jusqu’à la Kaaba",
+		CompassStart: "Utiliser la boussole", CompassActive: "Boussole active",
+		CompassUnavailable: "La boussole absolue n’est pas disponible sur cet appareil. Utilisez l’angle ci-dessus.",
+		CalendarTitle:      "Calendrier des prières", CalendarHelp: "Exportez les horaires vers Apple, Google, Outlook ou un autre calendrier.",
+		ExportWeek: "Exporter 7 jours", ExportMonth: "Exporter 30 jours", ExportPreparing: "Préparation du calendrier…", ExportReady: "Calendrier prêt",
+	},
+	"ru": {
+		Save: "Сохранить", Saved: "Сохранено", Loading: "Загружаем время намаза…",
+		LocationHelp:   "Поделитесь геопозицией для точного расчёта местного времени намаза.",
+		LocationError:  "Не удалось получить геопозицию. Проверьте разрешение Telegram и повторите попытку.",
+		OpenInTelegram: "Откройте эту страницу из бота в Telegram.", TemporaryFailure: "Произошла ошибка. Попробуйте ещё раз.",
+		CalculatedLocally: "Рассчитано локально для вашего часового пояса", Companion: "Помощник для намаза", UpdateLocation: "Обновить геопозицию",
+		Tools: "Инструменты", QiblaTitle: "Направление Кыблы", QiblaHelp: "Стрелка показывает направление от севера к Каабе.",
+		QiblaBearing: "{bearing}° от севера", QiblaDistance: "Примерно {distance} км до Каабы",
+		CompassStart: "Включить компас", CompassActive: "Компас включён",
+		CompassUnavailable: "Абсолютный компас недоступен на этом устройстве. Используйте угол выше.",
+		CalendarTitle:      "Календарь намаза", CalendarHelp: "Экспортируйте время намаза в Apple, Google, Outlook или другой календарь.",
+		ExportWeek: "Экспорт на 7 дней", ExportMonth: "Экспорт на 30 дней", ExportPreparing: "Готовим календарь…", ExportReady: "Календарь готов",
+	},
+	"tr": {
+		Save: "Değişiklikleri kaydet", Saved: "Kaydedildi", Loading: "Namaz vakitleri yükleniyor…",
+		LocationHelp:   "Doğru yerel namaz vakitleri için konumunuzu paylaşın.",
+		LocationError:  "Konum alınamadı. Telegram konum iznini kontrol edip tekrar deneyin.",
+		OpenInTelegram: "Bu sayfayı Telegram içindeki bottan açın.", TemporaryFailure: "Bir hata oluştu. Lütfen tekrar deneyin.",
+		CalculatedLocally: "Kayıtlı saat diliminiz için yerel olarak hesaplandı", Companion: "Namaz yardımcısı", UpdateLocation: "Konumu güncelle",
+		Tools: "Araçlar", QiblaTitle: "Kıble yönü", QiblaHelp: "Ok, kuzeyden Kâbe’ye doğru yönü gösterir.",
+		QiblaBearing: "Kuzeyden {bearing}°", QiblaDistance: "Kâbe’ye yaklaşık {distance} km",
+		CompassStart: "Canlı pusulayı kullan", CompassActive: "Canlı pusula etkin",
+		CompassUnavailable: "Bu cihazda mutlak pusula kullanılamıyor. Yukarıdaki açıyı kullanın.",
+		CalendarTitle:      "Namaz takvimi", CalendarHelp: "Namaz vakitlerini Apple, Google, Outlook veya başka bir takvime aktarın.",
+		ExportWeek: "7 günü aktar", ExportMonth: "30 günü aktar", ExportPreparing: "Takvim hazırlanıyor…", ExportReady: "Takvim hazır",
+	},
+	"uz": {
+		Save: "O‘zgarishlarni saqlash", Saved: "Saqlandi", Loading: "Namoz vaqtlari yuklanmoqda…",
+		LocationHelp:   "Aniq mahalliy namoz vaqtlari uchun joylashuvingizni ulashing.",
+		LocationError:  "Joylashuv olinmadi. Telegram ruxsatini tekshirib, qayta urinib ko‘ring.",
+		OpenInTelegram: "Bu sahifani Telegram ichidagi botdan oching.", TemporaryFailure: "Xatolik yuz berdi. Qayta urinib ko‘ring.",
+		CalculatedLocally: "Saqlangan vaqt mintaqangiz uchun mahalliy hisoblandi", Companion: "Namoz yordamchisi", UpdateLocation: "Joylashuvni yangilash",
+		Tools: "Vositalar", QiblaTitle: "Qibla yo‘nalishi", QiblaHelp: "Ko‘rsatkich shimoldan Ka’ba tomon yo‘naladi.",
+		QiblaBearing: "Shimoldan {bearing}°", QiblaDistance: "Ka’bagacha taxminan {distance} km",
+		CompassStart: "Jonli kompasni yoqish", CompassActive: "Jonli kompas faol",
+		CompassUnavailable: "Bu qurilmada mutlaq kompas mavjud emas. Yuqoridagi burchakdan foydalaning.",
+		CalendarTitle:      "Namoz taqvimi", CalendarHelp: "Namoz vaqtlarini Apple, Google, Outlook yoki boshqa taqvimga eksport qiling.",
+		ExportWeek: "7 kunni eksport qilish", ExportMonth: "30 kunni eksport qilish", ExportPreparing: "Taqvim tayyorlanmoqda…", ExportReady: "Taqvim tayyor",
+	},
+	"tt": {
+		Save: "Үзгәрешләрне саклау", Saved: "Сакланды", Loading: "Намаз вакытлары йөкләнә…",
+		LocationHelp:   "Төгәл җирле намаз вакытлары өчен урыныгызны бүлешегез.",
+		LocationError:  "Урынны алып булмады. Telegram рөхсәтен тикшереп, кабатлап карагыз.",
+		OpenInTelegram: "Бу битне Telegram эчендәге боттан ачыгыз.", TemporaryFailure: "Хата чыкты. Кабатлап карагыз.",
+		CalculatedLocally: "Сакланган сәгать поясы өчен җирле исәпләнде", Companion: "Намаз ярдәмчесе", UpdateLocation: "Урынны яңарту",
+		Tools: "Кораллар", QiblaTitle: "Кыйбла юнәлеше", QiblaHelp: "Ук төньяктан Кәгъбә ягына юнәлешне күрсәтә.",
+		QiblaBearing: "Төньяктан {bearing}°", QiblaDistance: "Кәгъбәгә якынча {distance} км",
+		CompassStart: "Тере компасны кабызу", CompassActive: "Тере компас эшли",
+		CompassUnavailable: "Бу җайланмада абсолют компас юк. Өстәге почмакны кулланыгыз.",
+		CalendarTitle:      "Намаз календаре", CalendarHelp: "Намаз вакытларын Apple, Google, Outlook яки башка календарьга чыгарыгыз.",
+		ExportWeek: "7 көнне чыгару", ExportMonth: "30 көнне чыгару", ExportPreparing: "Календарь әзерләнә…", ExportReady: "Календарь әзер",
+	},
 }

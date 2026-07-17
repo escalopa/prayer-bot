@@ -7,6 +7,7 @@
   let activeDay = "today";
   let toastTimer = null;
   let dirty = false;
+  let compassStarted = false;
 
   const launchCopy = {
     en: { open: "Open this page from the bot inside Telegram.", expired: "Your Telegram session expired. Close this window and reopen the app from the bot menu.", failed: "The app could not load. Please try again.", retry: "Try again" },
@@ -107,6 +108,14 @@
     setText("adjustments-label", labels.adjustments);
     setText("save-preferences", labels.save);
     setText("calculation-note", labels.calculated_locally);
+    setText("tools-title", labels.tools);
+    setText("qibla-title", labels.qibla_title);
+    setText("qibla-help", labels.qibla_help);
+    setText("start-compass", labels.compass_start);
+    setText("calendar-title", labels.calendar_title);
+    setText("calendar-help", labels.calendar_help);
+    setText("export-week", labels.export_week);
+    setText("export-month", labels.export_month);
   }
 
   function fillSelect(id, options, selected) {
@@ -174,6 +183,29 @@
     });
   }
 
+  function formatLabel(template, values) {
+    return Object.entries(values).reduce(
+      (result, [key, value]) => result.replaceAll(`{${key}}`, String(value)),
+      template || "",
+    );
+  }
+
+  function renderTools() {
+    if (!state.qibla) return;
+    const bearing = Number(state.qibla.bearing_degrees);
+    const number = new Intl.NumberFormat(state.locale, { maximumFractionDigits: 1 });
+    byId("qibla-needle").style.setProperty("--qibla-rotation", `${bearing}deg`);
+    setText("qibla-bearing", formatLabel(state.labels.qibla_bearing, { bearing: number.format(bearing) }));
+    setText("qibla-distance", formatLabel(state.labels.qibla_distance, {
+      distance: new Intl.NumberFormat(state.locale).format(state.qibla.distance_kilometres),
+    }));
+    byId("qibla-compass").setAttribute("aria-label", byId("qibla-bearing").textContent);
+    compassStarted = false;
+    byId("start-compass").disabled = false;
+    setText("start-compass", state.labels.compass_start);
+    byId("compass-status").classList.add("hidden");
+  }
+
   function renderReminders() {
     byId("prayer-reminders").checked = state.reminders.prayer;
     fillSelect("pre-prayer-minutes", state.options.pre_reminders, state.reminders.pre_prayer_minutes);
@@ -201,6 +233,7 @@
     locationGate.classList.add("hidden");
     dashboard.classList.remove("hidden");
     renderSchedule();
+    renderTools();
     renderReminders();
     renderSettings();
     setDirty(false);
@@ -321,6 +354,84 @@
     }
   }
 
+  function showCompassUnavailable() {
+    const sensor = telegram && telegram.DeviceOrientation;
+    if (sensor && sensor.isStarted) sensor.stop();
+    compassStarted = false;
+    setText("compass-status", state.labels.compass_unavailable);
+    byId("compass-status").classList.remove("hidden");
+    byId("start-compass").disabled = false;
+    setText("start-compass", state.labels.compass_start);
+  }
+
+  function updateCompassOrientation() {
+    const sensor = telegram && telegram.DeviceOrientation;
+    if (!state || !state.qibla || !sensor || !sensor.isStarted) return;
+    if (!sensor.absolute || !Number.isFinite(sensor.alpha)) {
+      showCompassUnavailable();
+      return;
+    }
+    // Telegram exposes the standard positive Z-axis rotation. Convert it to
+    // the clockwise compass heading used by bearings from magnetic north.
+    const alpha = ((sensor.alpha * 180 / Math.PI) % 360 + 360) % 360;
+    const heading = (360 - alpha) % 360;
+    const rotation = Number(state.qibla.bearing_degrees) - heading;
+    byId("qibla-needle").style.setProperty("--qibla-rotation", `${rotation}deg`);
+    if (!compassStarted) {
+      compassStarted = true;
+      setText("start-compass", state.labels.compass_active);
+      setText("compass-status", state.labels.compass_active);
+      byId("compass-status").classList.remove("hidden");
+      byId("start-compass").disabled = true;
+      if (telegram.HapticFeedback) telegram.HapticFeedback.notificationOccurred("success");
+    }
+  }
+
+  function startCompass() {
+    const sensor = telegram && telegram.DeviceOrientation;
+    if (!sensor || !telegram.isVersionAtLeast("8.0")) {
+      showCompassUnavailable();
+      return;
+    }
+    byId("start-compass").disabled = true;
+    sensor.start({ refresh_rate: 100, need_absolute: true }, (started) => {
+      if (!started) showCompassUnavailable();
+    });
+  }
+
+  function fallbackDownload(url, filename) {
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.rel = "noopener";
+    document.body.append(link);
+    link.click();
+    link.remove();
+    showToast(state.labels.export_ready);
+  }
+
+  async function exportCalendar(days, button) {
+    button.disabled = true;
+    const previousText = button.textContent;
+    button.textContent = state.labels.export_preparing;
+    try {
+      const download = await request("/api/miniapp/calendar-link", "POST", { days });
+      const fileURL = new URL(download.path, window.location.origin).href;
+      if (telegram && telegram.downloadFile && telegram.isVersionAtLeast("8.0") && fileURL.startsWith("https://")) {
+        telegram.downloadFile({ url: fileURL, file_name: download.filename }, (accepted) => {
+          if (accepted) showToast(state.labels.export_ready);
+        });
+      } else {
+        fallbackDownload(fileURL, download.filename);
+      }
+    } catch (_) {
+      showToast(state.labels.temporary_failure, true);
+    } finally {
+      button.disabled = false;
+      button.textContent = previousText;
+    }
+  }
+
   function showLaunchError(kind) {
     const copy = launchCopy[launchLanguage()] || launchCopy.en;
     loading.classList.add("hidden");
@@ -361,6 +472,9 @@
   byId("tomorrow-tab").addEventListener("click", () => selectDay("tomorrow"));
   byId("location-primary").addEventListener("click", (event) => updateLocation(event.currentTarget));
   byId("location-secondary").addEventListener("click", (event) => updateLocation(event.currentTarget));
+  byId("start-compass").addEventListener("click", startCompass);
+  byId("export-week").addEventListener("click", (event) => exportCalendar(7, event.currentTarget));
+  byId("export-month").addEventListener("click", (event) => exportCalendar(30, event.currentTarget));
   byId("save-preferences").addEventListener("click", savePreferences);
   byId("retry-app").addEventListener("click", bootstrapApp);
   ["prayer-reminders", "pre-prayer-minutes", "fasting-reminders", "kahf-reminders", "language", "method", "madhab", "highlat", "hijri-adjustment"]
@@ -370,6 +484,14 @@
   window.addEventListener("pageshow", (event) => {
     if (event.persisted) bootstrapApp();
   });
+  window.addEventListener("pagehide", () => {
+    const sensor = telegram && telegram.DeviceOrientation;
+    if (sensor && sensor.isStarted) sensor.stop();
+  });
+  if (telegram && telegram.onEvent) {
+    telegram.onEvent("deviceOrientationChanged", updateCompassOrientation);
+    telegram.onEvent("deviceOrientationFailed", showCompassUnavailable);
+  }
 
   bootstrapApp();
 })();

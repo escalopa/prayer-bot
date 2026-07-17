@@ -6,6 +6,44 @@ All services expose `GET /healthz`. Application logs include update IDs or deliv
 
 Useful alerts are Cloud Run 5xx rate, Cloud Tasks oldest task age, queue retry count, Scheduler failures, PostgreSQL connection errors, and Google Time Zone/Geocoding non-`OK` statuses.
 
+## Incident triage
+
+Start with the [engineering guide](README.md) and use the stable identifiers in
+structured logs:
+
+- Telegram webhook problems: `update_id`;
+- reminder delivery problems: `delivery_key`;
+- Cloud Tasks HTTP requests: service name, timestamp, status, and latency;
+- profile deployment problems: the named profile operation and Telegram retry
+  interval.
+
+Do not search logs by bot token, database URL, coordinates, or full Telegram
+payload.
+
+| Symptom | Likely evidence | First document |
+| --- | --- | --- |
+| Duplicate reminder messages in the same minute | A sender 5xx after Telegram accepted the first message, followed by a successful Cloud Tasks retry of the same delivery key | [Reminder delivery](reminder-delivery.md) |
+| `prepared statement ... already exists` (`42P05`) | pgx named statement caching used through a transaction pooler | [Runtime and deployment](runtime-and-deployment.md#database-connections) |
+| `prepared statement ... does not exist` (`26000`) | The pooler moved a cached statement to a different PostgreSQL connection | [Runtime and deployment](runtime-and-deployment.md#database-connections) |
+| Reminder is late but eventually arrives | Cloud Run cold start, queue backoff, or transient sender 5xx | [Reminder delivery](reminder-delivery.md#retry-configuration) |
+| Old notification remains | Immediate Telegram deletion failed and its durable deletion task is retrying or expired past Telegram's limit | [Reminder delivery](reminder-delivery.md#cleanup-categories) |
+| Existing schedules work but location update fails | Google Time Zone or Geocoding failure | [Maps failure mode](#maps-failure-mode) |
+| Mini App says to open it in Telegram | Missing, expired, or invalid signed Telegram init data | [Request flows](request-flows.md#mini-app-session-and-api) |
+
+For a duplicate reminder, reconstruct the sequence in this order:
+
+1. Find sender requests near the displayed local time.
+2. Convert the displayed time with the profile's IANA timezone.
+3. Group application errors by `delivery_key`.
+4. Determine whether the failure happened before or after `sendMessage`.
+5. Look for the subsequent Cloud Tasks retry and successful HTTP 204.
+6. Check deletion-task requests for the same period.
+
+An error labelled `complete delivery` is post-send: Telegram already returned a
+message ID, but PostgreSQL did not commit it. Normal slot cleanup cannot discover
+that uncommitted message; the sender needs compensating deletion before it
+returns a retryable error.
+
 ## Secret rotation
 
 - Bot token: add a Secret Manager version, deploy a new revision, then revoke the old token through BotFather if required.

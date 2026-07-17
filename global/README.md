@@ -2,6 +2,14 @@
 
 This directory is a separate application derived from the existing city bots. It has its own Go module, container image, Cloud Run services, Terraform state, Telegram token, Secret Manager entries, and PostgreSQL schema. Nothing under `global/` imports or changes the legacy runtime.
 
+## Engineering documentation
+
+Start with [`docs/README.md`](docs/README.md) before changing the global bot. It
+links the system architecture, package ownership, request flows, data model,
+reminder delivery semantics, runtime/deployment topology, and operational
+runbook. Architectural or persistence changes should update the owning document
+in the same pull request.
+
 ## What is implemented
 
 - Location onboarding from Telegram coordinates, with group changes restricted to group administrators.
@@ -16,6 +24,8 @@ This directory is a separate application derived from the existing city bots. It
 - Opt-in weekly reminders for Monday/Thursday voluntary fasting (20:00 on the preceding evening) and reading Surah Al-Kahf on Friday (09:00), scheduled in the saved local timezone.
 - Configurable pre-prayer reminders at 5, 10, 15, 20, 30, 45, or 60 minutes before each obligatory prayer, followed by the normal prayer-time notification.
 - Category-aware notification cleanup: a new prayer notice replaces the preceding prayer/pre-prayer message, weekly categories are independent, and every reminder expires within Telegram's deletion window.
+- A Qibla tool that calculates the initial great-circle bearing and distance to the Kaaba from the saved rounded coordinates, with optional live compass orientation on supported Telegram clients.
+- Localized 7-day and 30-day prayer-calendar exports in standard `.ics` format for Apple Calendar, Google Calendar, Outlook, and other compatible clients.
 - An embedded welcome illustration sent on `/start` and a generated bot avatar installed during profile synchronization.
 - A localized feedback and bug-report flow that accepts text or screenshots in a private chat and delivers them directly to the configured owner with the sender's disclosed Telegram identity.
 - An owner-only `/admin` dashboard with aggregate user activity, onboarding, language, calculation-method, reminder-adoption, queue, and delivery-health metrics.
@@ -41,6 +51,8 @@ Feedback arrives in the owner's private bot chat as a metadata message followed 
 | `sender` | Cloud Tasks service account only | Idempotent Telegram delivery, category cleanup, and next-occurrence planning |
 
 The three services use one immutable image and select `/webhook`, `/dispatch`, or `/send` as the command. The webhook binary embeds the Mini App and serves it at `/app/`, so the feature does not add another Cloud Run service, container image, database, migration, or secret.
+
+Calendar downloads use a short-lived, encrypted and authenticated URL created only after the Mini App session has been authenticated. The link expires after five minutes and exposes neither the Telegram user ID nor the bot token. Qibla calculations and calendar generation use the existing saved profile and prayer engine, so neither feature adds an external API call or recurring job.
 
 ## Testing and production secrets
 

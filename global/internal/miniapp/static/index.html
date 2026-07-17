@@ -58,6 +58,59 @@
         </article>
       </section>
 
+      <section class="panel tools-panel">
+        <div class="panel-heading">
+          <h2 id="tools-title">Tools</h2>
+        </div>
+
+        <div class="tool-grid">
+          <article class="tool-card qibla-card">
+            <div class="tool-heading">
+              <span class="tool-icon" aria-hidden="true">🕋</span>
+              <div>
+                <h3 id="qibla-title">Qibla direction</h3>
+                <p id="qibla-help">The arrow points from north toward the Kaaba.</p>
+              </div>
+            </div>
+
+            <div id="qibla-compass" class="qibla-compass" role="img" aria-labelledby="qibla-bearing">
+              <span class="cardinal cardinal-north">N</span>
+              <span class="cardinal cardinal-east">E</span>
+              <span class="cardinal cardinal-south">S</span>
+              <span class="cardinal cardinal-west">W</span>
+              <div id="qibla-needle" class="qibla-needle" aria-hidden="true">
+                <span class="needle-arrow">▲</span>
+                <span class="needle-kaaba">🕋</span>
+              </div>
+              <span class="compass-center" aria-hidden="true"></span>
+            </div>
+
+            <p id="qibla-bearing" class="tool-value"></p>
+            <p id="qibla-distance" class="tool-note"></p>
+            <button id="start-compass" class="secondary-button" type="button">Use live compass</button>
+            <p id="compass-status" class="tool-note hidden" role="status"></p>
+          </article>
+
+          <article class="tool-card calendar-card">
+            <div class="tool-heading">
+              <span class="tool-icon" aria-hidden="true">📅</span>
+              <div>
+                <h3 id="calendar-title">Prayer calendar</h3>
+                <p id="calendar-help">Export prayer times to your calendar.</p>
+              </div>
+            </div>
+            <div class="calendar-illustration" aria-hidden="true">
+              <span>☾</span>
+              <strong id="calendar-day">30</strong>
+            </div>
+            <div class="calendar-actions">
+              <button id="export-week" class="secondary-button" type="button" data-days="7">Export 7 days</button>
+              <button id="export-month" class="primary-button compact" type="button" data-days="30">Export 30 days</button>
+            </div>
+          </article>
+        </div>
+      </section>
+
       <section class="panel">
         <div class="panel-heading">
           <h2 id="reminders-title">Reminders</h2>

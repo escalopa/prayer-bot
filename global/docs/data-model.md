@@ -19,6 +19,7 @@ erDiagram
     reminder_schedules ||--o{ notification_deliveries : attempts
     reminder_schedules ||--o{ task_outbox : queues
     chats ||--o{ notification_message_slots : owns
+    chats ||--o| calendar_subscriptions : publishes
 
     chats {
         bigint telegram_chat_id PK
@@ -78,6 +79,12 @@ erDiagram
         text category PK
         bigint telegram_message_id
     }
+    calendar_subscriptions {
+        bigint chat_id PK
+        text feed_token UK
+        text uid_namespace UK
+        boolean enabled
+    }
 ```
 
 `processed_updates` is independent from this graph. Its primary key is the
@@ -136,6 +143,15 @@ category:
 
 Before-prayer and at-prayer messages deliberately share `prayer`.
 
+### `calendar_subscriptions`
+
+Stores one optional rolling calendar feed per private chat. `feed_token` is a
+random 256-bit bearer credential used by Google Calendar when it fetches the
+feed. `uid_namespace` is a stable random value used in event UIDs so a prayer
+keeps the same identity when its calculated time changes. Disabling the row
+immediately rejects future feed fetches; reconnecting issues a new feed token
+but keeps the UID namespace stable.
+
 ## Retention
 
 | Data | Retention behavior |
@@ -144,6 +160,7 @@ Before-prayer and at-prayer messages deliberately share `prayer`.
 | Sent, failed, or stale notification deliveries | Deleted after 30 days |
 | Telegram notification messages | Scheduled for deletion after 36 hours |
 | Profiles and reminder configuration | Kept until `/delete_me` or chat deletion |
+| Calendar subscription | Kept until `/delete_me`; its feed token can be disabled or replaced |
 | Feedback content | Never stored in PostgreSQL |
 
 Retention runs in bounded batches from the authenticated maintenance Scheduler

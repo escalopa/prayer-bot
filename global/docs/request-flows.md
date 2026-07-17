@@ -49,7 +49,7 @@ Location writes are the only normal user flow that calls Google APIs.
 7. The response calculates schedules locally with the saved rounded profile.
 
 If Google is unavailable, existing profiles, schedules, commands, reminders,
-Qibla direction, and calendar exports continue working. Only location writes
+Qibla direction, and calendar subscriptions continue working. Only location writes
 fail.
 
 ## Mini App session and API
@@ -98,17 +98,25 @@ returns only bearing and distance to the Mini App. On supported clients,
 Telegram's absolute device-orientation API rotates the needle; otherwise the
 numeric bearing remains available.
 
-Calendar export has two requests:
+Calendar connection separates authenticated management from anonymous feed
+fetching:
 
-1. An authenticated Mini App request asks for 7 or 30 days.
-2. The backend returns a same-origin URL containing a five-minute encrypted and
-   authenticated token.
-3. Telegram's native downloader, or an anchor fallback, downloads the `.ics`
-   file.
-4. The server loads the current profile, calculates each day on demand, and
-   emits localized events as UTC instants.
+1. An authenticated Mini App request creates or reuses a random private feed
+   token and stable UID namespace.
+2. The Mini App opens Google Calendar with the HTTPS feed URL. A copy-link
+   button supports Google's desktop **Other calendars → From URL** flow.
+3. Google fetches the `.ics` URL without Telegram authentication.
+4. The server validates the random token, loads the current profile, and
+   calculates today plus the following 29 local days.
+5. Stable event UIDs let Google update changed prayer times without creating a
+   second copy of the same prayer and date.
+6. Disconnecting the calendar disables the token. Future feed requests return
+   HTTP 401.
 
-The URL and event UIDs expose neither the Telegram user ID nor bot token.
+The feed always rolls forward when fetched and includes refresh hints, but
+Google decides when it refreshes subscribed calendars. The URL is a bearer
+credential and must remain private. It and the event UIDs expose neither the
+Telegram user ID nor bot token.
 
 ## Feedback
 

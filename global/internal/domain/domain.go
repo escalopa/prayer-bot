@@ -213,3 +213,10 @@ type MessageDeletionTask struct {
 	ChatID      int64  `json:"chat_id"`
 	MessageID   int64  `json:"message_id"`
 }
+
+type CalendarSubscription struct {
+	ChatID       int64
+	FeedToken    string
+	UIDNamespace string
+	Enabled      bool
+}

@@ -32,6 +32,12 @@ All services scale to zero. A first request can therefore include Cloud Run cold
 start latency. No minimum instances are configured intentionally to control
 cost.
 
+The Google Calendar integration is a private `.ics` subscription served by the
+webhook service. It adds no Google OAuth client, Calendar API credential,
+Scheduler job, or separate runtime. Google fetches the URL on its own schedule;
+each request calculates the current rolling 30-day window from the user's saved
+profile.
+
 ## Secrets
 
 Runtime services read environment-specific Secret Manager values:

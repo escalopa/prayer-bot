@@ -38,6 +38,10 @@ type Storage interface {
 	DisableRules(context.Context, int64) error
 	ConfigurePrayerRules(context.Context, int64, bool, int) error
 	SetWeeklyRule(context.Context, int64, domain.ReminderKind, bool) error
+	CalendarSubscription(context.Context, int64) (domain.CalendarSubscription, error)
+	CalendarSubscriptionByToken(context.Context, string) (domain.CalendarSubscription, error)
+	EnableCalendarSubscription(context.Context, int64, string, string) (domain.CalendarSubscription, error)
+	DisableCalendarSubscription(context.Context, int64) error
 }
 
 type ReminderPlanner interface {
@@ -79,7 +83,8 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("PUT /api/miniapp/preferences", h.api(h.updatePreferences))
 	mux.HandleFunc("PUT /api/miniapp/settings", h.api(h.updateSettings))
 	mux.HandleFunc("PUT /api/miniapp/reminders", h.api(h.updateReminders))
-	mux.HandleFunc("POST /api/miniapp/calendar-link", h.api(h.calendarLink))
+	mux.HandleFunc("POST /api/miniapp/calendar-subscription", h.api(h.createCalendarSubscription))
+	mux.HandleFunc("DELETE /api/miniapp/calendar-subscription", h.api(h.disableCalendarSubscription))
 	mux.HandleFunc("GET /api/miniapp/calendar.ics", h.calendarDownload)
 }
 
@@ -369,17 +374,18 @@ func (h *Handler) applyReminders(ctx context.Context, chatID int64, request remi
 }
 
 type bootstrapResponse struct {
-	User          userResponse      `json:"user"`
-	Locale        string            `json:"locale"`
-	NeedsLocation bool              `json:"needs_location"`
-	LocationName  string            `json:"location_name,omitempty"`
-	Profile       *profileResponse  `json:"profile,omitempty"`
-	Today         *scheduleResponse `json:"today,omitempty"`
-	Tomorrow      *scheduleResponse `json:"tomorrow,omitempty"`
-	Qibla         *qiblaResponse    `json:"qibla,omitempty"`
-	Reminders     reminderResponse  `json:"reminders"`
-	Options       optionsResponse   `json:"options"`
-	Labels        map[string]string `json:"labels"`
+	User          userResponse                 `json:"user"`
+	Locale        string                       `json:"locale"`
+	NeedsLocation bool                         `json:"needs_location"`
+	LocationName  string                       `json:"location_name,omitempty"`
+	Profile       *profileResponse             `json:"profile,omitempty"`
+	Today         *scheduleResponse            `json:"today,omitempty"`
+	Tomorrow      *scheduleResponse            `json:"tomorrow,omitempty"`
+	Qibla         *qiblaResponse               `json:"qibla,omitempty"`
+	Calendar      calendarSubscriptionResponse `json:"calendar"`
+	Reminders     reminderResponse             `json:"reminders"`
+	Options       optionsResponse              `json:"options"`
+	Labels        map[string]string            `json:"labels"`
 }
 
 type userResponse struct {
@@ -459,6 +465,12 @@ func (h *Handler) build(ctx context.Context, identity Identity) (bootstrapRespon
 	}
 	if err != nil {
 		return bootstrapResponse{}, fmt.Errorf("load profile: %w", err)
+	}
+	subscription, err := h.store.CalendarSubscription(ctx, identity.UserID)
+	if err == nil {
+		response.Calendar.Enabled = subscription.Enabled
+	} else if !store.IsNotFound(err) {
+		return bootstrapResponse{}, fmt.Errorf("load calendar subscription: %w", err)
 	}
 	response.Profile = &profileResponse{
 		Timezone: profile.Timezone, Method: profile.Method, Madhab: profile.Madhab,
@@ -670,8 +682,10 @@ func labels(locale i18n.Locale) map[string]string {
 		"compass_start": copy.CompassStart, "compass_active": copy.CompassActive,
 		"compass_unavailable": copy.CompassUnavailable,
 		"calendar_title":      copy.CalendarTitle, "calendar_help": copy.CalendarHelp,
-		"export_week": copy.ExportWeek, "export_month": copy.ExportMonth,
-		"export_preparing": copy.ExportPreparing, "export_ready": copy.ExportReady,
+		"calendar_connect": copy.CalendarConnect, "calendar_copy": copy.CalendarCopy,
+		"calendar_disconnect": copy.CalendarDisconnect, "calendar_opening": copy.CalendarOpening,
+		"calendar_copied": copy.CalendarCopied, "calendar_disconnected": copy.CalendarDisconnected,
+		"calendar_private": copy.CalendarPrivate,
 	}
 }
 
@@ -682,7 +696,9 @@ type miniAppCopy struct {
 	Tools, QiblaTitle, QiblaHelp, QiblaBearing            string
 	QiblaDistance, CompassStart, CompassActive            string
 	CompassUnavailable, CalendarTitle, CalendarHelp       string
-	ExportWeek, ExportMonth, ExportPreparing, ExportReady string
+	CalendarConnect, CalendarCopy, CalendarDisconnect     string
+	CalendarOpening, CalendarCopied, CalendarDisconnected string
+	CalendarPrivate                                       string
 }
 
 var miniCopy = map[string]miniAppCopy{
@@ -696,8 +712,11 @@ var miniCopy = map[string]miniAppCopy{
 		QiblaBearing: "{bearing}° from north", QiblaDistance: "Approximately {distance} km to the Kaaba",
 		CompassStart: "Use live compass", CompassActive: "Live compass active",
 		CompassUnavailable: "An absolute compass is unavailable on this device. Use the bearing above.",
-		CalendarTitle:      "Prayer calendar", CalendarHelp: "Export prayer times to Apple, Google, Outlook, or another calendar.",
-		ExportWeek: "Export 7 days", ExportMonth: "Export 30 days", ExportPreparing: "Preparing calendar…", ExportReady: "Calendar ready",
+		CalendarTitle:      "Prayer calendar", CalendarHelp: "Connect a rolling 30-day prayer calendar that updates automatically.",
+		CalendarConnect: "Connect Google Calendar", CalendarCopy: "Copy private link", CalendarDisconnect: "Disconnect calendar",
+		CalendarOpening: "Opening Google Calendar…", CalendarCopied: "Private calendar link copied",
+		CalendarDisconnected: "Calendar feed disconnected",
+		CalendarPrivate:      "Keep the link private. Google controls when subscribed calendars refresh.",
 	},
 	"ar": {
 		Save: "حفظ التغييرات", Saved: "تم الحفظ", Loading: "جارٍ تحميل مواقيت الصلاة…",
@@ -709,8 +728,11 @@ var miniCopy = map[string]miniAppCopy{
 		QiblaBearing: "{bearing}° من الشمال", QiblaDistance: "حوالي {distance} كم إلى الكعبة",
 		CompassStart: "استخدام البوصلة المباشرة", CompassActive: "البوصلة المباشرة مفعّلة",
 		CompassUnavailable: "البوصلة المطلقة غير متاحة على هذا الجهاز. استخدم الزاوية الموضحة أعلاه.",
-		CalendarTitle:      "تقويم الصلاة", CalendarHelp: "صدّر مواقيت الصلاة إلى تقويم Apple أو Google أو Outlook أو أي تقويم آخر.",
-		ExportWeek: "تصدير 7 أيام", ExportMonth: "تصدير 30 يومًا", ExportPreparing: "جارٍ إعداد التقويم…", ExportReady: "التقويم جاهز",
+		CalendarTitle:      "تقويم الصلاة", CalendarHelp: "اربط تقويمًا متجددًا لمواقيت الصلاة خلال 30 يومًا.",
+		CalendarConnect: "الربط مع تقويم Google", CalendarCopy: "نسخ الرابط الخاص", CalendarDisconnect: "قطع اتصال التقويم",
+		CalendarOpening: "جارٍ فتح تقويم Google…", CalendarCopied: "تم نسخ رابط التقويم الخاص",
+		CalendarDisconnected: "تم قطع اتصال التقويم",
+		CalendarPrivate:      "احتفظ بالرابط سريًا. يحدد Google وقت تحديث التقويمات المشتركة.",
 	},
 	"es": {
 		Save: "Guardar cambios", Saved: "Guardado", Loading: "Cargando horarios de oración…",
@@ -722,8 +744,11 @@ var miniCopy = map[string]miniAppCopy{
 		QiblaBearing: "{bearing}° desde el norte", QiblaDistance: "Aproximadamente {distance} km hasta la Kaaba",
 		CompassStart: "Usar brújula en vivo", CompassActive: "Brújula en vivo activa",
 		CompassUnavailable: "Este dispositivo no ofrece una brújula absoluta. Usa el ángulo indicado arriba.",
-		CalendarTitle:      "Calendario de oración", CalendarHelp: "Exporta los horarios a Apple, Google, Outlook u otro calendario.",
-		ExportWeek: "Exportar 7 días", ExportMonth: "Exportar 30 días", ExportPreparing: "Preparando calendario…", ExportReady: "Calendario listo",
+		CalendarTitle:      "Calendario de oración", CalendarHelp: "Conecta un calendario móvil de 30 días que se actualiza automáticamente.",
+		CalendarConnect: "Conectar Google Calendar", CalendarCopy: "Copiar enlace privado", CalendarDisconnect: "Desconectar calendario",
+		CalendarOpening: "Abriendo Google Calendar…", CalendarCopied: "Enlace privado copiado",
+		CalendarDisconnected: "Calendario desconectado",
+		CalendarPrivate:      "Mantén el enlace privado. Google decide cuándo actualizar los calendarios suscritos.",
 	},
 	"fr": {
 		Save: "Enregistrer", Saved: "Enregistré", Loading: "Chargement des horaires de prière…",
@@ -735,8 +760,11 @@ var miniCopy = map[string]miniAppCopy{
 		QiblaBearing: "{bearing}° depuis le nord", QiblaDistance: "Environ {distance} km jusqu’à la Kaaba",
 		CompassStart: "Utiliser la boussole", CompassActive: "Boussole active",
 		CompassUnavailable: "La boussole absolue n’est pas disponible sur cet appareil. Utilisez l’angle ci-dessus.",
-		CalendarTitle:      "Calendrier des prières", CalendarHelp: "Exportez les horaires vers Apple, Google, Outlook ou un autre calendrier.",
-		ExportWeek: "Exporter 7 jours", ExportMonth: "Exporter 30 jours", ExportPreparing: "Préparation du calendrier…", ExportReady: "Calendrier prêt",
+		CalendarTitle:      "Calendrier des prières", CalendarHelp: "Connectez un calendrier glissant de 30 jours mis à jour automatiquement.",
+		CalendarConnect: "Connecter Google Agenda", CalendarCopy: "Copier le lien privé", CalendarDisconnect: "Déconnecter le calendrier",
+		CalendarOpening: "Ouverture de Google Agenda…", CalendarCopied: "Lien privé copié",
+		CalendarDisconnected: "Calendrier déconnecté",
+		CalendarPrivate:      "Gardez ce lien privé. Google décide quand actualiser les calendriers abonnés.",
 	},
 	"ru": {
 		Save: "Сохранить", Saved: "Сохранено", Loading: "Загружаем время намаза…",
@@ -748,8 +776,11 @@ var miniCopy = map[string]miniAppCopy{
 		QiblaBearing: "{bearing}° от севера", QiblaDistance: "Примерно {distance} км до Каабы",
 		CompassStart: "Включить компас", CompassActive: "Компас включён",
 		CompassUnavailable: "Абсолютный компас недоступен на этом устройстве. Используйте угол выше.",
-		CalendarTitle:      "Календарь намаза", CalendarHelp: "Экспортируйте время намаза в Apple, Google, Outlook или другой календарь.",
-		ExportWeek: "Экспорт на 7 дней", ExportMonth: "Экспорт на 30 дней", ExportPreparing: "Готовим календарь…", ExportReady: "Календарь готов",
+		CalendarTitle:      "Календарь намаза", CalendarHelp: "Подключите автоматически обновляемый календарь намаза на 30 дней.",
+		CalendarConnect: "Подключить Google Календарь", CalendarCopy: "Копировать закрытую ссылку", CalendarDisconnect: "Отключить календарь",
+		CalendarOpening: "Открываем Google Календарь…", CalendarCopied: "Закрытая ссылка скопирована",
+		CalendarDisconnected: "Календарь отключён",
+		CalendarPrivate:      "Не передавайте ссылку другим. Частоту обновления подписки определяет Google.",
 	},
 	"tr": {
 		Save: "Değişiklikleri kaydet", Saved: "Kaydedildi", Loading: "Namaz vakitleri yükleniyor…",
@@ -761,8 +792,11 @@ var miniCopy = map[string]miniAppCopy{
 		QiblaBearing: "Kuzeyden {bearing}°", QiblaDistance: "Kâbe’ye yaklaşık {distance} km",
 		CompassStart: "Canlı pusulayı kullan", CompassActive: "Canlı pusula etkin",
 		CompassUnavailable: "Bu cihazda mutlak pusula kullanılamıyor. Yukarıdaki açıyı kullanın.",
-		CalendarTitle:      "Namaz takvimi", CalendarHelp: "Namaz vakitlerini Apple, Google, Outlook veya başka bir takvime aktarın.",
-		ExportWeek: "7 günü aktar", ExportMonth: "30 günü aktar", ExportPreparing: "Takvim hazırlanıyor…", ExportReady: "Takvim hazır",
+		CalendarTitle:      "Namaz takvimi", CalendarHelp: "Otomatik güncellenen 30 günlük namaz takvimini bağlayın.",
+		CalendarConnect: "Google Takvim’e bağlan", CalendarCopy: "Özel bağlantıyı kopyala", CalendarDisconnect: "Takvim bağlantısını kes",
+		CalendarOpening: "Google Takvim açılıyor…", CalendarCopied: "Özel takvim bağlantısı kopyalandı",
+		CalendarDisconnected: "Takvim bağlantısı kesildi",
+		CalendarPrivate:      "Bağlantıyı gizli tutun. Abone takvimlerin yenilenme zamanını Google belirler.",
 	},
 	"uz": {
 		Save: "O‘zgarishlarni saqlash", Saved: "Saqlandi", Loading: "Namoz vaqtlari yuklanmoqda…",
@@ -774,8 +808,11 @@ var miniCopy = map[string]miniAppCopy{
 		QiblaBearing: "Shimoldan {bearing}°", QiblaDistance: "Ka’bagacha taxminan {distance} km",
 		CompassStart: "Jonli kompasni yoqish", CompassActive: "Jonli kompas faol",
 		CompassUnavailable: "Bu qurilmada mutlaq kompas mavjud emas. Yuqoridagi burchakdan foydalaning.",
-		CalendarTitle:      "Namoz taqvimi", CalendarHelp: "Namoz vaqtlarini Apple, Google, Outlook yoki boshqa taqvimga eksport qiling.",
-		ExportWeek: "7 kunni eksport qilish", ExportMonth: "30 kunni eksport qilish", ExportPreparing: "Taqvim tayyorlanmoqda…", ExportReady: "Taqvim tayyor",
+		CalendarTitle:      "Namoz taqvimi", CalendarHelp: "Avtomatik yangilanadigan 30 kunlik namoz taqvimini ulang.",
+		CalendarConnect: "Google Taqvimga ulash", CalendarCopy: "Maxfiy havolani nusxalash", CalendarDisconnect: "Taqvimni uzish",
+		CalendarOpening: "Google Taqvim ochilmoqda…", CalendarCopied: "Maxfiy taqvim havolasi nusxalandi",
+		CalendarDisconnected: "Taqvim uzildi",
+		CalendarPrivate:      "Havolani maxfiy saqlang. Obuna taqvimini qachon yangilashni Google belgilaydi.",
 	},
 	"tt": {
 		Save: "Үзгәрешләрне саклау", Saved: "Сакланды", Loading: "Намаз вакытлары йөкләнә…",
@@ -787,7 +824,10 @@ var miniCopy = map[string]miniAppCopy{
 		QiblaBearing: "Төньяктан {bearing}°", QiblaDistance: "Кәгъбәгә якынча {distance} км",
 		CompassStart: "Тере компасны кабызу", CompassActive: "Тере компас эшли",
 		CompassUnavailable: "Бу җайланмада абсолют компас юк. Өстәге почмакны кулланыгыз.",
-		CalendarTitle:      "Намаз календаре", CalendarHelp: "Намаз вакытларын Apple, Google, Outlook яки башка календарьга чыгарыгыз.",
-		ExportWeek: "7 көнне чыгару", ExportMonth: "30 көнне чыгару", ExportPreparing: "Календарь әзерләнә…", ExportReady: "Календарь әзер",
+		CalendarTitle:      "Намаз календаре", CalendarHelp: "Автоматик яңартыла торган 30 көнлек намаз календарен тоташтырыгыз.",
+		CalendarConnect: "Google Календарьга тоташтыру", CalendarCopy: "Яшерен сылтаманы күчерү", CalendarDisconnect: "Календарьны өзү",
+		CalendarOpening: "Google Календарь ачыла…", CalendarCopied: "Яшерен календарь сылтамасы күчерелде",
+		CalendarDisconnected: "Календарь өзелде",
+		CalendarPrivate:      "Сылтаманы яшерен саклагыз. Яңарту вакытын Google билгели.",
 	},
 }

@@ -25,7 +25,7 @@ in the same pull request.
 - Configurable pre-prayer reminders at 5, 10, 15, 20, 30, 45, or 60 minutes before each obligatory prayer, followed by the normal prayer-time notification.
 - Category-aware notification cleanup: a new prayer notice replaces the preceding prayer/pre-prayer message, weekly categories are independent, and every reminder expires within Telegram's deletion window.
 - A Qibla tool that calculates the initial great-circle bearing and distance to the Kaaba from the saved rounded coordinates, with optional live compass orientation on supported Telegram clients.
-- Localized 7-day and 30-day prayer-calendar exports in standard `.ics` format for Apple Calendar, Google Calendar, Outlook, and other compatible clients.
+- A revocable private Google Calendar subscription that serves a localized rolling 30-day prayer feed and automatically reflects the saved location and calculation settings when Google refreshes it.
 - An embedded welcome illustration sent on `/start` and a generated bot avatar installed during profile synchronization.
 - A localized feedback and bug-report flow that accepts text or screenshots in a private chat and delivers them directly to the configured owner with the sender's disclosed Telegram identity.
 - An owner-only `/admin` dashboard with aggregate user activity, onboarding, language, calculation-method, reminder-adoption, queue, and delivery-health metrics.
@@ -52,7 +52,7 @@ Feedback arrives in the owner's private bot chat as a metadata message followed 
 
 The three services use one immutable image and select `/webhook`, `/dispatch`, or `/send` as the command. The webhook binary embeds the Mini App and serves it at `/app/`, so the feature does not add another Cloud Run service, container image, database, migration, or secret.
 
-Calendar downloads use a short-lived, encrypted and authenticated URL created only after the Mini App session has been authenticated. The link expires after five minutes and exposes neither the Telegram user ID nor the bot token. Qibla calculations and calendar generation use the existing saved profile and prayer engine, so neither feature adds an external API call or recurring job.
+Calendar subscriptions use a random private bearer URL created only after the Mini App session has been authenticated. The URL exposes neither the Telegram user ID nor the bot token and can be revoked from the Mini App. Each fetch calculates today and the following 29 local days, so no daily cron or stored calendar events are required. Google controls when subscribed calendars refresh, so updates are not guaranteed to appear exactly at local midnight. Qibla calculations and calendar generation use the existing saved profile and prayer engine, so neither feature adds an external API call from the bot or a recurring job.
 
 ## Testing and production secrets
 

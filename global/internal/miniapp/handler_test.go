@@ -42,9 +42,10 @@ func TestStaticMiniAppIsEmbeddedWithSecurityHeaders(t *testing.T) {
 	if !strings.Contains(string(script), "tgWebAppData") || !strings.Contains(string(script), "/api/miniapp/preferences") {
 		t.Fatal("Mini App script is missing resilient Telegram launch data or unified preference saving")
 	}
-	if !strings.Contains(html, "qibla-compass") || !strings.Contains(html, "export-month") ||
-		!strings.Contains(string(script), "DeviceOrientation") || !strings.Contains(string(script), "downloadFile") {
-		t.Fatal("Mini App is missing Qibla compass or native calendar export support")
+	if !strings.Contains(html, "qibla-compass") || !strings.Contains(html, "connect-calendar") ||
+		!strings.Contains(string(script), "DeviceOrientation") ||
+		!strings.Contains(string(script), "/api/miniapp/calendar-subscription") {
+		t.Fatal("Mini App is missing Qibla compass or rolling calendar subscription support")
 	}
 	if !strings.Contains(response.Header().Get("Content-Security-Policy"), "telegram.org") {
 		t.Fatal("Mini App response is missing its CSP")
@@ -164,7 +165,7 @@ func TestLocationUpdatePreservesCalculationSettingsAndRoundsCoordinates(t *testi
 	}
 }
 
-func TestCalendarExportUsesShortLivedSignedDownload(t *testing.T) {
+func TestCalendarSubscriptionProducesRollingThirtyDayFeed(t *testing.T) {
 	now := time.Date(2026, time.July, 17, 12, 0, 0, 0, time.UTC)
 	storage := newFakeStorage()
 	storage.chats[42] = domain.Chat{TelegramChatID: 42, Type: "private", LanguageCode: "en"}
@@ -178,7 +179,7 @@ func TestCalendarExportUsesShortLivedSignedDownload(t *testing.T) {
 	mux := http.NewServeMux()
 	handler.Register(mux)
 
-	linkRequest := httptest.NewRequest(http.MethodPost, "/api/miniapp/calendar-link", strings.NewReader(`{"days":7}`))
+	linkRequest := httptest.NewRequest(http.MethodPost, "/api/miniapp/calendar-subscription", nil)
 	linkRequest.Header.Set("X-Telegram-Init-Data", signedInitData(t, "test-token", now, initDataUser{
 		ID: 42, FirstName: "Amina", LanguageCode: "en",
 	}))
@@ -187,13 +188,16 @@ func TestCalendarExportUsesShortLivedSignedDownload(t *testing.T) {
 	if linkResponse.Code != http.StatusOK {
 		t.Fatalf("link status = %d, body = %s", linkResponse.Code, linkResponse.Body.String())
 	}
-	var link calendarLinkResponse
+	var link calendarSubscriptionResponse
 	if err := json.Unmarshal(linkResponse.Body.Bytes(), &link); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.HasPrefix(link.Path, "/api/miniapp/calendar.ics?token=") ||
-		link.Filename != "prayer-times-2026-07-17-7-days.ics" {
+	if !link.Enabled || !strings.HasPrefix(link.Path, "/api/miniapp/calendar.ics?token=") {
 		t.Fatalf("unexpected calendar link: %+v", link)
+	}
+	subscription := storage.subscriptions[42]
+	if !subscription.Enabled || len(subscription.FeedToken) != 64 || len(subscription.UIDNamespace) != 32 {
+		t.Fatalf("unexpected stored subscription: %+v", subscription)
 	}
 
 	downloadRequest := httptest.NewRequest(http.MethodGet, link.Path, nil)
@@ -205,33 +209,125 @@ func TestCalendarExportUsesShortLivedSignedDownload(t *testing.T) {
 	if contentType := downloadResponse.Header().Get("Content-Type"); !strings.HasPrefix(contentType, "text/calendar") {
 		t.Fatalf("content type = %q", contentType)
 	}
-	if disposition := downloadResponse.Header().Get("Content-Disposition"); !strings.Contains(disposition, link.Filename) {
+	if disposition := downloadResponse.Header().Get("Content-Disposition"); disposition != `inline; filename="prayer-times.ics"` {
 		t.Fatalf("content disposition = %q", disposition)
 	}
-	if downloadResponse.Header().Get("Access-Control-Allow-Origin") != "https://web.telegram.org" {
-		t.Fatal("calendar response is missing Telegram Web download CORS header")
+	if !strings.Contains(downloadResponse.Body.String(), "REFRESH-INTERVAL;VALUE=DURATION:PT12H") {
+		t.Fatal("calendar response is missing its refresh hint")
 	}
-	if events := strings.Count(downloadResponse.Body.String(), "BEGIN:VEVENT\r\n"); events != 42 {
-		t.Fatalf("calendar event count = %d, want 42", events)
+	if events := strings.Count(downloadResponse.Body.String(), "BEGIN:VEVENT\r\n"); events != 180 {
+		t.Fatalf("calendar event count = %d, want 180", events)
+	}
+	if !strings.Contains(downloadResponse.Body.String(), subscription.UIDNamespace+"-20260717-fajr@global-prayer-bot") {
+		t.Fatal("calendar response is missing its stable event UID")
+	}
+	etag := downloadResponse.Header().Get("ETag")
+	if etag == "" {
+		t.Fatal("calendar response is missing its ETag")
+	}
+	cachedRequest := httptest.NewRequest(http.MethodGet, link.Path, nil)
+	cachedRequest.Header.Set("If-None-Match", etag)
+	cachedResponse := httptest.NewRecorder()
+	mux.ServeHTTP(cachedResponse, cachedRequest)
+	if cachedResponse.Code != http.StatusNotModified {
+		t.Fatalf("cached status = %d, want 304", cachedResponse.Code)
+	}
+	tamperedResponse := httptest.NewRecorder()
+	mux.ServeHTTP(tamperedResponse, httptest.NewRequest(http.MethodGet, link.Path+"0", nil))
+	if tamperedResponse.Code != http.StatusUnauthorized {
+		t.Fatalf("tampered calendar status = %d, want 401", tamperedResponse.Code)
+	}
+
+	now = now.AddDate(0, 0, 1)
+	rolledRequest := httptest.NewRequest(http.MethodGet, link.Path, nil)
+	rolledResponse := httptest.NewRecorder()
+	mux.ServeHTTP(rolledResponse, rolledRequest)
+	if rolledResponse.Code != http.StatusOK {
+		t.Fatalf("rolled feed status = %d, body = %s", rolledResponse.Code, rolledResponse.Body.String())
+	}
+	if strings.Contains(rolledResponse.Body.String(), subscription.UIDNamespace+"-20260717-fajr@global-prayer-bot") ||
+		!strings.Contains(rolledResponse.Body.String(), subscription.UIDNamespace+"-20260718-fajr@global-prayer-bot") {
+		t.Fatal("calendar feed did not roll forward by one local day")
 	}
 }
 
-func TestCalendarTokensRejectTamperingAndExpiry(t *testing.T) {
+func TestCalendarSubscriptionCanBeRevoked(t *testing.T) {
 	now := time.Date(2026, time.July, 17, 12, 0, 0, 0, time.UTC)
-	token, err := signCalendarToken("secret", calendarTokenPayload{
-		ChatID: 42, Days: 30, ExpiresAt: now.Add(calendarTokenLifetime).Unix(),
+	storage := newFakeStorage()
+	storage.chats[42] = domain.Chat{TelegramChatID: 42, Type: "private", LanguageCode: "en"}
+	storage.profiles[42] = domain.PrayerProfile{
+		ChatID: 42, Latitude: 30.044, Longitude: 31.236, Timezone: "Africa/Cairo",
+		Method: domain.MethodEgyptian, Madhab: domain.MadhabShafii,
+		HighLatitudeRule: domain.HighLatitudeAngleBased,
+	}
+	handler := NewHandler("test-token", storage, nil, prayertime.New(), nil, nil)
+	handler.now = func() time.Time { return now }
+	mux := http.NewServeMux()
+	handler.Register(mux)
+	initData := signedInitData(t, "test-token", now, initDataUser{
+		ID: 42, FirstName: "Amina", LanguageCode: "en",
 	})
+
+	createRequest := httptest.NewRequest(http.MethodPost, "/api/miniapp/calendar-subscription", nil)
+	createRequest.Header.Set("X-Telegram-Init-Data", initData)
+	createResponse := httptest.NewRecorder()
+	mux.ServeHTTP(createResponse, createRequest)
+	var created calendarSubscriptionResponse
+	if err := json.Unmarshal(createResponse.Body.Bytes(), &created); err != nil {
+		t.Fatal(err)
+	}
+
+	deleteRequest := httptest.NewRequest(http.MethodDelete, "/api/miniapp/calendar-subscription", nil)
+	deleteRequest.Header.Set("X-Telegram-Init-Data", initData)
+	deleteResponse := httptest.NewRecorder()
+	mux.ServeHTTP(deleteResponse, deleteRequest)
+	if deleteResponse.Code != http.StatusOK || storage.subscriptions[42].Enabled {
+		t.Fatalf("calendar subscription was not disabled: %d %+v", deleteResponse.Code, storage.subscriptions[42])
+	}
+
+	downloadResponse := httptest.NewRecorder()
+	mux.ServeHTTP(downloadResponse, httptest.NewRequest(http.MethodGet, created.Path, nil))
+	if downloadResponse.Code != http.StatusUnauthorized {
+		t.Fatalf("revoked calendar status = %d, want 401", downloadResponse.Code)
+	}
+
+	previous := storage.subscriptions[42]
+	reconnectRequest := httptest.NewRequest(http.MethodPost, "/api/miniapp/calendar-subscription", nil)
+	reconnectRequest.Header.Set("X-Telegram-Init-Data", initData)
+	reconnectResponse := httptest.NewRecorder()
+	mux.ServeHTTP(reconnectResponse, reconnectRequest)
+	var reconnected calendarSubscriptionResponse
+	if err := json.Unmarshal(reconnectResponse.Body.Bytes(), &reconnected); err != nil {
+		t.Fatal(err)
+	}
+	current := storage.subscriptions[42]
+	if reconnected.Path == created.Path || current.FeedToken == previous.FeedToken {
+		t.Fatal("reconnecting did not replace the revoked private feed token")
+	}
+	if current.UIDNamespace != previous.UIDNamespace {
+		t.Fatal("reconnecting changed the stable event UID namespace")
+	}
+	newFeedResponse := httptest.NewRecorder()
+	mux.ServeHTTP(newFeedResponse, httptest.NewRequest(http.MethodGet, reconnected.Path, nil))
+	if newFeedResponse.Code != http.StatusOK {
+		t.Fatalf("reconnected calendar status = %d, want 200", newFeedResponse.Code)
+	}
+}
+
+func TestCalendarCredentialsAreOpaqueAndIndependent(t *testing.T) {
+	firstToken, firstNamespace, err := newCalendarCredentials()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if payload, err := verifyCalendarToken("secret", token, now); err != nil || payload.ChatID != 42 || payload.Days != 30 {
-		t.Fatalf("valid token failed: payload=%+v err=%v", payload, err)
+	secondToken, secondNamespace, err := newCalendarCredentials()
+	if err != nil {
+		t.Fatal(err)
 	}
-	if _, err := verifyCalendarToken("secret", token+"x", now); err == nil {
-		t.Fatal("tampered token was accepted")
+	if len(firstToken) != 64 || len(firstNamespace) != 32 {
+		t.Fatalf("unexpected credential sizes: token=%d namespace=%d", len(firstToken), len(firstNamespace))
 	}
-	if _, err := verifyCalendarToken("secret", token, now.Add(calendarTokenLifetime)); err == nil {
-		t.Fatal("expired token was accepted")
+	if firstToken == secondToken || firstNamespace == secondNamespace {
+		t.Fatal("calendar credentials were unexpectedly reused")
 	}
 }
 
@@ -304,15 +400,17 @@ func TestValidateRemindersRejectsUnsupportedLeadTime(t *testing.T) {
 }
 
 type fakeStorage struct {
-	chats    map[int64]domain.Chat
-	profiles map[int64]domain.PrayerProfile
-	rules    map[int64][]domain.ReminderRule
+	chats         map[int64]domain.Chat
+	profiles      map[int64]domain.PrayerProfile
+	rules         map[int64][]domain.ReminderRule
+	subscriptions map[int64]domain.CalendarSubscription
 }
 
 func newFakeStorage() *fakeStorage {
 	return &fakeStorage{
 		chats: make(map[int64]domain.Chat), profiles: make(map[int64]domain.PrayerProfile),
-		rules: make(map[int64][]domain.ReminderRule),
+		rules:         make(map[int64][]domain.ReminderRule),
+		subscriptions: make(map[int64]domain.CalendarSubscription),
 	}
 }
 
@@ -403,6 +501,54 @@ func (s *fakeStorage) SetWeeklyRule(_ context.Context, chatID int64, kind domain
 		}
 	}
 	s.rules[chatID] = append(s.rules[chatID], domain.ReminderRule{ChatID: chatID, Kind: kind, Enabled: enabled})
+	return nil
+}
+
+func (s *fakeStorage) CalendarSubscription(_ context.Context, chatID int64) (domain.CalendarSubscription, error) {
+	subscription, ok := s.subscriptions[chatID]
+	if !ok {
+		return domain.CalendarSubscription{}, pgx.ErrNoRows
+	}
+	return subscription, nil
+}
+
+func (s *fakeStorage) CalendarSubscriptionByToken(
+	_ context.Context,
+	feedToken string,
+) (domain.CalendarSubscription, error) {
+	for _, subscription := range s.subscriptions {
+		if subscription.FeedToken == feedToken {
+			return subscription, nil
+		}
+	}
+	return domain.CalendarSubscription{}, pgx.ErrNoRows
+}
+
+func (s *fakeStorage) EnableCalendarSubscription(
+	_ context.Context,
+	chatID int64,
+	feedToken string,
+	uidNamespace string,
+) (domain.CalendarSubscription, error) {
+	subscription, ok := s.subscriptions[chatID]
+	if !ok {
+		subscription = domain.CalendarSubscription{
+			ChatID: chatID, FeedToken: feedToken, UIDNamespace: uidNamespace,
+		}
+	} else if !subscription.Enabled {
+		subscription.FeedToken = feedToken
+	}
+	subscription.Enabled = true
+	s.subscriptions[chatID] = subscription
+	return subscription, nil
+}
+
+func (s *fakeStorage) DisableCalendarSubscription(_ context.Context, chatID int64) error {
+	subscription, ok := s.subscriptions[chatID]
+	if ok && subscription.Enabled {
+		subscription.Enabled = false
+		s.subscriptions[chatID] = subscription
+	}
 	return nil
 }
 

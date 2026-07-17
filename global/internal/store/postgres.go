@@ -702,6 +702,70 @@ func (s *Store) FailDelivery(ctx context.Context, deliveryKey string, cause erro
 	return err
 }
 
+func (s *Store) CalendarSubscription(ctx context.Context, chatID int64) (domain.CalendarSubscription, error) {
+	var subscription domain.CalendarSubscription
+	err := s.pool.QueryRow(ctx, `SELECT chat_id, feed_token, uid_namespace, enabled
+		FROM global_bot.calendar_subscriptions WHERE chat_id = $1`, chatID).Scan(
+		&subscription.ChatID,
+		&subscription.FeedToken,
+		&subscription.UIDNamespace,
+		&subscription.Enabled,
+	)
+	return subscription, err
+}
+
+func (s *Store) CalendarSubscriptionByToken(
+	ctx context.Context,
+	feedToken string,
+) (domain.CalendarSubscription, error) {
+	var subscription domain.CalendarSubscription
+	err := s.pool.QueryRow(ctx, `SELECT chat_id, feed_token, uid_namespace, enabled
+		FROM global_bot.calendar_subscriptions WHERE feed_token = $1`, feedToken).Scan(
+		&subscription.ChatID,
+		&subscription.FeedToken,
+		&subscription.UIDNamespace,
+		&subscription.Enabled,
+	)
+	return subscription, err
+}
+
+func (s *Store) EnableCalendarSubscription(
+	ctx context.Context,
+	chatID int64,
+	feedToken string,
+	uidNamespace string,
+) (domain.CalendarSubscription, error) {
+	var subscription domain.CalendarSubscription
+	err := s.pool.QueryRow(ctx, `
+		INSERT INTO global_bot.calendar_subscriptions AS current_subscription
+			(chat_id, feed_token, uid_namespace, enabled)
+		VALUES ($1, $2, $3, true)
+		ON CONFLICT (chat_id) DO UPDATE SET
+			feed_token = CASE
+				WHEN current_subscription.enabled
+				THEN current_subscription.feed_token
+				ELSE excluded.feed_token
+			END,
+			enabled = true,
+			updated_at = now()
+		RETURNING chat_id, feed_token, uid_namespace, enabled`,
+		chatID, feedToken, uidNamespace,
+	).Scan(
+		&subscription.ChatID,
+		&subscription.FeedToken,
+		&subscription.UIDNamespace,
+		&subscription.Enabled,
+	)
+	return subscription, err
+}
+
+func (s *Store) DisableCalendarSubscription(ctx context.Context, chatID int64) error {
+	_, err := s.pool.Exec(ctx, `UPDATE global_bot.calendar_subscriptions
+		SET enabled = false, updated_at = now()
+		WHERE chat_id = $1 AND enabled`, chatID)
+	return err
+}
+
 func errorText(err error) string {
 	if err == nil {
 		return ""

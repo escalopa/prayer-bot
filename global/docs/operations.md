@@ -71,7 +71,7 @@ The welcome illustration is embedded in the webhook binary and sent with the loc
 
 Set `GLOBAL_DB_SCHEMA` to `global_bot_testing` or `global_bot_production`, then run Goose with `-table="${GLOBAL_DB_SCHEMA}.goose_db_version"`. Never run global migrations with the legacy default migration table. The initial down migration drops only the selected global schema, but production rollback should normally use a forward corrective migration rather than dropping user data.
 
-Migration `00002` adds the per-chat Hijri correction and the two weekly reminder kinds. Migration `00003` adds notification message slots and scheduled deletion tasks for pre-prayer/category cleanup. The normal global deployment runs migrations before the new webhook and sender revisions are applied.
+Migration `00002` adds the per-chat Hijri correction and the two weekly reminder kinds. Migration `00003` adds notification message slots and scheduled deletion tasks for pre-prayer/category cleanup. Migration `00004` adds revocable private rolling-calendar subscriptions. The normal global deployment runs migrations before the new webhook and sender revisions are applied.
 
 Telegram only deletes messages younger than 48 hours. The sender schedules every reminder for cleanup after 36 hours, while a new message in the same category also triggers immediate best-effort deletion of its predecessor. If direct deletion fails transiently, the durable cleanup task retries through the existing Cloud Tasks queue.
 
@@ -80,6 +80,29 @@ Telegram only deletes messages younger than 48 hours. The sender schedules every
 Existing profiles and prayer calculations continue working if Google Maps is unavailable. Only new location setup or a location change fails, and Telegram retries the webhook after a server error. No Maps API is called for `/today`, `/tomorrow`, `/next`, or reminder delivery.
 
 The same behavior applies to the Mini App: loading an existing schedule and saving calculation/reminder settings do not call Maps. Only an explicit location update calls the Time Zone and Geocoding APIs.
+
+## Calendar subscriptions
+
+The private `.ics` URL is a bearer credential. Do not add it to application
+logs, support tickets, screenshots, or public documentation, and restrict
+access to platform request logs that may contain requested URLs. A user who
+accidentally shares it should press **Disconnect calendar** and reconnect; this
+disables the old token and issues a new one.
+
+The feed contains today and the following 29 days at the time of each request.
+It does not need Cloud Scheduler or a background sync job. Google Calendar
+chooses when to refetch URL subscriptions and can lag behind local midnight or a
+settings change. The feed advertises a 12-hour refresh interval, but that value
+is only a hint.
+
+If Google does not show events:
+
+1. Confirm the feed URL returns HTTP 200 and `Content-Type: text/calendar`.
+2. Confirm the body has no UTF-8 byte-order mark and uses CRLF line endings.
+3. Check that the subscription is still enabled.
+4. Add it from Google Calendar on a computer with **Other calendars → From
+   URL** using the Mini App's copy-link fallback.
+5. Allow for Google's refresh cache before recreating the subscription.
 
 ## Feedback delivery
 

@@ -3,8 +3,6 @@ package calendarfile
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"strings"
 	"time"
@@ -34,9 +32,13 @@ func Generate(
 	start time.Time,
 	days int,
 	createdAt time.Time,
+	uidNamespace string,
 ) ([]byte, error) {
 	if days < 1 || days > 31 {
 		return nil, fmt.Errorf("calendar range must be between 1 and 31 days")
+	}
+	if !validUIDNamespace(uidNamespace) {
+		return nil, fmt.Errorf("invalid calendar UID namespace")
 	}
 	location, err := time.LoadLocation(profile.Timezone)
 	if err != nil {
@@ -52,6 +54,8 @@ func Generate(
 	writeLine(&calendar, "METHOD:PUBLISH")
 	writeLine(&calendar, "X-WR-CALNAME:"+escapeText(locale.BotName))
 	writeLine(&calendar, "X-WR-TIMEZONE:"+escapeText(profile.Timezone))
+	writeLine(&calendar, "X-PUBLISHED-TTL:PT12H")
+	writeLine(&calendar, "REFRESH-INTERVAL;VALUE=DURATION:PT12H")
 
 	for day := 0; day < days; day++ {
 		schedule, err := calculator.Day(ctx, start.AddDate(0, 0, day), profile)
@@ -63,15 +67,11 @@ func Generate(
 			if !ok {
 				continue
 			}
-			writeEvent(&calendar, profile, locale, prayer, at, createdAt)
+			writeEvent(&calendar, profile, locale, prayer, at, createdAt, uidNamespace)
 		}
 	}
 	writeLine(&calendar, "END:VCALENDAR")
 	return calendar.Bytes(), nil
-}
-
-func Filename(start time.Time, days int) string {
-	return fmt.Sprintf("prayer-times-%s-%d-days.ics", start.Format("2006-01-02"), days)
 }
 
 func writeEvent(
@@ -81,13 +81,18 @@ func writeEvent(
 	prayer domain.Prayer,
 	at time.Time,
 	createdAt time.Time,
+	uidNamespace string,
 ) {
-	uidSource := fmt.Sprintf("%s|%.3f|%.3f|%s|%s", profile.Timezone, profile.Latitude, profile.Longitude, prayer, at.UTC().Format(time.RFC3339))
-	digest := sha256.Sum256([]byte(uidSource))
 	description := fmt.Sprintf("%s · %s · %s", locale.BotName, locale.Method(profile.Method), profile.Timezone)
+	uid := fmt.Sprintf(
+		"%s-%s-%s@global-prayer-bot",
+		uidNamespace,
+		at.In(mustLocation(profile.Timezone)).Format("20060102"),
+		prayer,
+	)
 
 	writeLine(calendar, "BEGIN:VEVENT")
-	writeLine(calendar, "UID:"+hex.EncodeToString(digest[:12])+"@global-prayer-bot")
+	writeLine(calendar, "UID:"+uid)
 	writeLine(calendar, "DTSTAMP:"+createdAt.UTC().Format("20060102T150405Z"))
 	writeLine(calendar, "DTSTART:"+at.UTC().Format("20060102T150405Z"))
 	writeLine(calendar, "DTEND:"+at.Add(eventDuration).UTC().Format("20060102T150405Z"))
@@ -95,6 +100,26 @@ func writeEvent(
 	writeLine(calendar, "DESCRIPTION:"+escapeText(description))
 	writeLine(calendar, "CATEGORIES:Prayer Times")
 	writeLine(calendar, "END:VEVENT")
+}
+
+func validUIDNamespace(value string) bool {
+	if len(value) != 32 {
+		return false
+	}
+	for _, character := range value {
+		if (character < '0' || character > '9') && (character < 'a' || character > 'f') {
+			return false
+		}
+	}
+	return true
+}
+
+func mustLocation(name string) *time.Location {
+	location, err := time.LoadLocation(name)
+	if err != nil {
+		return time.UTC
+	}
+	return location
 }
 
 func escapeText(value string) string {

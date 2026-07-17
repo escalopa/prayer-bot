@@ -21,6 +21,15 @@ func TestResolveNormalizesTelegramLanguageTags(t *testing.T) {
 	}
 }
 
+func TestStableEnglishDescriptionIsStructured(t *testing.T) {
+	description := Resolve("en").Description
+	for _, marker := range []string{"📍", "🧭", "🔔", "\n\n"} {
+		if !strings.Contains(description, marker) {
+			t.Errorf("English bot description is missing %q", marker)
+		}
+	}
+}
+
 func TestLocalizedFormatStringsAcceptExpectedArguments(t *testing.T) {
 	samples := map[string][]any{
 		"location_set":      {"Cairo", "Africa/Cairo", "Egyptian"},

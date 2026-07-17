@@ -6,6 +6,8 @@ All services expose `GET /healthz`. Application logs include update IDs or deliv
 
 Useful alerts are Cloud Run 5xx rate, Cloud Tasks oldest task age, queue retry count, Scheduler failures, PostgreSQL connection errors, and Google Time Zone/Geocoding non-`OK` statuses.
 
+The webhook defaults to one minimum instance so interactive Telegram requests avoid scale-from-zero latency. Dispatch and sender continue to scale to zero. A deployment can override `webhook_min_instances`; setting it to `0` removes the idle-instance charge but reintroduces cold starts after inactivity.
+
 ## Secret rotation
 
 - Bot token: add a Secret Manager version, deploy a new revision, then revoke the old token through BotFather if required.
@@ -25,7 +27,7 @@ After deployment, verify the workflow summary's Mini App URL returns HTTP 200, o
 
 The menu button is configured automatically through the Bot API. BotFather's optional “Main Mini App” profile launch button is separate and may be configured manually later if a second entry point on the bot profile is wanted; it is not required for this release.
 
-The welcome illustration is embedded in the webhook binary and sent with the localized `/start` caption. Updating either JPEG requires a normal application deployment; updating an already configured avatar also requires removing the old photo in Telegram before rerunning profile synchronization.
+The welcome illustration is embedded in the webhook binary and sent with the localized `/start` caption. Telegram's empty-chat description supports text only, so the bot avatar is the image shown with that profile section; there is no separate description-image Bot API field. Updating either JPEG requires a normal application deployment; updating an already configured avatar also requires removing the old photo in Telegram before rerunning profile synchronization.
 
 ## Database recovery
 

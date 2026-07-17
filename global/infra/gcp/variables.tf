@@ -57,3 +57,14 @@ variable "max_instances" {
   type    = number
   default = 10
 }
+
+variable "webhook_min_instances" {
+  type        = number
+  default     = 1
+  description = "Minimum number of warm webhook instances. Keep at 1 for responsive Telegram interactions; set to 0 to allow cold starts and minimize idle cost."
+
+  validation {
+    condition     = var.webhook_min_instances >= 0 && floor(var.webhook_min_instances) == var.webhook_min_instances
+    error_message = "webhook_min_instances must be a non-negative integer."
+  }
+}

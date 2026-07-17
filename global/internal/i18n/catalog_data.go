@@ -18,7 +18,7 @@ var locales = map[string]Locale{
 	"en": {
 		Code: "en", NativeName: "English", BotName: "Global Prayer Times",
 		ShortDescription: "Accurate local prayer times, wherever you are.",
-		Description:      "Share a location to get accurate daily prayer times anywhere in the world. Choose a calculation method, madhab and high-latitude rule, fine-tune each prayer and enable reminders.",
+		Description:      "📍 Share your location to get accurate daily prayer times anywhere in the world.\n\n🧭 Choose your calculation method, madhab, and high-latitude rule.\n\n🔔 Fine-tune each prayer and enable reminders.",
 		Commands: map[string]string{
 			"location": "Set or replace prayer location", "today": "Show today's prayer times",
 			"tomorrow": "Show tomorrow's prayer times", "next": "Show the next prayer",

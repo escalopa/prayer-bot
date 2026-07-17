@@ -33,6 +33,8 @@ Hijri dates use the calculated Umm al-Qura calendar. Because official local moon
 
 The three services use one immutable image and select `/webhook`, `/dispatch`, or `/send` as the command. The webhook binary embeds the Mini App and serves it at `/app/`, so the feature does not add another Cloud Run service, container image, database, migration, or secret.
 
+The interactive webhook keeps one minimum Cloud Run instance warm by default, in both testing and production, so the first Telegram interaction after an idle period does not wait for a container cold start. Dispatch and sender services still scale to zero. Set the Terraform input `webhook_min_instances` (or `TF_VAR_webhook_min_instances`) to `0` only when minimizing idle cost is more important than first-response latency.
+
 ## Testing and production secrets
 
 The global workflow reuses the existing GitHub environments: logical `testing` deployments read secrets from `dev`, and logical `production` deployments read secrets from `prod`. No duplicate infrastructure environments or credentials are required.

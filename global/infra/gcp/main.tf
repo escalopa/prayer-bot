@@ -239,7 +239,7 @@ resource "google_cloud_run_v2_service" "webhook" {
     timeout         = "30s"
 
     scaling {
-      min_instance_count = 0
+      min_instance_count = var.webhook_min_instances
       max_instance_count = var.max_instances
     }
 

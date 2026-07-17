@@ -32,7 +32,10 @@ func TestGenerateCreatesPortableLocalizedCalendar(t *testing.T) {
 		HighLatitudeRule: domain.HighLatitudeAngleBased,
 	}
 	start := time.Date(2026, time.July, 17, 12, 0, 0, 0, time.UTC)
-	data, err := Generate(context.Background(), fakeCalculator{}, profile, i18n.Resolve("ar"), start, 2, start)
+	data, err := Generate(
+		context.Background(), fakeCalculator{}, profile, i18n.Resolve("ar"),
+		start, 2, start, "0123456789abcdef0123456789abcdef",
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,6 +49,12 @@ func TestGenerateCreatesPortableLocalizedCalendar(t *testing.T) {
 	if !strings.Contains(content, "SUMMARY:الفجر\r\n") || !strings.Contains(content, "DTSTART:20260717T010000Z\r\n") {
 		t.Fatalf("calendar is missing localized prayer or UTC timestamp:\n%s", content)
 	}
+	if !strings.Contains(content, "UID:0123456789abcdef0123456789abcdef-20260717-fajr@global-prayer-bot\r\n") {
+		t.Fatalf("calendar is missing its stable subscription UID:\n%s", content)
+	}
+	if !strings.Contains(content, "REFRESH-INTERVAL;VALUE=DURATION:PT12H\r\n") {
+		t.Fatalf("calendar is missing its refresh hint:\n%s", content)
+	}
 	if strings.Contains(content, "42@") {
 		t.Fatal("calendar must not expose a Telegram chat ID")
 	}
@@ -53,8 +62,17 @@ func TestGenerateCreatesPortableLocalizedCalendar(t *testing.T) {
 
 func TestGenerateValidatesRange(t *testing.T) {
 	profile := domain.PrayerProfile{Timezone: "UTC"}
-	if _, err := Generate(context.Background(), fakeCalculator{}, profile, i18n.Resolve("en"), time.Now(), 32, time.Now()); err == nil {
-		t.Fatal("expected oversized calendar export to fail")
+	if _, err := Generate(
+		context.Background(), fakeCalculator{}, profile, i18n.Resolve("en"),
+		time.Now(), 32, time.Now(), "0123456789abcdef0123456789abcdef",
+	); err == nil {
+		t.Fatal("expected oversized calendar range to fail")
+	}
+	if _, err := Generate(
+		context.Background(), fakeCalculator{}, profile, i18n.Resolve("en"),
+		time.Now(), 30, time.Now(), "invalid",
+	); err == nil {
+		t.Fatal("expected invalid UID namespace to fail")
 	}
 }
 

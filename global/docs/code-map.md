@@ -29,7 +29,7 @@ with the container command, so the three Cloud Run services use the same build.
 | `internal/location` | Google Time Zone and reverse-geocoding integration | Google HTTP APIs |
 | `internal/reminders` | Recurrence planning, due dispatch, Cloud Tasks enqueueing, Telegram delivery, and cleanup categories | `domain`, `store`, `prayertime`, Telegram and GCP clients |
 | `internal/telegram` | Bot commands, callbacks, keyboards, update routing, feedback, and owner dashboard | `store`, `location`, `prayertime`, `reminders`, `i18n` |
-| `internal/miniapp` | Embedded web UI, signed init-data authentication, settings APIs, Qibla/bootstrap data, and calendar downloads | `store`, `location`, `prayertime`, `reminders`, `qibla`, `calendarfile`, `i18n` |
+| `internal/miniapp` | Embedded web UI, signed init-data authentication, settings APIs, Qibla/bootstrap data, and private calendar subscriptions | `store`, `location`, `prayertime`, `reminders`, `qibla`, `calendarfile`, `i18n` |
 | `internal/i18n` | All supported locales, messages, buttons, prayer names, method names, and dates | `domain` |
 | `internal/qibla` | Great-circle bearing and distance to the Kaaba | Standard library only |
 | `internal/calendarfile` | Localized RFC 5545 prayer-calendar generation | `domain`, `i18n`, `prayertime` |

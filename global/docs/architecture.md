@@ -26,7 +26,15 @@ The backend never trusts a Telegram user ID sent in JSON. Every Mini App API req
 
 The Qibla tool derives a great-circle bearing from the rounded coordinates already present in the profile and sends only the resulting bearing and distance to the browser. Supported Telegram clients can rotate the displayed needle with absolute device-orientation data; unsupported clients retain the numeric bearing and static compass.
 
-Calendar export first creates a five-minute encrypted and authenticated download token from an authenticated Mini App request. The opaque token exposes neither the Telegram identity nor the bot token. The resulting same-origin URL generates a localized 7-day or 30-day iCalendar file on demand. Events are emitted as UTC instants for broad calendar-client compatibility, while the source timezone and calculation method remain in the calendar metadata. No exported event UID contains a Telegram user or chat ID.
+Calendar connection first creates or reuses a random private subscription URL
+from an authenticated Mini App request. Google Calendar fetches that URL without
+Telegram authentication, so possession of the URL is the access credential. The
+feed calculates a localized rolling 30-day window on every fetch, emits event
+instants in UTC for compatibility, and uses stable opaque UIDs so settings
+changes update events instead of duplicating them. The URL and event UIDs expose
+neither the Telegram user ID nor bot token. Users can revoke the URL from the
+Mini App. Google controls its subscription refresh schedule, so midnight
+rollover is eventually consistent rather than immediate.
 
 ## Data ownership
 

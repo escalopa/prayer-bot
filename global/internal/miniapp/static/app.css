@@ -211,6 +211,8 @@ button { -webkit-tap-highlight-color: transparent; }
 .calendar-illustration span { position: absolute; z-index: 1; top: 4px; left: 13px; color: #fff8d6; font: 700 22px/1 Georgia, serif; }
 .calendar-illustration strong { margin-top: 24px; font-size: 38px; letter-spacing: -.05em; }
 .calendar-actions { display: grid; gap: 9px; margin-top: auto; }
+.calendar-private { margin: -7px 0 15px; }
+.calendar-disconnect { justify-self: center; color: #a84040; }
 
 .toggle-row { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 68px; border-bottom: 1px solid var(--line); cursor: pointer; }
 .toggle-row:last-child { border-bottom: 0; }

@@ -8,6 +8,7 @@
   let toastTimer = null;
   let dirty = false;
   let compassStarted = false;
+  let calendarFeedURL = "";
 
   const launchCopy = {
     en: { open: "Open this page from the bot inside Telegram.", expired: "Your Telegram session expired. Close this window and reopen the app from the bot menu.", failed: "The app could not load. Please try again.", retry: "Try again" },
@@ -114,8 +115,10 @@
     setText("start-compass", labels.compass_start);
     setText("calendar-title", labels.calendar_title);
     setText("calendar-help", labels.calendar_help);
-    setText("export-week", labels.export_week);
-    setText("export-month", labels.export_month);
+    setText("calendar-private", labels.calendar_private);
+    setText("connect-calendar", labels.calendar_connect);
+    setText("copy-calendar-link", labels.calendar_copy);
+    setText("disconnect-calendar", labels.calendar_disconnect);
   }
 
   function fillSelect(id, options, selected) {
@@ -204,6 +207,16 @@
     byId("start-compass").disabled = false;
     setText("start-compass", state.labels.compass_start);
     byId("compass-status").classList.add("hidden");
+    renderCalendarSubscription();
+  }
+
+  function renderCalendarSubscription() {
+    const enabled = Boolean(state.calendar && state.calendar.enabled);
+    byId("disconnect-calendar").classList.toggle("hidden", !enabled);
+    byId("calendar-status").classList.add("hidden");
+    setText("connect-calendar", state.labels.calendar_connect);
+    setText("copy-calendar-link", state.labels.calendar_copy);
+    setText("disconnect-calendar", state.labels.calendar_disconnect);
   }
 
   function renderReminders() {
@@ -399,36 +412,80 @@
     });
   }
 
-  function fallbackDownload(url, filename) {
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = filename;
-    link.rel = "noopener";
-    document.body.append(link);
-    link.click();
-    link.remove();
-    showToast(state.labels.export_ready);
+  function setCalendarButtonsDisabled(value) {
+    ["connect-calendar", "copy-calendar-link", "disconnect-calendar"].forEach((id) => {
+      byId(id).disabled = value;
+    });
   }
 
-  async function exportCalendar(days, button) {
-    button.disabled = true;
-    const previousText = button.textContent;
-    button.textContent = state.labels.export_preparing;
+  async function ensureCalendarSubscription() {
+    const subscription = await request("/api/miniapp/calendar-subscription", "POST");
+    state.calendar = subscription;
+    calendarFeedURL = new URL(subscription.path, window.location.origin).href;
+    renderCalendarSubscription();
+    return calendarFeedURL;
+  }
+
+  async function connectGoogleCalendar() {
+    setCalendarButtonsDisabled(true);
+    setText("calendar-status", state.labels.calendar_opening);
+    byId("calendar-status").classList.remove("hidden");
     try {
-      const download = await request("/api/miniapp/calendar-link", "POST", { days });
-      const fileURL = new URL(download.path, window.location.origin).href;
-      if (telegram && telegram.downloadFile && telegram.isVersionAtLeast("8.0") && fileURL.startsWith("https://")) {
-        telegram.downloadFile({ url: fileURL, file_name: download.filename }, (accepted) => {
-          if (accepted) showToast(state.labels.export_ready);
-        });
+      const feedURL = await ensureCalendarSubscription();
+      const googleURL = `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(feedURL)}`;
+      if (telegram && telegram.openLink) {
+        telegram.openLink(googleURL);
       } else {
-        fallbackDownload(fileURL, download.filename);
+        window.open(googleURL, "_blank", "noopener");
       }
+      showToast(state.labels.calendar_opening);
     } catch (_) {
       showToast(state.labels.temporary_failure, true);
     } finally {
-      button.disabled = false;
-      button.textContent = previousText;
+      setCalendarButtonsDisabled(false);
+    }
+  }
+
+  function copyText(value) {
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(value);
+    }
+    const input = document.createElement("textarea");
+    input.value = value;
+    input.setAttribute("readonly", "");
+    input.style.position = "fixed";
+    input.style.opacity = "0";
+    document.body.append(input);
+    input.select();
+    const copied = document.execCommand("copy");
+    input.remove();
+    return copied ? Promise.resolve() : Promise.reject(new Error("copy_failed"));
+  }
+
+  async function copyCalendarLink() {
+    setCalendarButtonsDisabled(true);
+    try {
+      const feedURL = calendarFeedURL || await ensureCalendarSubscription();
+      await copyText(feedURL);
+      showToast(state.labels.calendar_copied);
+    } catch (_) {
+      showToast(state.labels.temporary_failure, true);
+    } finally {
+      setCalendarButtonsDisabled(false);
+    }
+  }
+
+  async function disconnectCalendar() {
+    setCalendarButtonsDisabled(true);
+    try {
+      state.calendar = await request("/api/miniapp/calendar-subscription", "DELETE");
+      calendarFeedURL = "";
+      renderCalendarSubscription();
+      showToast(state.labels.calendar_disconnected);
+    } catch (_) {
+      showToast(state.labels.temporary_failure, true);
+    } finally {
+      setCalendarButtonsDisabled(false);
     }
   }
 
@@ -473,8 +530,9 @@
   byId("location-primary").addEventListener("click", (event) => updateLocation(event.currentTarget));
   byId("location-secondary").addEventListener("click", (event) => updateLocation(event.currentTarget));
   byId("start-compass").addEventListener("click", startCompass);
-  byId("export-week").addEventListener("click", (event) => exportCalendar(7, event.currentTarget));
-  byId("export-month").addEventListener("click", (event) => exportCalendar(30, event.currentTarget));
+  byId("connect-calendar").addEventListener("click", connectGoogleCalendar);
+  byId("copy-calendar-link").addEventListener("click", copyCalendarLink);
+  byId("disconnect-calendar").addEventListener("click", disconnectCalendar);
   byId("save-preferences").addEventListener("click", savePreferences);
   byId("retry-app").addEventListener("click", bootstrapApp);
   ["prayer-reminders", "pre-prayer-minutes", "fasting-reminders", "kahf-reminders", "language", "method", "madhab", "highlat", "hijri-adjustment"]

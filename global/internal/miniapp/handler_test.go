@@ -42,6 +42,10 @@ func TestStaticMiniAppIsEmbeddedWithSecurityHeaders(t *testing.T) {
 	if !strings.Contains(string(script), "tgWebAppData") || !strings.Contains(string(script), "/api/miniapp/preferences") {
 		t.Fatal("Mini App script is missing resilient Telegram launch data or unified preference saving")
 	}
+	if !strings.Contains(html, "qibla-compass") || !strings.Contains(html, "export-month") ||
+		!strings.Contains(string(script), "DeviceOrientation") || !strings.Contains(string(script), "downloadFile") {
+		t.Fatal("Mini App is missing Qibla compass or native calendar export support")
+	}
 	if !strings.Contains(response.Header().Get("Content-Security-Policy"), "telegram.org") {
 		t.Fatal("Mini App response is missing its CSP")
 	}
@@ -152,8 +156,82 @@ func TestLocationUpdatePreservesCalculationSettingsAndRoundsCoordinates(t *testi
 	if err := json.Unmarshal(response.Body.Bytes(), &data); err != nil {
 		t.Fatal(err)
 	}
-	if data.LocationName != "Cairo" || data.Today == nil || data.Tomorrow == nil {
+	if data.LocationName != "Cairo" || data.Today == nil || data.Tomorrow == nil || data.Qibla == nil {
 		t.Fatalf("unexpected response: %+v", data)
+	}
+	if data.Qibla.BearingDegrees < 135 || data.Qibla.BearingDegrees > 137 || data.Qibla.DistanceKilometres < 1250 {
+		t.Fatalf("unexpected Qibla result: %+v", data.Qibla)
+	}
+}
+
+func TestCalendarExportUsesShortLivedSignedDownload(t *testing.T) {
+	now := time.Date(2026, time.July, 17, 12, 0, 0, 0, time.UTC)
+	storage := newFakeStorage()
+	storage.chats[42] = domain.Chat{TelegramChatID: 42, Type: "private", LanguageCode: "en"}
+	storage.profiles[42] = domain.PrayerProfile{
+		ChatID: 42, Latitude: 30.044, Longitude: 31.236, Timezone: "Africa/Cairo",
+		Method: domain.MethodEgyptian, Madhab: domain.MadhabShafii,
+		HighLatitudeRule: domain.HighLatitudeAngleBased,
+	}
+	handler := NewHandler("test-token", storage, nil, prayertime.New(), nil, nil)
+	handler.now = func() time.Time { return now }
+	mux := http.NewServeMux()
+	handler.Register(mux)
+
+	linkRequest := httptest.NewRequest(http.MethodPost, "/api/miniapp/calendar-link", strings.NewReader(`{"days":7}`))
+	linkRequest.Header.Set("X-Telegram-Init-Data", signedInitData(t, "test-token", now, initDataUser{
+		ID: 42, FirstName: "Amina", LanguageCode: "en",
+	}))
+	linkResponse := httptest.NewRecorder()
+	mux.ServeHTTP(linkResponse, linkRequest)
+	if linkResponse.Code != http.StatusOK {
+		t.Fatalf("link status = %d, body = %s", linkResponse.Code, linkResponse.Body.String())
+	}
+	var link calendarLinkResponse
+	if err := json.Unmarshal(linkResponse.Body.Bytes(), &link); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(link.Path, "/api/miniapp/calendar.ics?token=") ||
+		link.Filename != "prayer-times-2026-07-17-7-days.ics" {
+		t.Fatalf("unexpected calendar link: %+v", link)
+	}
+
+	downloadRequest := httptest.NewRequest(http.MethodGet, link.Path, nil)
+	downloadResponse := httptest.NewRecorder()
+	mux.ServeHTTP(downloadResponse, downloadRequest)
+	if downloadResponse.Code != http.StatusOK {
+		t.Fatalf("download status = %d, body = %s", downloadResponse.Code, downloadResponse.Body.String())
+	}
+	if contentType := downloadResponse.Header().Get("Content-Type"); !strings.HasPrefix(contentType, "text/calendar") {
+		t.Fatalf("content type = %q", contentType)
+	}
+	if disposition := downloadResponse.Header().Get("Content-Disposition"); !strings.Contains(disposition, link.Filename) {
+		t.Fatalf("content disposition = %q", disposition)
+	}
+	if downloadResponse.Header().Get("Access-Control-Allow-Origin") != "https://web.telegram.org" {
+		t.Fatal("calendar response is missing Telegram Web download CORS header")
+	}
+	if events := strings.Count(downloadResponse.Body.String(), "BEGIN:VEVENT\r\n"); events != 42 {
+		t.Fatalf("calendar event count = %d, want 42", events)
+	}
+}
+
+func TestCalendarTokensRejectTamperingAndExpiry(t *testing.T) {
+	now := time.Date(2026, time.July, 17, 12, 0, 0, 0, time.UTC)
+	token, err := signCalendarToken("secret", calendarTokenPayload{
+		ChatID: 42, Days: 30, ExpiresAt: now.Add(calendarTokenLifetime).Unix(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if payload, err := verifyCalendarToken("secret", token, now); err != nil || payload.ChatID != 42 || payload.Days != 30 {
+		t.Fatalf("valid token failed: payload=%+v err=%v", payload, err)
+	}
+	if _, err := verifyCalendarToken("secret", token+"x", now); err == nil {
+		t.Fatal("tampered token was accepted")
+	}
+	if _, err := verifyCalendarToken("secret", token, now.Add(calendarTokenLifetime)); err == nil {
+		t.Fatal("expired token was accepted")
 	}
 }
 

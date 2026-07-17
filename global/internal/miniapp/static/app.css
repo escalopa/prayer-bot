@@ -131,6 +131,87 @@ button { -webkit-tap-highlight-color: transparent; }
 .panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
 .panel-heading h2 { margin: 3px 0 0; font-size: 19px; letter-spacing: -.02em; }
 
+.tools-panel { padding-bottom: 18px; }
+.tool-grid { display: grid; gap: 12px; }
+.tool-card {
+  position: relative;
+  min-width: 0;
+  padding: 17px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--surface-alt) 58%, var(--surface));
+}
+.tool-card::before {
+  position: absolute;
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+  content: "";
+  inset: -70px -55px auto auto;
+  pointer-events: none;
+}
+[dir="rtl"] .tool-card::before { right: auto; left: -55px; }
+.tool-heading { position: relative; z-index: 1; display: flex; align-items: flex-start; gap: 10px; }
+.tool-heading h3 { margin: 1px 0 4px; font-size: 16px; letter-spacing: -.015em; }
+.tool-heading p { margin: 0; color: var(--app-muted); font-size: 11px; line-height: 1.45; }
+.tool-icon { display: grid; place-items: center; width: 34px; height: 34px; flex: 0 0 34px; border-radius: 11px; background: var(--surface); font-size: 17px; box-shadow: 0 5px 15px rgba(25, 57, 45, .07); }
+
+.qibla-compass {
+  position: relative;
+  width: 190px;
+  height: 190px;
+  margin: 19px auto 13px;
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--line));
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, transparent 0 31%, color-mix(in srgb, var(--accent) 9%, transparent) 32% 33%, transparent 34%),
+    repeating-conic-gradient(from -1deg, color-mix(in srgb, var(--app-muted) 34%, transparent) 0deg 1deg, transparent 1deg 15deg),
+    radial-gradient(circle, var(--surface) 0 67%, color-mix(in srgb, var(--accent) 8%, var(--surface-alt)) 68%);
+  box-shadow: inset 0 0 0 10px color-mix(in srgb, var(--surface) 82%, transparent), 0 12px 30px rgba(25, 57, 45, .08);
+}
+.cardinal { position: absolute; z-index: 2; color: var(--app-muted); font-size: 10px; font-weight: 850; }
+.cardinal-north { top: 10px; left: 50%; color: var(--accent); transform: translateX(-50%); }
+.cardinal-east { top: 50%; right: 11px; transform: translateY(-50%); }
+.cardinal-south { bottom: 9px; left: 50%; transform: translateX(-50%); }
+.cardinal-west { top: 50%; left: 11px; transform: translateY(-50%); }
+.qibla-needle {
+  position: absolute;
+  z-index: 1;
+  top: 20px;
+  right: 20px;
+  bottom: 20px;
+  left: 20px;
+  transform: rotate(var(--qibla-rotation, 0deg));
+  transition: transform .28s ease-out;
+}
+.needle-arrow { position: absolute; top: -3px; left: 50%; color: #bf8b25; font-size: 23px; line-height: 1; transform: translateX(-50%); filter: drop-shadow(0 2px 3px rgba(100, 71, 13, .25)); }
+.needle-kaaba { position: absolute; top: 20px; left: 50%; font-size: 18px; transform: translateX(-50%); }
+.qibla-needle::after { position: absolute; top: 43px; bottom: 50%; left: calc(50% - 1px); width: 2px; border-radius: 2px; background: linear-gradient(#c49330, color-mix(in srgb, var(--accent) 45%, transparent)); content: ""; }
+.compass-center { position: absolute; z-index: 3; top: 50%; left: 50%; width: 14px; height: 14px; border: 4px solid var(--surface); border-radius: 50%; background: var(--accent); box-shadow: 0 2px 8px rgba(0,0,0,.18); transform: translate(-50%, -50%); }
+.tool-value { margin: 0; font-size: 18px; font-weight: 850; text-align: center; }
+.tool-note { margin: 5px 0 13px; color: var(--app-muted); font-size: 11px; line-height: 1.4; text-align: center; }
+
+.calendar-card { display: flex; flex-direction: column; }
+.calendar-illustration {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 126px;
+  height: 112px;
+  margin: 24px auto 25px;
+  border: 1px solid var(--line);
+  border-radius: 19px;
+  color: var(--app-text);
+  background: var(--surface);
+  box-shadow: 0 14px 28px rgba(25, 57, 45, .09);
+}
+.calendar-illustration::before { position: absolute; top: 0; right: 0; left: 0; height: 29px; border-radius: 18px 18px 0 0; background: var(--accent); content: ""; }
+.calendar-illustration span { position: absolute; z-index: 1; top: 4px; left: 13px; color: #fff8d6; font: 700 22px/1 Georgia, serif; }
+.calendar-illustration strong { margin-top: 24px; font-size: 38px; letter-spacing: -.05em; }
+.calendar-actions { display: grid; gap: 9px; margin-top: auto; }
+
 .toggle-row { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 68px; border-bottom: 1px solid var(--line); cursor: pointer; }
 .toggle-row:last-child { border-bottom: 0; }
 .toggle-row strong, .toggle-row small { display: block; }
@@ -170,6 +251,9 @@ select:focus, input[type="number"]:focus { border-color: var(--accent); box-shad
 
 .primary-button { width: 100%; min-height: 50px; padding: 0 18px; border: 0; border-radius: 16px; color: var(--accent-text); background: var(--accent); font-weight: 800; cursor: pointer; box-shadow: 0 10px 24px color-mix(in srgb, var(--accent) 24%, transparent); }
 .primary-button:disabled { opacity: .55; cursor: wait; }
+.primary-button.compact { min-height: 44px; border-radius: 14px; box-shadow: none; font-size: 13px; }
+.secondary-button { width: 100%; min-height: 44px; padding: 0 14px; border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line)); border-radius: 14px; color: var(--accent); background: color-mix(in srgb, var(--accent) 7%, var(--surface)); font-size: 13px; font-weight: 800; cursor: pointer; }
+.secondary-button:disabled { opacity: .55; cursor: wait; }
 .text-button { padding: 8px 0; border: 0; color: var(--accent); background: transparent; font-size: 12px; font-weight: 750; cursor: pointer; }
 
 .save-bar {
@@ -187,6 +271,7 @@ select:focus, input[type="number"]:focus { border-color: var(--accent); box-shad
 @media (min-width: 560px) {
   .app-shell { padding-inline: 24px; }
   .form-grid { grid-template-columns: 1fr 1fr; }
+  .tool-grid { grid-template-columns: 1fr 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {

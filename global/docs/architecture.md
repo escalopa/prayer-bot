@@ -20,6 +20,10 @@ The webhook service embeds and serves a dependency-free HTML/CSS/JavaScript Mini
 
 The backend never trusts a Telegram user ID sent in JSON. Every Mini App API request carries the exact `Telegram.WebApp.initData` string in a header. The server verifies Telegram's HMAC signature with the environment's bot token, rejects duplicate fields and sessions older than 24 hours, and derives the private chat ID from the signed user object. The app is private-chat scoped; group configuration remains in the bot, where administrator authorization is enforced.
 
+The Qibla tool derives a great-circle bearing from the rounded coordinates already present in the profile and sends only the resulting bearing and distance to the browser. Supported Telegram clients can rotate the displayed needle with absolute device-orientation data; unsupported clients retain the numeric bearing and static compass.
+
+Calendar export first creates a five-minute encrypted and authenticated download token from an authenticated Mini App request. The opaque token exposes neither the Telegram identity nor the bot token. The resulting same-origin URL generates a localized 7-day or 30-day iCalendar file on demand. Events are emitted as UTC instants for broad calendar-client compatibility, while the source timezone and calculation method remain in the calendar metadata. No exported event UID contains a Telegram user or chat ID.
+
 ## Data ownership
 
 The legacy `public.chats` and `public.prayers` tables remain untouched. Global testing data is owned by `global_bot_testing`, production data is owned by `global_bot_production`, foreign keys cascade from each schema's `chats` table, and `/delete_me` deletes the chat root.

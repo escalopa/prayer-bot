@@ -1,0 +1,59 @@
+name: Calculation documentation
+
+on:
+  pull_request:
+    paths:
+      - 'docs/**'
+      - 'output/pdf/**'
+      - '.github/workflows/pages.yaml'
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'output/pdf/**'
+      - '.github/workflows/pages.yaml'
+  workflow_dispatch:
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python3 docs/validate.py
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - name: Assemble static site
+        run: |
+          mkdir -p _site/downloads
+          cp -R docs/index.html docs/styles.css _site/
+          cp docs/calculation-methods.tex docs/artifact-manifest.json _site/
+          cp output/pdf/prayer-time-calculations.pdf _site/downloads/
+          touch _site/.nojekyll
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

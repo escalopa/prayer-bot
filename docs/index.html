@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="A transparent technical specification of how Global Prayer Times calculates prayer times, high-latitude adjustments, and Hijri dates.">
+  <meta name="theme-color" content="#123f33">
+  <title>How Global Prayer Times Calculates Prayer Times</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [["\\(", "\\)"]], displayMath: [["\\[", "\\]"]] },
+      options: { skipHtmlTags: ["script", "noscript", "style", "textarea", "pre", "code"] }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <header class="hero">
+    <nav class="topbar" aria-label="Primary navigation">
+      <a class="brand" href="#top"><span aria-hidden="true">☾</span> Global Prayer Times</a>
+      <div class="nav-links">
+        <a href="#methods">Methods</a>
+        <a href="#high-latitude">High latitude</a>
+        <a href="#hijri">Hijri</a>
+        <a href="https://github.com/escalopa/prayer-bot">Source</a>
+      </div>
+    </nav>
+    <div id="top" class="hero-content">
+      <p class="eyebrow">Public calculation specification</p>
+      <h1>How the bot calculates prayer times</h1>
+      <p class="lede">A transparent, equation-level explanation of solar events, all nine calculation methods, Asr conventions, high-latitude rules, corrections, and Gregorian–Hijri conversion.</p>
+      <div class="actions">
+        <a class="button primary" href="./downloads/prayer-time-calculations.pdf">Download the PDF</a>
+        <a class="button secondary" href="https://github.com/escalopa/prayer-bot/blob/main/docs/calculation-methods.tex">Read the LaTeX source</a>
+      </div>
+      <div class="summary-grid" aria-label="Calculation summary">
+        <div><strong>9</strong><span>twilight methods</span></div>
+        <div><strong>2</strong><span>Asr conventions</span></div>
+        <div><strong>3</strong><span>high-latitude rules</span></div>
+        <div><strong>±2</strong><span>Hijri correction days</span></div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <aside class="toc" aria-label="On this page">
+      <p>On this page</p>
+      <a href="#scope">Scope</a>
+      <a href="#pipeline">Pipeline</a>
+      <a href="#solar">Solar geometry</a>
+      <a href="#methods">Methods</a>
+      <a href="#asr">Asr</a>
+      <a href="#high-latitude">High latitude</a>
+      <a href="#corrections">Corrections</a>
+      <a href="#hijri">Hijri calendar</a>
+      <a href="#differences">Differences</a>
+      <a href="#references">References</a>
+    </aside>
+
+    <article>
+      <section id="scope">
+        <p class="section-label">01 · Scope</p>
+        <h2>What this document represents</h2>
+        <p>This page describes the behavior of the <strong>global</strong> Telegram bot as implemented in its source code. It is a technical specification, not a religious ruling. Local mosques and recognized authorities may publish schedules with different conventions, observation decisions, or safety margins.</p>
+        <div class="callout">
+          <strong>Prayer times are calculated locally.</strong>
+          <p>Google Maps is consulted only when a user sets a location, to resolve an IANA timezone, ISO country code, city label, and place identifier. Google does not provide the prayer schedule.</p>
+        </div>
+        <p>The runtime uses <a href="https://github.com/hablullah/go-prayer/tree/v1.1.1">Go Prayer v1.1.1</a>, whose solar events come from <a href="https://github.com/hablullah/go-sampa/tree/v1.0.0">Go SAMPA v1.0.0</a> and the NREL Solar Position Algorithm. Calendar conversion uses <a href="https://github.com/hablullah/go-hijri/tree/v1.0.2">Go Hijri v1.0.2</a>.</p>
+      </section>
+
+      <section id="pipeline">
+        <p class="section-label">02 · Pipeline</p>
+        <h2>From a Telegram location to a schedule</h2>
+        <ol class="steps">
+          <li><span>1</span><div><strong>Validate coordinates</strong><p>Latitude must be within −90°…90° and longitude within −180°…180°.</p></div></li>
+          <li><span>2</span><div><strong>Resolve local civil time</strong><p>The bot obtains the IANA timezone and ISO country code, then stores coordinates rounded to three decimals.</p></div></li>
+          <li><span>3</span><div><strong>Select a default</strong><p>The country chooses an initial twilight method. The user can replace it at any time.</p></div></li>
+          <li><span>4</span><div><strong>Calculate solar events</strong><p>The requested instant is converted to the local timezone, and the bot calculates/caches the entire local year.</p></div></li>
+          <li><span>5</span><div><strong>Adapt and finalize</strong><p>It applies the high-latitude rule when necessary, per-prayer minute corrections, and nearest-minute rounding.</p></div></li>
+          <li><span>6</span><div><strong>Display the Hijri date</strong><p>The same local Gregorian date is converted separately. Hijri correction never moves prayer times.</p></div></li>
+        </ol>
+        <div class="formula">
+          \[
+          \phi_s=\frac{\operatorname{round}(1000\phi)}{1000},\qquad
+          \lambda_s=\frac{\operatorname{round}(1000\lambda)}{1000}
+          \]
+          <p>Stored location precision is approximately a city block; raw Telegram precision is not retained.</p>
+        </div>
+      </section>
+
+      <section id="solar">
+        <p class="section-label">03 · Solar geometry</p>
+        <h2>Finding the Sun’s event times</h2>
+        <p>The underlying engine implements NREL SPA to obtain topocentric solar position. The prayer library searches around solar transit for the moment the Sun reaches the required elevation.</p>
+        <p>For intuition, with latitude \(\phi\), solar declination \(\delta\), local hour angle \(H\), and solar elevation \(h\):</p>
+        <div class="formula">
+          \[
+          \sin h=\sin\phi\sin\delta+\cos\phi\cos\delta\cos H
+          \]
+          \[
+          H_0=\arccos\!\left(\frac{\sin h_0-\sin\phi\sin\delta}{\cos\phi\cos\delta}\right)
+          \]
+        </div>
+        <p>The morning solution occurs before transit; the evening solution occurs after it. If the arccos argument is outside \([-1,1]\), the target elevation is not reached that day. That is the geometric reason a high-latitude fallback may be required.</p>
+        <div class="event-grid">
+          <div><span>Fajr</span><p>Sun reaches the method’s negative Fajr angle before transit.</p></div>
+          <div><span>Sunrise</span><p>SPA sunrise at sea-level elevation settings.</p></div>
+          <div><span>Dhuhr</span><p>Solar transit; no built-in delay.</p></div>
+          <div><span>Asr</span><p>Post-transit shadow-ratio elevation.</p></div>
+          <div><span>Maghrib</span><p>SPA sunset.</p></div>
+          <div><span>Isha</span><p>Negative Isha angle, or +90 minutes for Umm al-Qura.</p></div>
+        </div>
+      </section>
+
+      <section id="methods">
+        <p class="section-label">04 · Twilight conventions</p>
+        <h2>All calculation methods available in the bot</h2>
+        <p>The method changes Fajr and Isha only. Sunrise, Dhuhr, Asr, and Maghrib keep the definitions above.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Method</th><th>Fajr</th><th>Isha</th><th>Automatic default</th></tr></thead>
+            <tbody>
+              <tr><td>Muslim World League</td><td>18°</td><td>17°</td><td>All other countries</td></tr>
+              <tr><td>Egyptian General Authority</td><td>19.5°</td><td>17.5°</td><td>Egypt</td></tr>
+              <tr><td>Umm al-Qura</td><td>18.5°</td><td>Maghrib + 90 min</td><td>Saudi Arabia</td></tr>
+              <tr><td>Karachi</td><td>18°</td><td>18°</td><td>Pakistan, India, Bangladesh, Afghanistan</td></tr>
+              <tr><td>ISNA</td><td>15°</td><td>15°</td><td>United States, Canada</td></tr>
+              <tr><td>Diyanet</td><td>18°</td><td>17°</td><td>Turkey</td></tr>
+              <tr><td>Kemenag</td><td>20°</td><td>18°</td><td>Indonesia</td></tr>
+              <tr><td>MUIS</td><td>20°</td><td>18°</td><td>Singapore</td></tr>
+              <tr><td>JAKIM</td><td>20°</td><td>18°</td><td>Malaysia</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="formula">
+          \[
+          h(t_F)=-\theta_F,\;t_F&lt;t_{transit},\qquad
+          h(t_I)=-\theta_I,\;t_I&gt;t_{transit}
+          \]
+        </div>
+        <p>For Umm al-Qura, final Isha is \(t_I=t_M+90\text{ minutes}\). This fixed rule is applied after the general high-latitude adapter, so the selected high-latitude rule can affect Umm al-Qura Fajr but does not replace its fixed Isha duration.</p>
+      </section>
+
+      <section id="asr">
+        <p class="section-label">05 · Asr</p>
+        <h2>The selected madhab changes the shadow factor</h2>
+        <p>Let \(k=1\) for Shafi’i, Maliki, and Hanbali timing, and \(k=2\) for Hanafi timing. The target solar elevation is:</p>
+        <div class="formula prominent">
+          \[
+          h_A=\operatorname{arccot}\!\left(k+\tan|\delta-\phi|\right),
+          \qquad \operatorname{arccot}(x)=\arctan(1/x)
+          \]
+        </div>
+        <p>The engine finds this target after transit. The Hanafi factor normally produces a later Asr because the target Sun elevation is lower.</p>
+      </section>
+
+      <section id="high-latitude">
+        <p class="section-label">06 · High latitude</p>
+        <h2>When normal twilight is unavailable</h2>
+        <p>A day is marked abnormal if sunrise or sunset is missing, or if astronomical dawn/dusk at −18° is missing. The configured adapter changes a date only when Fajr or Isha is missing and both sunrise and Maghrib still exist.</p>
+        <div class="formula">
+          \[
+          D=t_M-t_R,\qquad N=24\text{ hours}-D
+          \]
+          \[
+          t_F=t_R-p_FN,\qquad t_I=t_M+p_IN
+          \]
+        </div>
+        <div class="rule-grid">
+          <div><span>Angle based</span><strong>\(p_F=\theta_F/60\)</strong><strong>\(p_I=\theta_I/60\)</strong><p>The method angles determine the fractions of night.</p></div>
+          <div><span>Middle night</span><strong>\(p_F=1/2\)</strong><strong>\(p_I=1/2\)</strong><p>Both events are placed at the middle-night boundary.</p></div>
+          <div><span>One seventh</span><strong>\(p_F=1/7\)</strong><strong>\(p_I=1/7\)</strong><p>The first and last seventh of the night are used.</p></div>
+        </div>
+        <div class="callout warning">
+          <strong>Extreme-latitude limitation</strong>
+          <p>All three exposed rules require sunrise and sunset. During polar day or polar night they cannot synthesize a complete schedule. Users should follow an appropriate local authority in that situation.</p>
+        </div>
+      </section>
+
+      <section id="corrections">
+        <p class="section-label">07 · Finalization</p>
+        <h2>User corrections, rounding, and caching</h2>
+        <p>Each prayer can have a whole-minute correction \(\Delta_p\) from −30 to +30. The result is corrected and then rounded to the nearest minute:</p>
+        <div class="formula prominent">
+          \[
+          t_{p,shown}=\operatorname{round}_{minute}(t_{p,base}+\Delta_p)
+          \]
+        </div>
+        <p>A correction changes only that prayer. Year schedules are cached by rounded coordinates, timezone, method, madhab, high-latitude rule, all six corrections, and year. Caching changes performance, never the result.</p>
+      </section>
+
+      <section id="hijri">
+        <p class="section-label">08 · Calendars</p>
+        <h2>Gregorian to Hijri, and back</h2>
+        <p>The bot converts the requested instant to the saved timezone and takes its local Gregorian date \(G\). A user correction \(a\in\{-2,-1,0,1,2\}\) is applied only to the calendar display: \(G'=G+a\) civil days.</p>
+
+        <h3>1. Convert Gregorian date to Julian day</h3>
+        <p>January and February are treated as months 13 and 14 of the previous year. For adjusted \(Y',M'\), day \(d\), fraction \(f\), and Gregorian correction \(B\):</p>
+        <div class="formula">
+          \[
+          A=\left\lfloor\frac{Y'}{100}\right\rfloor,\qquad
+          B=2+\left\lfloor\frac{A}{4}\right\rfloor-A
+          \]
+          \[
+          JD=1720994.5+\lfloor365.25Y'\rfloor+\lfloor30.6001(M'+1)\rfloor+B+d+f
+          \]
+        </div>
+
+        <h3>2. Preferred Umm al-Qura lookup</h3>
+        <p>The bundled lunation table covers 14 March 1937 through 16 November 2077. At UTC noon, the converter computes \(CJDN=\lfloor JD\rfloor\) and \(MCJDN=CJDN-2400000\). If \(L_i\) is the first table entry greater than MCJDN:</p>
+        <div class="formula">
+          \[
+          ILN=i+16260,\qquad y=\left\lfloor\frac{ILN-1}{12}\right\rfloor+1
+          \]
+          \[
+          m=ILN-12\left\lfloor\frac{ILN-1}{12}\right\rfloor,\qquad
+          d=MCJDN-L_{i-1}+1
+          \]
+        </div>
+        <p>The inverse supported by the library is \(ILN=m+12(y-1)\), \(i=ILN-16260\), \(MCJDN=d-1+L_{i-1}\), and \(JD=MCJDN+2400000-0.5\). The bot currently uses Gregorian → Hijri for display; it does not expose the reverse conversion in the UI.</p>
+
+        <h3>3. Arithmetic fallback</h3>
+        <p>Outside the table, the bot uses the deterministic 30-year tabular cycle. It contains 10,631 days; leap years are 2, 5, 7, 10, 13, 16, 18, 21, 24, 26, and 29. Months alternate 30/29 days, and month 12 has 30 days in a leap year.</p>
+        <div class="formula">
+          \[
+          JD_H=1948438.5+354(y-1)+\left\lfloor\frac{3+11y}{30}\right\rfloor+
+          29(m-1)+\left\lfloor\frac{m}{2}\right\rfloor+d
+          \]
+        </div>
+        <p>This fallback and Umm al-Qura are calculated calendars. Local crescent observation can differ, which is why the bot allows the ±2-day display correction.</p>
+      </section>
+
+      <section id="differences">
+        <p class="section-label">09 · Interpretation</p>
+        <h2>Why another timetable may differ</h2>
+        <div class="difference-grid">
+          <div><strong>Convention</strong><p>Different Fajr/Isha angles or Asr factor.</p></div>
+          <div><strong>Latitude policy</strong><p>Different treatment when twilight disappears.</p></div>
+          <div><strong>Astronomy</strong><p>Elevation, refraction, or solar model choices.</p></div>
+          <div><strong>Civil time</strong><p>Timezone or daylight-saving assumptions.</p></div>
+          <div><strong>Institution</strong><p>Safety margins and local adjustments.</p></div>
+          <div><strong>Calendar</strong><p>Observed crescent versus calculated date.</p></div>
+        </div>
+      </section>
+
+      <section id="references">
+        <p class="section-label">10 · Reproducibility</p>
+        <h2>Primary references and source code</h2>
+        <ul class="references">
+          <li><a href="https://github.com/escalopa/prayer-bot/blob/main/global/internal/prayertime/calculator.go">Bot prayer calculator</a></li>
+          <li><a href="https://github.com/escalopa/prayer-bot/blob/main/global/internal/hijri/calendar.go">Bot Hijri wrapper</a></li>
+          <li><a href="https://github.com/hablullah/go-prayer/tree/v1.1.1">Go Prayer v1.1.1</a></li>
+          <li><a href="https://github.com/hablullah/go-sampa/tree/v1.0.0">Go SAMPA v1.0.0</a></li>
+          <li><a href="https://github.com/hablullah/go-hijri/tree/v1.0.2">Go Hijri v1.0.2</a></li>
+          <li><a href="https://docs.nrel.gov/docs/fy08osti/34302.pdf">NREL Solar Position Algorithm report</a></li>
+        </ul>
+        <p class="closing">This specification is versioned with the open-source bot. If implementation and documentation ever disagree, the pinned source code is authoritative and the documentation should be corrected.</p>
+      </section>
+    </article>
+  </main>
+
+  <footer>
+    <span>Global Prayer Times · Open calculation specification</span>
+    <a href="#top">Back to top ↑</a>
+  </footer>
+</body>
+</html>

@@ -500,7 +500,7 @@ func formatSchedule(schedule domain.DaySchedule, profile domain.PrayerProfile, l
 		Timezone:  profile.Timezone,
 	}
 	if date, err := hijri.FromGregorian(schedule.Date, profile.HijriAdjustment); err == nil {
-		result.Hijri = fmt.Sprintf("%d %s %d %s", date.Day, locale.HijriMonth(date.Month), date.Year, locale.Message("hijri_era"))
+		result.Hijri = fmt.Sprintf("%d %s %d", date.Day, locale.HijriMonth(date.Month), date.Year)
 	}
 	for _, prayer := range prayers() {
 		if at, ok := schedule.At(prayer); ok {

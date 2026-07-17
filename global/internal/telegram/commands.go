@@ -268,8 +268,8 @@ func formatSchedule(heading string, schedule domain.DaySchedule, profile domain.
 	var builder strings.Builder
 	fmt.Fprintf(&builder, "<b>%s</b> 🕌\n📅 %s", escape(heading), localizedDate(schedule.Date, locale))
 	if hijriDate, err := hijri.FromGregorian(schedule.Date, profile.HijriAdjustment); err == nil {
-		fmt.Fprintf(&builder, "\n🌙 %d %s %d %s <i>(%s)</i>", hijriDate.Day,
-			escape(locale.HijriMonth(hijriDate.Month)), hijriDate.Year, escape(locale.Message("hijri_era")), escape(locale.Message("hijri_note")))
+		fmt.Fprintf(&builder, "\n🌙 %d %s %d", hijriDate.Day,
+			escape(locale.HijriMonth(hijriDate.Month)), hijriDate.Year)
 	}
 	builder.WriteString("\n")
 	for _, prayer := range allPrayers() {

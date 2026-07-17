@@ -73,7 +73,7 @@ func TestFormatScheduleIncludesLocalizedGregorianAndHijriDates(t *testing.T) {
 	profile := domain.PrayerProfile{Timezone: "Africa/Cairo", Method: domain.MethodEgyptian}
 
 	result := formatSchedule(schedule, profile, i18n.Resolve("ar"))
-	if !strings.Contains(result.Gregorian, "يوليو") || !strings.Contains(result.Hijri, "هـ") {
+	if !strings.Contains(result.Gregorian, "يوليو") || result.Hijri != "3 صفر 1448" {
 		t.Fatalf("unexpected localized dates: %+v", result)
 	}
 	if len(result.Prayers) != 1 || result.Prayers[0].Time != "04:12" || result.Prayers[0].Name != "الفجر" {

@@ -49,9 +49,14 @@ func TestFormatScheduleUsesLocalizedNamesAndHTMLTimes(t *testing.T) {
 	}}
 	profile := domain.PrayerProfile{Timezone: "Africa/Cairo", Method: domain.MethodEgyptian}
 	text := formatSchedule("مواقيت صلاة اليوم", schedule, profile, i18n.Resolve("ar"))
-	for _, expected := range []string{"<b>مواقيت صلاة اليوم</b>", "17 يوليو 2026", "هـ", "أم القرى", "الفجر", "<code>04:12</code>", "الظهر", "Africa/Cairo"} {
+	for _, expected := range []string{"<b>مواقيت صلاة اليوم</b>", "17 يوليو 2026", "صفر", "1448", "الفجر", "<code>04:12</code>", "الظهر", "Africa/Cairo"} {
 		if !strings.Contains(text, expected) {
 			t.Errorf("formatted schedule missing %q:\n%s", expected, text)
+		}
+	}
+	for _, unwanted := range []string{"هـ", "أم القرى", "محسوب"} {
+		if strings.Contains(text, unwanted) {
+			t.Errorf("formatted schedule contains unnecessary Hijri detail %q:\n%s", unwanted, text)
 		}
 	}
 }

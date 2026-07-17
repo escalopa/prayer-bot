@@ -24,6 +24,7 @@ type Bot interface {
 	SendMessage(context.Context, *botapi.SendMessageParams) (*models.Message, error)
 	SendPhoto(context.Context, *botapi.SendPhotoParams) (*models.Message, error)
 	EditMessageText(context.Context, *botapi.EditMessageTextParams) (*models.Message, error)
+	CopyMessage(context.Context, *botapi.CopyMessageParams) (*models.MessageID, error)
 	AnswerCallbackQuery(context.Context, *botapi.AnswerCallbackQueryParams) (bool, error)
 	GetChatMember(context.Context, *botapi.GetChatMemberParams) (*models.ChatMember, error)
 }
@@ -64,6 +65,9 @@ func (h *Handler) Handle(ctx context.Context, update models.Update) error {
 	locale, err := h.chatLocale(ctx, message.Chat.ID, languageHint)
 	if err != nil {
 		return err
+	}
+	if isFeedbackReply(message) {
+		return h.submitFeedback(ctx, message, locale)
 	}
 
 	if message.Location != nil {
@@ -116,6 +120,8 @@ func (h *Handler) Handle(ctx context.Context, update models.Update) error {
 		return h.setReminders(ctx, message.Chat.ID, argument, locale)
 	case i18n.ActionLanguage:
 		return h.send(ctx, message.Chat.ID, locale.Message("choose_language"), languageKeyboard(locale.Code))
+	case i18n.ActionFeedback:
+		return h.requestFeedback(ctx, message.Chat, locale)
 	case "method", "madhab", "highlat", "adjust", "delete_me":
 		ok, err := h.canConfigure(ctx, message, locale)
 		if err != nil || !ok {

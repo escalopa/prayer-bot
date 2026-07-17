@@ -14,6 +14,7 @@ import (
 	"github.com/escalopa/prayer-bot/global/internal/config"
 	"github.com/escalopa/prayer-bot/global/internal/httpx"
 	"github.com/escalopa/prayer-bot/global/internal/location"
+	"github.com/escalopa/prayer-bot/global/internal/miniapp"
 	"github.com/escalopa/prayer-bot/global/internal/prayertime"
 	"github.com/escalopa/prayer-bot/global/internal/reminders"
 	"github.com/escalopa/prayer-bot/global/internal/store"
@@ -40,12 +41,15 @@ func main() {
 	}
 	calculator := prayertime.New()
 	planner := reminders.NewPlanner(storage, calculator)
+	resolver := location.NewGoogleMaps(cfg.GoogleMapsAPIKey, cfg.HTTPTimeout)
 	handler := telegramhandler.NewHandler(
-		telegramBot, storage, location.NewGoogleMaps(cfg.GoogleMapsAPIKey, cfg.HTTPTimeout), calculator, planner, cfg.OwnerID,
+		telegramBot, storage, resolver, calculator, planner, cfg.OwnerID,
 	)
+	miniApp := miniapp.NewHandler(cfg.TelegramToken, storage, resolver, calculator, planner, logger)
 
 	mux := http.NewServeMux()
 	httpx.HealthMux(mux)
+	miniApp.Register(mux)
 	mux.HandleFunc("POST /telegram/webhook", func(w http.ResponseWriter, r *http.Request) {
 		provided := r.Header.Get("X-Telegram-Bot-Api-Secret-Token")
 		if len(provided) != len(cfg.WebhookSecret) || subtle.ConstantTimeCompare([]byte(provided), []byte(cfg.WebhookSecret)) != 1 {

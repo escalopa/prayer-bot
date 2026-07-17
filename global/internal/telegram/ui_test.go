@@ -24,10 +24,16 @@ func TestMainKeyboardIsPersistentAndButtonFirst(t *testing.T) {
 	if !keyboard.IsPersistent || !keyboard.ResizeKeyboard {
 		t.Fatal("main keyboard should be persistent and resized")
 	}
-	if len(keyboard.Keyboard) != 4 {
-		t.Fatalf("main keyboard has %d rows, want 4", len(keyboard.Keyboard))
+	if len(keyboard.Keyboard) != 5 {
+		t.Fatalf("main keyboard has %d rows, want 5", len(keyboard.Keyboard))
 	}
-	for _, row := range keyboard.Keyboard {
+	for index, row := range keyboard.Keyboard {
+		if index == len(keyboard.Keyboard)-1 {
+			if len(row) != 1 || row[0].Text != i18n.Resolve("ar").Button(i18n.ActionFeedback) {
+				t.Fatalf("unexpected feedback row: %+v", row)
+			}
+			continue
+		}
 		if len(row) != 2 {
 			t.Fatalf("main keyboard row has %d buttons, want 2", len(row))
 		}

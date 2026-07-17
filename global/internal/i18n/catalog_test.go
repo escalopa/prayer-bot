@@ -58,8 +58,9 @@ func TestLocalesAreCompleteAndWithinTelegramLimits(t *testing.T) {
 		"language_saved", "admin_only", "unknown", "deleted", "help", "privacy", "reminder_at",
 		"reminder_before", "reminder_tomorrow", "enabled", "disabled", "fasting_schedule", "kahf_schedule",
 		"hijri_date", "hijri_era", "hijri_setting", "hijri_note", "choose_hijri", "reminder_fasting", "reminder_kahf",
+		"feedback_prompt", "feedback_placeholder", "feedback_sent", "feedback_private",
 	}
-	commandKeys := []string{"location", "today", "tomorrow", "next", "settings", "remind", "language", "privacy", "help"}
+	commandKeys := []string{"location", "today", "tomorrow", "next", "settings", "remind", "language", "feedback", "privacy", "help"}
 	prayers := []domain.Prayer{domain.PrayerFajr, domain.PrayerSunrise, domain.PrayerDhuhr, domain.PrayerAsr, domain.PrayerMaghrib, domain.PrayerIsha}
 
 	seen := make(map[string]bool)
@@ -92,6 +93,9 @@ func TestLocalesAreCompleteAndWithinTelegramLimits(t *testing.T) {
 			if locale.Text[key] == "" {
 				t.Errorf("%s missing text %q", locale.Code, key)
 			}
+		}
+		if utf8.RuneCountInString(locale.Message("feedback_placeholder")) > 64 {
+			t.Errorf("%s feedback placeholder exceeds Telegram's 64-character limit", locale.Code)
 		}
 		for _, key := range commandKeys {
 			if locale.Commands[key] == "" {

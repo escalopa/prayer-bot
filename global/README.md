@@ -9,11 +9,13 @@ This directory is a separate application derived from the existing city bots. It
 - Local calculation of prayer times with MWL, Egyptian, Umm al-Qura, Karachi, ISNA, Diyanet, Kemenag, MUIS, and JAKIM methods.
 - Shafii/Hanafi Asr selection, three high-latitude rules, and per-prayer minute adjustments.
 - A persistent two-column Telegram menu for today, tomorrow, the next prayer, location, settings, reminders, language, and help.
+- A Telegram Mini App, opened from the bot menu, for today/tomorrow schedules, location, calculation settings, Hijri correction, and all reminder toggles without typed commands.
 - Inline button pickers for calculation method, madhab, high-latitude rule, per-prayer adjustments, reminder state, and language. The equivalent typed commands remain available.
-- Localized interface, prayer names, dates, command menus, profile descriptions, and reminder deliveries in English, Arabic, Spanish, French, Russian, Turkish, Uzbek, and Tatar.
+- Localized messages, reply keyboards, prayer names, dates, Mini App, and reminder deliveries in English, Arabic, Spanish, French, Russian, Turkish, Uzbek, and Tatar. The public Telegram bot name and description remain stable for every user.
 - Gregorian and calculated Umm al-Qura Hijri dates on every daily schedule, with a per-chat moon-sighting correction from -2 to +2 days.
 - Opt-in weekly reminders for Monday/Thursday voluntary fasting (20:00 on the preceding evening) and reading Surah Al-Kahf on Friday (09:00), scheduled in the saved local timezone.
 - An embedded welcome illustration sent on `/start` and a generated bot avatar installed during profile synchronization.
+- A localized feedback and bug-report flow that accepts text or screenshots in a private chat and delivers them directly to the configured owner with the sender's disclosed Telegram identity.
 - Indexed reminder scheduling through Cloud Scheduler, an outbox, Cloud Tasks, a private sender service, leases, and delivery idempotency keys.
 - Dedicated `global_bot_testing` and `global_bot_production` PostgreSQL schemas, each with its own Goose migration table.
 
@@ -25,11 +27,11 @@ Hijri dates use the calculated Umm al-Qura calendar. Because official local moon
 
 | Service | Access | Responsibility |
 | --- | --- | --- |
-| `webhook` | Public URL, protected by Telegram's webhook secret header | Commands, location setup, calculation settings |
+| `webhook` | Public URL; webhook protected by Telegram's secret header, Mini App API protected by signed init data | Commands, Mini App, location setup, calculation settings |
 | `dispatch` | Cloud Scheduler service account only | Claim due indexed schedules and create Cloud Tasks |
 | `sender` | Cloud Tasks service account only | Idempotent Telegram delivery and next-occurrence planning |
 
-The three services use one immutable image and select `/webhook`, `/dispatch`, or `/send` as the command.
+The three services use one immutable image and select `/webhook`, `/dispatch`, or `/send` as the command. The webhook binary embeds the Mini App and serves it at `/app/`, so the feature does not add another Cloud Run service, container image, database, migration, or secret.
 
 ## Testing and production secrets
 
@@ -90,6 +92,6 @@ The bootstrap command only creates the selected empty global schema. `GLOBAL_DB_
 
 ## Deployment
 
-Run the separate **Deploy global prayer bot** GitHub workflow and choose `testing` or `production`. It uses a distinct state prefix (`prayer-bot/global-testing` or `prayer-bot/global-production`), migrates the matching `global_bot_testing` or `global_bot_production` schema, builds the global image, provisions the global resources, and then configures the selected Telegram webhook, localized command menus, names, descriptions, and avatar.
+Run the separate **Deploy global prayer bot** GitHub workflow and choose `testing` or `production`. It uses a distinct state prefix (`prayer-bot/global-testing` or `prayer-bot/global-production`), migrates the matching `global_bot_testing` or `global_bot_production` schema, builds the global image, provisions the global resources, and then configures the selected Telegram webhook, Mini App menu button, stable public profile, command menu, and avatar. The Mini App URL is derived from the environment's existing webhook URL; no new GitHub variable is required.
 
 The workflow is intentionally manual until the new token, secrets, API quotas, privacy text, and prayer-time samples are approved through the logical `testing` deployment.

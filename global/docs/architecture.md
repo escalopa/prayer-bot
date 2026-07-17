@@ -3,6 +3,7 @@
 ```mermaid
 flowchart LR
     T[Telegram] -->|secret-protected webhook| W[Cloud Run webhook]
+    A[Telegram Mini App] -->|signed init data| W
     W -->|profile and rules| P[(Existing PostgreSQL\nenvironment-specific global schema)]
     W -->|location changes only| G[Google Time Zone and Geocoding]
     C[Cloud Scheduler] -->|OIDC| D[Cloud Run dispatch]
@@ -13,11 +14,19 @@ flowchart LR
     S --> T
 ```
 
+## Mini App
+
+The webhook service embeds and serves a dependency-free HTML/CSS/JavaScript Mini App at `/app/`. Deployment sets that HTTPS URL as the bot's default chat menu button. The app calls same-origin `/api/miniapp/*` endpoints and uses the same storage, location resolver, prayer calculator, and reminder planner as the conversational interface, so settings remain consistent across both interfaces.
+
+The backend never trusts a Telegram user ID sent in JSON. Every Mini App API request carries the exact `Telegram.WebApp.initData` string in a header. The server verifies Telegram's HMAC signature with the environment's bot token, rejects duplicate fields and sessions older than 24 hours, and derives the private chat ID from the signed user object. The app is private-chat scoped; group configuration remains in the bot, where administrator authorization is enforced.
+
 ## Data ownership
 
 The legacy `public.chats` and `public.prayers` tables remain untouched. Global testing data is owned by `global_bot_testing`, production data is owned by `global_bot_production`, foreign keys cascade from each schema's `chats` table, and `/delete_me` deletes the chat root.
 
 Raw coordinates exist only in the webhook request while resolving the timezone and approximate place. Persistence rounds them to three decimals. The reverse-geocoded city is displayed in the immediate reply but is not stored; only Google's Place ID is retained. A future user-entered label can be stored because it is user-provided content.
+
+Feedback is not stored in PostgreSQL. When a user explicitly replies to the localized feedback prompt, Telegram copies that message or screenshot into the private owner chat together with the sender's name, username, Telegram ID, and selected bot language. The prompt discloses that identity sharing before submission.
 
 ## Calculation profile
 

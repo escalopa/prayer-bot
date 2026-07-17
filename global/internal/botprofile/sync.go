@@ -29,21 +29,20 @@ var startDescriptions = map[string]string{
 	"tt": "Ботны ачу һәм төп менюны күрсәтү",
 }
 
-// Sync applies the default English profile, all supported localized profiles,
-// the localized command menus and the generated avatar. The avatar is uploaded
-// only when the bot does not yet have a profile photo.
-func Sync(ctx context.Context, client *botapi.Bot, token string) error {
-	english := i18n.Resolve("en")
-	if err := syncLocale(ctx, client, english, ""); err != nil {
+var profileSyncDelay = 50 * time.Millisecond
+
+// Sync applies one stable Telegram-facing identity and removes old localized
+// profile variants. User-selected languages belong to chat data and must never
+// mutate global bot metadata. The avatar is uploaded only when the bot does not
+// yet have a profile photo.
+func Sync(ctx context.Context, client *botapi.Bot, token, miniAppURL string) error {
+	if err := syncStableIdentity(ctx, client); err != nil {
 		return err
 	}
-	for _, locale := range i18n.Supported() {
-		if locale.Code == "en" {
-			continue
-		}
-		if err := syncLocale(ctx, client, locale, locale.Code); err != nil {
-			return err
-		}
+	if _, err := client.SetChatMenuButton(ctx, &botapi.SetChatMenuButtonParams{
+		MenuButton: miniAppMenuButton(miniAppURL),
+	}); err != nil {
+		return fmt.Errorf("set Mini App menu button: %w", err)
 	}
 
 	me, err := client.GetMe(ctx)
@@ -62,34 +61,79 @@ func Sync(ctx context.Context, client *botapi.Bot, token string) error {
 	return nil
 }
 
-func syncLocale(ctx context.Context, client *botapi.Bot, locale i18n.Locale, languageCode string) error {
-	if _, err := client.SetMyName(ctx, &botapi.SetMyNameParams{Name: locale.BotName, LanguageCode: languageCode}); err != nil {
-		return fmt.Errorf("set bot name for %q: %w", languageCode, err)
+func miniAppMenuButton(url string) models.MenuButtonWebApp {
+	return models.MenuButtonWebApp{Text: "🕌 Prayer App", WebApp: models.WebAppInfo{URL: url}}
+}
+
+type identityClient interface {
+	SetMyName(context.Context, *botapi.SetMyNameParams) (bool, error)
+	SetMyShortDescription(context.Context, *botapi.SetMyShortDescriptionParams) (bool, error)
+	SetMyDescription(context.Context, *botapi.SetMyDescriptionParams) (bool, error)
+	SetMyCommands(context.Context, *botapi.SetMyCommandsParams) (bool, error)
+	DeleteMyCommands(context.Context, *botapi.DeleteMyCommandsParams) (bool, error)
+}
+
+func syncStableIdentity(ctx context.Context, client identityClient) error {
+	english := i18n.Resolve("en")
+	if _, err := client.SetMyName(ctx, &botapi.SetMyNameParams{Name: english.BotName}); err != nil {
+		return fmt.Errorf("set default bot name: %w", err)
 	}
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(profileSyncDelay)
 	if _, err := client.SetMyShortDescription(ctx, &botapi.SetMyShortDescriptionParams{
-		ShortDescription: locale.ShortDescription, LanguageCode: languageCode,
+		ShortDescription: english.ShortDescription,
 	}); err != nil {
-		return fmt.Errorf("set short description for %q: %w", languageCode, err)
+		return fmt.Errorf("set default short description: %w", err)
 	}
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(profileSyncDelay)
 	if _, err := client.SetMyDescription(ctx, &botapi.SetMyDescriptionParams{
-		Description: locale.Description, LanguageCode: languageCode,
+		Description: english.Description,
 	}); err != nil {
-		return fmt.Errorf("set description for %q: %w", languageCode, err)
+		return fmt.Errorf("set default description: %w", err)
 	}
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(profileSyncDelay)
 	if _, err := client.SetMyCommands(ctx, &botapi.SetMyCommandsParams{
-		Commands: commands(locale), LanguageCode: languageCode,
+		Commands: commands(english),
 	}); err != nil {
-		return fmt.Errorf("set commands for %q: %w", languageCode, err)
+		return fmt.Errorf("set default commands: %w", err)
 	}
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(profileSyncDelay)
+
+	// Earlier releases published localized profile metadata. Telegram selects
+	// those values from the viewer's Telegram language, not the per-chat bot
+	// preference, so remove them to keep the public identity consistent.
+	for _, locale := range i18n.Supported() {
+		if locale.Code == english.Code {
+			continue
+		}
+		if err := clearLocalizedIdentity(ctx, client, locale.Code); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func clearLocalizedIdentity(ctx context.Context, client identityClient, languageCode string) error {
+	if _, err := client.SetMyName(ctx, &botapi.SetMyNameParams{LanguageCode: languageCode}); err != nil {
+		return fmt.Errorf("remove localized bot name for %q: %w", languageCode, err)
+	}
+	time.Sleep(profileSyncDelay)
+	if _, err := client.SetMyShortDescription(ctx, &botapi.SetMyShortDescriptionParams{LanguageCode: languageCode}); err != nil {
+		return fmt.Errorf("remove localized short description for %q: %w", languageCode, err)
+	}
+	time.Sleep(profileSyncDelay)
+	if _, err := client.SetMyDescription(ctx, &botapi.SetMyDescriptionParams{LanguageCode: languageCode}); err != nil {
+		return fmt.Errorf("remove localized description for %q: %w", languageCode, err)
+	}
+	time.Sleep(profileSyncDelay)
+	if _, err := client.DeleteMyCommands(ctx, &botapi.DeleteMyCommandsParams{LanguageCode: languageCode}); err != nil {
+		return fmt.Errorf("remove localized commands for %q: %w", languageCode, err)
+	}
+	time.Sleep(profileSyncDelay)
 	return nil
 }
 
 func commands(locale i18n.Locale) []models.BotCommand {
-	order := []string{"start", "location", "today", "tomorrow", "next", "settings", "remind", "language", "privacy", "help"}
+	order := []string{"start", "location", "today", "tomorrow", "next", "settings", "remind", "language", "feedback", "privacy", "help"}
 	result := make([]models.BotCommand, 0, len(order))
 	for _, command := range order {
 		description := locale.Commands[command]

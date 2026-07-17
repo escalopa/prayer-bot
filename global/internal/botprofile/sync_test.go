@@ -3,6 +3,7 @@ package botprofile
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
 	"unicode/utf8"
 
@@ -45,6 +46,18 @@ func TestMiniAppMenuButtonUsesDeploymentURL(t *testing.T) {
 	if string(payload) != want {
 		t.Fatalf("Mini App menu button JSON = %s, want %s", payload, want)
 	}
+
+	current := models.MenuButton{
+		Type:   models.MenuButtonTypeWebApp,
+		WebApp: &button,
+	}
+	if !menuButtonEqual(current, button) {
+		t.Fatal("identical Mini App menu buttons should compare equal")
+	}
+	differentButton := miniAppMenuButton("https://different.example/app/")
+	if menuButtonEqual(current, differentButton) {
+		t.Fatal("different Mini App URLs should require an update")
+	}
 }
 
 func TestStableIdentityRemovesLocalizedGlobalMetadata(t *testing.T) {
@@ -52,7 +65,20 @@ func TestStableIdentityRemovesLocalizedGlobalMetadata(t *testing.T) {
 	profileSyncDelay = 0
 	t.Cleanup(func() { profileSyncDelay = originalDelay })
 
-	client := &fakeIdentityClient{}
+	client := newFakeIdentityClient()
+	client.currentNames[""] = "Old name"
+	client.currentShortDescriptions[""] = "Old short description"
+	client.currentDescriptions[""] = "Old description"
+	client.currentCommands[""] = []models.BotCommand{{Command: "old", Description: "Old command"}}
+	for _, locale := range i18n.Supported() {
+		if locale.Code == "en" {
+			continue
+		}
+		client.currentNames[locale.Code] = "Localized name"
+		client.currentShortDescriptions[locale.Code] = "Localized short description"
+		client.currentDescriptions[locale.Code] = "Localized description"
+		client.currentCommands[locale.Code] = []models.BotCommand{{Command: "old", Description: "Old command"}}
+	}
 	if err := syncStableIdentity(context.Background(), client); err != nil {
 		t.Fatal(err)
 	}
@@ -77,36 +103,104 @@ func TestStableIdentityRemovesLocalizedGlobalMetadata(t *testing.T) {
 	}
 }
 
+func TestStableIdentitySkipsUnchangedMetadata(t *testing.T) {
+	originalDelay := profileSyncDelay
+	profileSyncDelay = 0
+	t.Cleanup(func() { profileSyncDelay = originalDelay })
+
+	english := i18n.Resolve("en")
+	client := newFakeIdentityClient()
+	client.currentNames[""] = english.BotName
+	client.currentShortDescriptions[""] = english.ShortDescription
+	client.currentDescriptions[""] = english.Description
+	client.currentCommands[""] = commands(english)
+
+	if err := syncStableIdentity(context.Background(), client); err != nil {
+		t.Fatal(err)
+	}
+	if len(client.names)+len(client.shortDescriptions)+len(client.descriptions)+len(client.commandSets)+len(client.commandDeletes) != 0 {
+		t.Fatalf("unchanged profile generated writes: %+v", client)
+	}
+}
+
+func TestRateLimitRetryAfterRecognizesWrappedTelegramError(t *testing.T) {
+	err := fmt.Errorf("set bot name: %w", &botapi.TooManyRequestsError{
+		Message:    "Too Many Requests",
+		RetryAfter: 76903,
+	})
+	retryAfter, ok := RateLimitRetryAfter(err)
+	if !ok || retryAfter != 76903 {
+		t.Fatalf("RateLimitRetryAfter() = %d, %t", retryAfter, ok)
+	}
+	if _, ok := RateLimitRetryAfter(fmt.Errorf("unauthorized")); ok {
+		t.Fatal("non-rate-limit error was classified as rate limited")
+	}
+}
+
 type fakeIdentityClient struct {
-	names             []botapi.SetMyNameParams
-	shortDescriptions []botapi.SetMyShortDescriptionParams
-	descriptions      []botapi.SetMyDescriptionParams
-	commandSets       []botapi.SetMyCommandsParams
-	commandDeletes    []botapi.DeleteMyCommandsParams
+	currentNames             map[string]string
+	currentShortDescriptions map[string]string
+	currentDescriptions      map[string]string
+	currentCommands          map[string][]models.BotCommand
+	names                    []botapi.SetMyNameParams
+	shortDescriptions        []botapi.SetMyShortDescriptionParams
+	descriptions             []botapi.SetMyDescriptionParams
+	commandSets              []botapi.SetMyCommandsParams
+	commandDeletes           []botapi.DeleteMyCommandsParams
+}
+
+func newFakeIdentityClient() *fakeIdentityClient {
+	return &fakeIdentityClient{
+		currentNames:             make(map[string]string),
+		currentShortDescriptions: make(map[string]string),
+		currentDescriptions:      make(map[string]string),
+		currentCommands:          make(map[string][]models.BotCommand),
+	}
+}
+
+func (f *fakeIdentityClient) GetMyName(_ context.Context, params *botapi.GetMyNameParams) (models.BotName, error) {
+	return models.BotName{Name: f.currentNames[params.LanguageCode]}, nil
 }
 
 func (f *fakeIdentityClient) SetMyName(_ context.Context, params *botapi.SetMyNameParams) (bool, error) {
 	f.names = append(f.names, *params)
+	f.currentNames[params.LanguageCode] = params.Name
 	return true, nil
+}
+
+func (f *fakeIdentityClient) GetMyShortDescription(_ context.Context, params *botapi.GetMyShortDescriptionParams) (models.BotShortDescription, error) {
+	return models.BotShortDescription{ShortDescription: f.currentShortDescriptions[params.LanguageCode]}, nil
 }
 
 func (f *fakeIdentityClient) SetMyShortDescription(_ context.Context, params *botapi.SetMyShortDescriptionParams) (bool, error) {
 	f.shortDescriptions = append(f.shortDescriptions, *params)
+	f.currentShortDescriptions[params.LanguageCode] = params.ShortDescription
 	return true, nil
+}
+
+func (f *fakeIdentityClient) GetMyDescription(_ context.Context, params *botapi.GetMyDescriptionParams) (models.BotDescription, error) {
+	return models.BotDescription{Description: f.currentDescriptions[params.LanguageCode]}, nil
 }
 
 func (f *fakeIdentityClient) SetMyDescription(_ context.Context, params *botapi.SetMyDescriptionParams) (bool, error) {
 	f.descriptions = append(f.descriptions, *params)
+	f.currentDescriptions[params.LanguageCode] = params.Description
 	return true, nil
+}
+
+func (f *fakeIdentityClient) GetMyCommands(_ context.Context, params *botapi.GetMyCommandsParams) ([]models.BotCommand, error) {
+	return append([]models.BotCommand(nil), f.currentCommands[params.LanguageCode]...), nil
 }
 
 func (f *fakeIdentityClient) SetMyCommands(_ context.Context, params *botapi.SetMyCommandsParams) (bool, error) {
 	f.commandSets = append(f.commandSets, *params)
+	f.currentCommands[params.LanguageCode] = append([]models.BotCommand(nil), params.Commands...)
 	return true, nil
 }
 
 func (f *fakeIdentityClient) DeleteMyCommands(_ context.Context, params *botapi.DeleteMyCommandsParams) (bool, error) {
 	f.commandDeletes = append(f.commandDeletes, *params)
+	delete(f.currentCommands, params.LanguageCode)
 	return true, nil
 }
 

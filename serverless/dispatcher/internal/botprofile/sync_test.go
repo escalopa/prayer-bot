@@ -1,6 +1,7 @@
 package botprofile
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
@@ -25,8 +26,8 @@ func TestIsRateLimited(t *testing.T) {
 
 func TestWrapProfileErr(t *testing.T) {
 	rateErr := &bot.TooManyRequestsError{RetryAfter: 60}
-	if err := wrapProfileErr("setMyName", rateErr); err != nil {
-		t.Fatalf("expected nil for rate limit, got %v", err)
+	if err := wrapProfileErr("setMyName", rateErr); !errors.Is(err, ErrRateLimited) {
+		t.Fatalf("expected ErrRateLimited, got %v", err)
 	}
 	if err := wrapProfileErr("setMyName", fmt.Errorf("bad request")); err == nil {
 		t.Fatal("expected error for non-rate-limit failure")

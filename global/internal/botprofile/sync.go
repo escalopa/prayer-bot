@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -39,10 +40,17 @@ func Sync(ctx context.Context, client *botapi.Bot, token, miniAppURL string) err
 	if err := syncStableIdentity(ctx, client); err != nil {
 		return err
 	}
-	if _, err := client.SetChatMenuButton(ctx, &botapi.SetChatMenuButtonParams{
-		MenuButton: miniAppMenuButton(miniAppURL),
-	}); err != nil {
-		return fmt.Errorf("set Mini App menu button: %w", err)
+	desiredMenuButton := miniAppMenuButton(miniAppURL)
+	currentMenuButton, err := client.GetChatMenuButton(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("get Mini App menu button: %w", err)
+	}
+	if !menuButtonEqual(currentMenuButton, desiredMenuButton) {
+		if _, err := client.SetChatMenuButton(ctx, &botapi.SetChatMenuButtonParams{
+			MenuButton: desiredMenuButton,
+		}); err != nil {
+			return fmt.Errorf("set Mini App menu button: %w", err)
+		}
 	}
 
 	me, err := client.GetMe(ctx)
@@ -61,6 +69,16 @@ func Sync(ctx context.Context, client *botapi.Bot, token, miniAppURL string) err
 	return nil
 }
 
+// RateLimitRetryAfter reports Telegram's requested retry delay through wrapped
+// errors so deploy-time profile throttling can be treated as a non-fatal skip.
+func RateLimitRetryAfter(err error) (int, bool) {
+	var rateLimit *botapi.TooManyRequestsError
+	if !errors.As(err, &rateLimit) {
+		return 0, false
+	}
+	return rateLimit.RetryAfter, true
+}
+
 func miniAppMenuButton(url string) models.MenuButtonWebApp {
 	return models.MenuButtonWebApp{
 		Type: models.MenuButtonTypeWebApp,
@@ -68,38 +86,39 @@ func miniAppMenuButton(url string) models.MenuButtonWebApp {
 	}
 }
 
+func menuButtonEqual(current models.MenuButton, desired models.MenuButtonWebApp) bool {
+	return current.Type == models.MenuButtonTypeWebApp &&
+		current.WebApp != nil &&
+		current.WebApp.Text == desired.Text &&
+		current.WebApp.WebApp.URL == desired.WebApp.URL
+}
+
 type identityClient interface {
+	GetMyName(context.Context, *botapi.GetMyNameParams) (models.BotName, error)
 	SetMyName(context.Context, *botapi.SetMyNameParams) (bool, error)
+	GetMyShortDescription(context.Context, *botapi.GetMyShortDescriptionParams) (models.BotShortDescription, error)
 	SetMyShortDescription(context.Context, *botapi.SetMyShortDescriptionParams) (bool, error)
+	GetMyDescription(context.Context, *botapi.GetMyDescriptionParams) (models.BotDescription, error)
 	SetMyDescription(context.Context, *botapi.SetMyDescriptionParams) (bool, error)
+	GetMyCommands(context.Context, *botapi.GetMyCommandsParams) ([]models.BotCommand, error)
 	SetMyCommands(context.Context, *botapi.SetMyCommandsParams) (bool, error)
 	DeleteMyCommands(context.Context, *botapi.DeleteMyCommandsParams) (bool, error)
 }
 
 func syncStableIdentity(ctx context.Context, client identityClient) error {
 	english := i18n.Resolve("en")
-	if _, err := client.SetMyName(ctx, &botapi.SetMyNameParams{Name: english.BotName}); err != nil {
-		return fmt.Errorf("set default bot name: %w", err)
+	if err := syncName(ctx, client, "", english.BotName); err != nil {
+		return err
 	}
-	time.Sleep(profileSyncDelay)
-	if _, err := client.SetMyShortDescription(ctx, &botapi.SetMyShortDescriptionParams{
-		ShortDescription: english.ShortDescription,
-	}); err != nil {
-		return fmt.Errorf("set default short description: %w", err)
+	if err := syncShortDescription(ctx, client, "", english.ShortDescription); err != nil {
+		return err
 	}
-	time.Sleep(profileSyncDelay)
-	if _, err := client.SetMyDescription(ctx, &botapi.SetMyDescriptionParams{
-		Description: english.Description,
-	}); err != nil {
-		return fmt.Errorf("set default description: %w", err)
+	if err := syncDescription(ctx, client, "", english.Description); err != nil {
+		return err
 	}
-	time.Sleep(profileSyncDelay)
-	if _, err := client.SetMyCommands(ctx, &botapi.SetMyCommandsParams{
-		Commands: commands(english),
-	}); err != nil {
-		return fmt.Errorf("set default commands: %w", err)
+	if err := syncCommands(ctx, client, "", commands(english)); err != nil {
+		return err
 	}
-	time.Sleep(profileSyncDelay)
 
 	// Earlier releases published localized profile metadata. Telegram selects
 	// those values from the viewer's Telegram language, not the per-chat bot
@@ -116,23 +135,101 @@ func syncStableIdentity(ctx context.Context, client identityClient) error {
 }
 
 func clearLocalizedIdentity(ctx context.Context, client identityClient, languageCode string) error {
-	if _, err := client.SetMyName(ctx, &botapi.SetMyNameParams{LanguageCode: languageCode}); err != nil {
-		return fmt.Errorf("remove localized bot name for %q: %w", languageCode, err)
+	if err := syncName(ctx, client, languageCode, ""); err != nil {
+		return err
 	}
-	time.Sleep(profileSyncDelay)
-	if _, err := client.SetMyShortDescription(ctx, &botapi.SetMyShortDescriptionParams{LanguageCode: languageCode}); err != nil {
-		return fmt.Errorf("remove localized short description for %q: %w", languageCode, err)
+	if err := syncShortDescription(ctx, client, languageCode, ""); err != nil {
+		return err
 	}
-	time.Sleep(profileSyncDelay)
-	if _, err := client.SetMyDescription(ctx, &botapi.SetMyDescriptionParams{LanguageCode: languageCode}); err != nil {
-		return fmt.Errorf("remove localized description for %q: %w", languageCode, err)
+	if err := syncDescription(ctx, client, languageCode, ""); err != nil {
+		return err
 	}
-	time.Sleep(profileSyncDelay)
-	if _, err := client.DeleteMyCommands(ctx, &botapi.DeleteMyCommandsParams{LanguageCode: languageCode}); err != nil {
-		return fmt.Errorf("remove localized commands for %q: %w", languageCode, err)
+	return syncCommands(ctx, client, languageCode, nil)
+}
+
+func syncName(ctx context.Context, client identityClient, languageCode, desired string) error {
+	current, err := client.GetMyName(ctx, &botapi.GetMyNameParams{LanguageCode: languageCode})
+	if err != nil {
+		return fmt.Errorf("get bot name for %q: %w", languageCode, err)
+	}
+	if current.Name == desired {
+		return nil
+	}
+	if _, err := client.SetMyName(ctx, &botapi.SetMyNameParams{Name: desired, LanguageCode: languageCode}); err != nil {
+		return fmt.Errorf("set bot name for %q: %w", languageCode, err)
 	}
 	time.Sleep(profileSyncDelay)
 	return nil
+}
+
+func syncShortDescription(ctx context.Context, client identityClient, languageCode, desired string) error {
+	current, err := client.GetMyShortDescription(ctx, &botapi.GetMyShortDescriptionParams{LanguageCode: languageCode})
+	if err != nil {
+		return fmt.Errorf("get short description for %q: %w", languageCode, err)
+	}
+	if current.ShortDescription == desired {
+		return nil
+	}
+	if _, err := client.SetMyShortDescription(ctx, &botapi.SetMyShortDescriptionParams{
+		ShortDescription: desired,
+		LanguageCode:     languageCode,
+	}); err != nil {
+		return fmt.Errorf("set short description for %q: %w", languageCode, err)
+	}
+	time.Sleep(profileSyncDelay)
+	return nil
+}
+
+func syncDescription(ctx context.Context, client identityClient, languageCode, desired string) error {
+	current, err := client.GetMyDescription(ctx, &botapi.GetMyDescriptionParams{LanguageCode: languageCode})
+	if err != nil {
+		return fmt.Errorf("get description for %q: %w", languageCode, err)
+	}
+	if current.Description == desired {
+		return nil
+	}
+	if _, err := client.SetMyDescription(ctx, &botapi.SetMyDescriptionParams{
+		Description:  desired,
+		LanguageCode: languageCode,
+	}); err != nil {
+		return fmt.Errorf("set description for %q: %w", languageCode, err)
+	}
+	time.Sleep(profileSyncDelay)
+	return nil
+}
+
+func syncCommands(ctx context.Context, client identityClient, languageCode string, desired []models.BotCommand) error {
+	current, err := client.GetMyCommands(ctx, &botapi.GetMyCommandsParams{LanguageCode: languageCode})
+	if err != nil {
+		return fmt.Errorf("get commands for %q: %w", languageCode, err)
+	}
+	if commandsEqual(current, desired) {
+		return nil
+	}
+	if len(desired) == 0 {
+		if _, err := client.DeleteMyCommands(ctx, &botapi.DeleteMyCommandsParams{LanguageCode: languageCode}); err != nil {
+			return fmt.Errorf("delete commands for %q: %w", languageCode, err)
+		}
+	} else if _, err := client.SetMyCommands(ctx, &botapi.SetMyCommandsParams{
+		Commands:     desired,
+		LanguageCode: languageCode,
+	}); err != nil {
+		return fmt.Errorf("set commands for %q: %w", languageCode, err)
+	}
+	time.Sleep(profileSyncDelay)
+	return nil
+}
+
+func commandsEqual(current, desired []models.BotCommand) bool {
+	if len(current) != len(desired) {
+		return false
+	}
+	for index := range current {
+		if current[index] != desired[index] {
+			return false
+		}
+	}
+	return true
 }
 
 func commands(locale i18n.Locale) []models.BotCommand {

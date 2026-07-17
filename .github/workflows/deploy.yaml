@@ -5,6 +5,7 @@ on:
     branches:
       - main
     paths:
+      - '.github/workflows/deploy.yaml'
       - '.github/actions/load-config/**'
       - '_scripts/**'
       - 'config/**'
@@ -22,6 +23,7 @@ on:
     branches:
       - main
     paths:
+      - '.github/workflows/deploy.yaml'
       - '.github/actions/load-config/**'
       - '_scripts/**'
       - 'config/**'
@@ -95,7 +97,7 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
 
       - name: Cache Go modules
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cache/go-build
@@ -387,6 +389,8 @@ jobs:
     needs: [setup, deploy-gcp]
     if: needs.setup.outputs.run_deploy == 'true' && needs.deploy-gcp.result == 'success'
     environment: ${{ needs.setup.outputs.workspace }}
+    outputs:
+      profile_status: ${{ steps.sync.outputs.profile_status }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -397,7 +401,7 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
 
       - name: Cache Go modules
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cache/go-build
@@ -413,8 +417,23 @@ jobs:
           app_config_path: ${{ env.APP_CONFIG_PATH }}
 
       - name: Sync Telegram bot profiles
+        id: sync
         working-directory: serverless/dispatcher
-        run: go run ./cmd/syncprofile -config "${{ github.workspace }}/config.json"
+        run: |
+          set +e
+          PROFILE_OUTPUT="$(go run ./cmd/syncprofile -config "${{ github.workspace }}/config.json" 2>&1)"
+          PROFILE_EXIT=$?
+          set -e
+          printf '%s\n' "$PROFILE_OUTPUT"
+          if [[ "$PROFILE_EXIT" -ne 0 ]]; then
+            exit "$PROFILE_EXIT"
+          fi
+          if grep -qi "profile sync rate limited" <<< "$PROFILE_OUTPUT"; then
+            echo "profile_status=rate limited; skipped until a future deployment" >> "$GITHUB_OUTPUT"
+            echo "::warning::One or more Telegram profile updates were rate limited and skipped."
+          else
+            echo "profile_status=synchronized" >> "$GITHUB_OUTPUT"
+          fi
 
   summary:
     name: Deployment Summary
@@ -435,6 +454,7 @@ jobs:
           echo "## Deployment Summary — \`${{ needs.setup.outputs.workspace }}\` environment" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Trigger:** ${{ needs.setup.outputs.deploy_trigger }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** \`${GITHUB_SHA}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
@@ -445,6 +465,7 @@ jobs:
           echo "| Deploy GCP | ${{ needs.deploy-gcp.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Telegram Webhooks | ${{ needs.hook.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Bot Profiles | ${{ needs.profile.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Bot Profile Details | ${{ needs.profile.outputs.profile_status || 'not reached' }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ "${{ needs.deploy-gcp.outputs.dispatcher_url }}" != "" ]; then
             echo "**Webhook URL (GCP):** ${{ needs.deploy-gcp.outputs.dispatcher_url }}" >> $GITHUB_STEP_SUMMARY

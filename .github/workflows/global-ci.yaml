@@ -16,6 +16,7 @@ permissions:
 
 jobs:
   test:
+    name: Go tests and container build
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -32,6 +33,7 @@ jobs:
       - run: docker build -t global-prayer-bot:test .
 
   terraform:
+    name: Terraform validation
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -44,3 +46,23 @@ jobs:
       - run: terraform fmt -check -recursive
       - run: terraform init -backend=false
       - run: terraform validate
+
+  summary:
+    name: Global CI summary
+    runs-on: ubuntu-latest
+    needs: [test, terraform]
+    if: always()
+    steps:
+      - name: Write workflow summary
+        run: |
+          {
+            echo "## Global bot CI"
+            echo
+            echo "| Check | Result |"
+            echo "|---|---|"
+            echo "| Go tests and container build | ${{ needs.test.result }} |"
+            echo "| Terraform validation | ${{ needs.terraform.result }} |"
+            echo
+            echo "- Commit: \`${GITHUB_SHA}\`"
+            echo "- Trigger: \`${{ github.event_name }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"

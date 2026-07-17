@@ -17,7 +17,9 @@ Cloud Run secret references use `latest`; a new revision is still recommended af
 
 ## Telegram profile synchronization
 
-The final deployment step runs `cmd/botprofile`. It registers both message and callback-query webhook updates, installs one stable default bot name, description, and command menu, removes localized profile variants left by earlier releases, configures the default chat menu button to open `${WEBHOOK_URL}/app/`, and uploads the embedded avatar when the bot has no profile photo. Re-running the deployment is safe; an existing avatar is left in place. The URL is derived by the workflow, so there is no additional GitHub secret or variable.
+The final deployment step runs `cmd/botprofile`. It registers both message and callback-query webhook updates, installs one stable default bot name, description, and command menu, removes localized profile variants left by earlier releases, configures the default chat menu button to open `${WEBHOOK_URL}/app/`, and uploads the embedded avatar when the bot has no profile photo. Before mutating profile text, commands, or the menu button, it reads the current Telegram value and skips an update when the value already matches. An existing avatar is also left in place, so normal redeployments do not upload another photo.
+
+Telegram profile changes are cosmetic and rate-limited independently from webhook registration. If Telegram returns `429 Too Many Requests` during profile synchronization, the command reports the requested retry interval and exits successfully. The deployment summary records the skipped profile update; rerun the deployment after that interval to apply any remaining profile change. Other errors, including invalid tokens, invalid webhook configuration, or malformed profile values, remain fatal.
 
 The language selected inside the bot is per chat. It changes messages, reply keyboards, reminders, dates, and the Mini App, but never calls Telegram's global profile methods. Telegram profile localization is based on the viewer's Telegram client language rather than this saved preference, so the production profile intentionally uses one stable public identity.
 

@@ -34,6 +34,8 @@ jobs:
     if: github.event_name != 'pull_request'
     needs: validate
     runs-on: ubuntu-latest
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
     permissions:
       contents: read
       pages: write
@@ -57,3 +59,25 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+  summary:
+    name: Documentation summary
+    runs-on: ubuntu-latest
+    needs: [validate, deploy]
+    if: always()
+    steps:
+      - name: Write workflow summary
+        run: |
+          {
+            echo "## Calculation documentation"
+            echo
+            echo "| Stage | Result |"
+            echo "|---|---|"
+            echo "| Validation | ${{ needs.validate.result }} |"
+            echo "| GitHub Pages deployment | ${{ needs.deploy.result }} |"
+            echo
+            echo "- Commit: \`${GITHUB_SHA}\`"
+            if [[ -n "${{ needs.deploy.outputs.page_url }}" ]]; then
+              echo "- Published page: ${{ needs.deploy.outputs.page_url }}"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

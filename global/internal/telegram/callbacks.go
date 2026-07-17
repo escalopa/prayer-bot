@@ -35,6 +35,17 @@ func (h *Handler) handleCallback(ctx context.Context, query *models.CallbackQuer
 		return err
 	}
 
+	if strings.HasPrefix(query.Data, "admin:") {
+		if !h.isOwner(message.Chat, &query.From) {
+			return nil
+		}
+		view, ok := parseAdminView(query.Data)
+		if !ok {
+			return nil
+		}
+		return h.editAdminDashboard(ctx, message, view)
+	}
+
 	if strings.HasPrefix(query.Data, "language:") {
 		if ok, err := h.canConfigureActor(ctx, message.Chat, &query.From, locale); err != nil || !ok {
 			return err

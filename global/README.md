@@ -16,12 +16,19 @@ This directory is a separate application derived from the existing city bots. It
 - Opt-in weekly reminders for Monday/Thursday voluntary fasting (20:00 on the preceding evening) and reading Surah Al-Kahf on Friday (09:00), scheduled in the saved local timezone.
 - An embedded welcome illustration sent on `/start` and a generated bot avatar installed during profile synchronization.
 - A localized feedback and bug-report flow that accepts text or screenshots in a private chat and delivers them directly to the configured owner with the sender's disclosed Telegram identity.
+- An owner-only `/admin` dashboard with aggregate user activity, onboarding, language, calculation-method, reminder-adoption, queue, and delivery-health metrics.
 - Indexed reminder scheduling through Cloud Scheduler, an outbox, Cloud Tasks, a private sender service, leases, and delivery idempotency keys.
 - Dedicated `global_bot_testing` and `global_bot_production` PostgreSQL schemas, each with its own Goose migration table.
 
 The initial UI language follows the user's Telegram language when supported and otherwise falls back to English. A language selected inside the bot is persisted and is not overwritten by later Telegram updates.
 
 Hijri dates use the calculated Umm al-Qura calendar. Because official local moon-sighting dates can differ by a day or two, users can correct the displayed date under **Settings → Hijri date correction**. The correction is applied only to the Hijri display; it never shifts prayer calculations.
+
+## Owner dashboard and feedback
+
+The Telegram account configured by `GLOBAL_OWNER_ID` can open the private owner dashboard with `/admin` or the backward-compatible `/status` command. The command is intentionally absent from the public command menu, is ignored for every other user, and is unavailable in groups. Its inline buttons show aggregate metrics only; the dashboard never lists Telegram IDs, coordinates, or individual user records.
+
+Feedback arrives in the owner's private bot chat as a metadata message followed by a copy of the user's original text or screenshot. A **Contact user** button opens the sender's Telegram profile. Replies typed inside the bot chat are not forwarded, so contact the sender through that button or the linked username.
 
 ## Services
 

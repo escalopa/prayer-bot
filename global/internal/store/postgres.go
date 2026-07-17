@@ -150,22 +150,139 @@ func (s *Store) DeleteChat(ctx context.Context, chatID int64) error {
 	return err
 }
 
-type Stats struct {
-	Chats            int64
-	Profiles         int64
-	EnabledRules     int64
-	PendingSchedules int64
+type MetricCount struct {
+	Key   string
+	Count int64
 }
 
-func (s *Store) Stats(ctx context.Context) (Stats, error) {
-	var stats Stats
+type AdminDashboard struct {
+	Users                   int64
+	Groups                  int64
+	ConfiguredUsers         int64
+	NewUsers24Hours         int64
+	NewUsers7Days           int64
+	NewUsers30Days          int64
+	ActiveUsers24Hours      int64
+	ActiveUsers7Days        int64
+	ActiveUsers30Days       int64
+	ReminderUsers           int64
+	EnabledRules            int64
+	PendingSchedules        int64
+	QueuedTasks             int64
+	SentDeliveries24Hours   int64
+	FailedDeliveries24Hours int64
+	StaleDeliveries24Hours  int64
+	ProcessingDeliveries    int64
+	FailedUpdates24Hours    int64
+	Languages               []MetricCount
+	Methods                 []MetricCount
+	ReminderKinds           []MetricCount
+}
+
+func (s *Store) AdminMetrics(ctx context.Context) (AdminDashboard, error) {
+	var dashboard AdminDashboard
 	err := s.pool.QueryRow(ctx, `SELECT
-		(SELECT count(*) FROM global_bot.chats),
-		(SELECT count(*) FROM global_bot.prayer_profiles),
+		(SELECT count(*) FROM global_bot.chats WHERE chat_type = 'private'),
+		(SELECT count(*) FROM global_bot.chats WHERE chat_type IN ('group', 'supergroup')),
+		(SELECT count(*) FROM global_bot.prayer_profiles p
+			JOIN global_bot.chats c ON c.telegram_chat_id = p.chat_id
+			WHERE c.chat_type = 'private'),
+		(SELECT count(*) FROM global_bot.chats WHERE chat_type = 'private' AND created_at >= now() - interval '24 hours'),
+		(SELECT count(*) FROM global_bot.chats WHERE chat_type = 'private' AND created_at >= now() - interval '7 days'),
+		(SELECT count(*) FROM global_bot.chats WHERE chat_type = 'private' AND created_at >= now() - interval '30 days'),
+		(SELECT count(*) FROM global_bot.chats WHERE chat_type = 'private' AND updated_at >= now() - interval '24 hours'),
+		(SELECT count(*) FROM global_bot.chats WHERE chat_type = 'private' AND updated_at >= now() - interval '7 days'),
+		(SELECT count(*) FROM global_bot.chats WHERE chat_type = 'private' AND updated_at >= now() - interval '30 days'),
+		(SELECT count(DISTINCT r.chat_id) FROM global_bot.reminder_rules r
+			JOIN global_bot.chats c ON c.telegram_chat_id = r.chat_id
+			WHERE r.enabled AND c.chat_type = 'private'),
 		(SELECT count(*) FROM global_bot.reminder_rules WHERE enabled),
-		(SELECT count(*) FROM global_bot.reminder_schedules WHERE state = 'pending')`).Scan(
-		&stats.Chats, &stats.Profiles, &stats.EnabledRules, &stats.PendingSchedules)
-	return stats, err
+		(SELECT count(*) FROM global_bot.reminder_schedules WHERE state = 'pending'),
+		(SELECT count(*) FROM global_bot.task_outbox),
+		(SELECT count(*) FROM global_bot.notification_deliveries
+			WHERE status = 'sent' AND updated_at >= now() - interval '24 hours'),
+		(SELECT count(*) FROM global_bot.notification_deliveries
+			WHERE status = 'failed' AND updated_at >= now() - interval '24 hours'),
+		(SELECT count(*) FROM global_bot.notification_deliveries
+			WHERE status = 'stale' AND updated_at >= now() - interval '24 hours'),
+		(SELECT count(*) FROM global_bot.notification_deliveries WHERE status = 'processing'),
+		(SELECT count(*) FROM global_bot.processed_updates
+			WHERE status = 'failed' AND updated_at >= now() - interval '24 hours')`).Scan(
+		&dashboard.Users,
+		&dashboard.Groups,
+		&dashboard.ConfiguredUsers,
+		&dashboard.NewUsers24Hours,
+		&dashboard.NewUsers7Days,
+		&dashboard.NewUsers30Days,
+		&dashboard.ActiveUsers24Hours,
+		&dashboard.ActiveUsers7Days,
+		&dashboard.ActiveUsers30Days,
+		&dashboard.ReminderUsers,
+		&dashboard.EnabledRules,
+		&dashboard.PendingSchedules,
+		&dashboard.QueuedTasks,
+		&dashboard.SentDeliveries24Hours,
+		&dashboard.FailedDeliveries24Hours,
+		&dashboard.StaleDeliveries24Hours,
+		&dashboard.ProcessingDeliveries,
+		&dashboard.FailedUpdates24Hours,
+	)
+	if err != nil {
+		return AdminDashboard{}, err
+	}
+	if dashboard.Languages, err = s.metricCounts(ctx, `
+		SELECT language_code, count(*)
+		FROM global_bot.chats
+		WHERE chat_type = 'private'
+		GROUP BY language_code
+		ORDER BY count(*) DESC, language_code`); err != nil {
+		return AdminDashboard{}, err
+	}
+	if dashboard.Methods, err = s.metricCounts(ctx, `
+		SELECT p.method, count(*)
+		FROM global_bot.prayer_profiles p
+		JOIN global_bot.chats c ON c.telegram_chat_id = p.chat_id
+		WHERE c.chat_type = 'private'
+		GROUP BY p.method
+		ORDER BY count(*) DESC, p.method`); err != nil {
+		return AdminDashboard{}, err
+	}
+	dashboard.ReminderKinds, err = s.metricCounts(ctx, `
+		SELECT category, count(DISTINCT chat_id)
+		FROM (
+			SELECT r.chat_id, CASE
+				WHEN kind IN ('before', 'at', 'tomorrow') THEN 'prayer'
+				WHEN kind = 'weekly_fasting' THEN 'fasting'
+				WHEN kind = 'weekly_kahf' THEN 'kahf'
+			END AS category
+			FROM global_bot.reminder_rules r
+			JOIN global_bot.chats c ON c.telegram_chat_id = r.chat_id
+			WHERE r.enabled AND c.chat_type = 'private'
+		) enabled_rules
+		WHERE category IS NOT NULL
+		GROUP BY category
+		ORDER BY count(DISTINCT chat_id) DESC, category`)
+	if err != nil {
+		return AdminDashboard{}, err
+	}
+	return dashboard, nil
+}
+
+func (s *Store) metricCounts(ctx context.Context, query string) ([]MetricCount, error) {
+	rows, err := s.pool.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var metrics []MetricCount
+	for rows.Next() {
+		var metric MetricCount
+		if err := rows.Scan(&metric.Key, &metric.Count); err != nil {
+			return nil, err
+		}
+		metrics = append(metrics, metric)
+	}
+	return metrics, rows.Err()
 }
 
 func (s *Store) Profile(ctx context.Context, chatID int64) (domain.PrayerProfile, error) {

@@ -34,6 +34,7 @@ type Storage interface {
 	EnabledRules(context.Context, int64) ([]domain.ReminderRule, error)
 	EnableDefaultRules(context.Context, int64) error
 	DisableRules(context.Context, int64) error
+	ConfigurePrayerRules(context.Context, int64, bool, int) error
 	SetWeeklyRule(context.Context, int64, domain.ReminderKind, bool) error
 }
 
@@ -219,9 +220,10 @@ func (h *Handler) updateSettings(w http.ResponseWriter, r *http.Request, identit
 }
 
 type remindersRequest struct {
-	Prayer  *bool `json:"prayer"`
-	Fasting *bool `json:"fasting"`
-	Kahf    *bool `json:"kahf"`
+	Prayer           *bool `json:"prayer"`
+	PrePrayerMinutes int   `json:"pre_prayer_minutes"`
+	Fasting          *bool `json:"fasting"`
+	Kahf             *bool `json:"kahf"`
 }
 
 type preferencesRequest struct {
@@ -250,7 +252,8 @@ func validateSettings(request settingsRequest) (validatedSettings, error) {
 }
 
 func validateReminders(request remindersRequest) error {
-	if request.Prayer == nil || request.Fasting == nil || request.Kahf == nil {
+	if request.Prayer == nil || request.Fasting == nil || request.Kahf == nil ||
+		!domain.ValidPreReminderMinutes(request.PrePrayerMinutes) {
 		return badRequest("invalid_request")
 	}
 	return nil
@@ -335,13 +338,15 @@ func (h *Handler) applyReminders(ctx context.Context, chatID int64, request remi
 	if err != nil {
 		return false, reminderResponse{}, err
 	}
-	desired := reminderResponse{Prayer: *request.Prayer, Fasting: *request.Fasting, Kahf: *request.Kahf}
-	if current.Prayer != desired.Prayer {
-		if *request.Prayer {
-			err = h.store.EnableDefaultRules(ctx, chatID)
-		} else {
-			err = h.store.DisableRules(ctx, chatID)
-		}
+	desired := reminderResponse{
+		Prayer: *request.Prayer, PrePrayerMinutes: request.PrePrayerMinutes,
+		Fasting: *request.Fasting, Kahf: *request.Kahf,
+	}
+	if !desired.Prayer {
+		desired.PrePrayerMinutes = 0
+	}
+	if current.Prayer != desired.Prayer || current.PrePrayerMinutes != desired.PrePrayerMinutes {
+		err = h.store.ConfigurePrayerRules(ctx, chatID, desired.Prayer, desired.PrePrayerMinutes)
 		if err != nil {
 			return false, reminderResponse{}, fmt.Errorf("update prayer reminders: %w", err)
 		}
@@ -401,9 +406,10 @@ type prayerResponse struct {
 }
 
 type reminderResponse struct {
-	Prayer  bool `json:"prayer"`
-	Fasting bool `json:"fasting"`
-	Kahf    bool `json:"kahf"`
+	Prayer           bool `json:"prayer"`
+	PrePrayerMinutes int  `json:"pre_prayer_minutes"`
+	Fasting          bool `json:"fasting"`
+	Kahf             bool `json:"kahf"`
 }
 
 type option struct {
@@ -416,6 +422,7 @@ type optionsResponse struct {
 	Methods      []option `json:"methods"`
 	Madhabs      []option `json:"madhabs"`
 	HighLatitude []option `json:"high_latitude"`
+	PreReminders []option `json:"pre_reminders"`
 }
 
 func (h *Handler) build(ctx context.Context, identity Identity) (bootstrapResponse, error) {
@@ -487,8 +494,10 @@ func (h *Handler) reminderState(ctx context.Context, chatID int64) (reminderResp
 			state.Fasting = true
 		case domain.ReminderWeeklyKahf:
 			state.Kahf = true
-		default:
+		case domain.ReminderAt:
 			state.Prayer = true
+		case domain.ReminderBefore:
+			state.PrePrayerMinutes = rule.OffsetMinutes
 		}
 	}
 	return state, nil
@@ -525,6 +534,13 @@ func options(locale i18n.Locale) optionsResponse {
 	}
 	for _, rule := range []domain.HighLatitudeRule{domain.HighLatitudeAngleBased, domain.HighLatitudeMiddleNight, domain.HighLatitudeSeventhNight} {
 		result.HighLatitude = append(result.HighLatitude, option{Value: string(rule), Label: locale.HighLatitudeRule(rule)})
+	}
+	for _, minutes := range domain.SupportedPreReminderMinutes() {
+		label := locale.Message("pre_reminder_off")
+		if minutes > 0 {
+			label = fmt.Sprintf(locale.Message("minutes_before"), minutes)
+		}
+		result.PreReminders = append(result.PreReminders, option{Value: fmt.Sprint(minutes), Label: label})
 	}
 	return result
 }
@@ -623,7 +639,8 @@ func labels(locale i18n.Locale) map[string]string {
 		"method": locale.Message("method"), "madhab": locale.Message("madhab"),
 		"highlat": locale.Message("highlat"), "adjustments": locale.Message("adjustments"),
 		"hijri": locale.Message("hijri_date"), "prayer_reminders": locale.Button("prayer_reminders"),
-		"fasting_reminders": locale.Button("fasting_reminders"), "kahf_reminders": locale.Button("kahf_reminders"),
+		"pre_prayer_reminder": locale.Message("pre_prayer_reminder"),
+		"fasting_reminders":   locale.Button("fasting_reminders"), "kahf_reminders": locale.Button("kahf_reminders"),
 		"fasting_schedule": locale.Message("fasting_schedule"), "kahf_schedule": locale.Message("kahf_schedule"),
 		"save": copy.Save, "saved": copy.Saved, "loading": copy.Loading,
 		"location_help": copy.LocationHelp, "location_error": copy.LocationError,

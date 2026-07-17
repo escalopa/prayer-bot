@@ -17,7 +17,9 @@ Cloud Run secret references use `latest`; a new revision is still recommended af
 
 ## Telegram profile synchronization
 
-The final deployment step runs `cmd/botprofile`. It registers both message and callback-query webhook updates, installs one stable default bot name, description, and command menu, removes localized profile variants left by earlier releases, configures the default chat menu button to open `${WEBHOOK_URL}/app/`, and uploads the embedded avatar when the bot has no profile photo. Re-running the deployment is safe; an existing avatar is left in place. The URL is derived by the workflow, so there is no additional GitHub secret or variable.
+The final deployment step runs `cmd/botprofile`. It registers both message and callback-query webhook updates, installs one stable default bot name, description, and command menu, removes localized profile variants left by earlier releases, configures the default chat menu button to open `${WEBHOOK_URL}/app/`, and manages the embedded avatar. Before mutating profile text, commands, or the menu button, it reads the current Telegram value and skips an update when the value already matches. It also downloads the current avatar and compares a recompression-tolerant visual hash with the embedded image, uploading only when the visible photo changed.
+
+Telegram profile changes are cosmetic and rate-limited independently from webhook registration. If Telegram returns `429 Too Many Requests` during profile synchronization, the command reports the requested retry interval and exits successfully. The deployment summary records the skipped profile update; rerun the deployment after that interval to apply any remaining profile change. Other errors, including invalid tokens, invalid webhook configuration, or malformed profile values, remain fatal.
 
 The language selected inside the bot is per chat. It changes messages, reply keyboards, reminders, dates, and the Mini App, but never calls Telegram's global profile methods. Telegram profile localization is based on the viewer's Telegram client language rather than this saved preference, so the production profile intentionally uses one stable public identity.
 
@@ -31,7 +33,9 @@ The welcome illustration is embedded in the webhook binary and sent with the loc
 
 Set `GLOBAL_DB_SCHEMA` to `global_bot_testing` or `global_bot_production`, then run Goose with `-table="${GLOBAL_DB_SCHEMA}.goose_db_version"`. Never run global migrations with the legacy default migration table. The initial down migration drops only the selected global schema, but production rollback should normally use a forward corrective migration rather than dropping user data.
 
-Migration `00002` adds the per-chat Hijri correction and the two weekly reminder kinds. The normal global deployment runs it before the new webhook and sender revisions are applied, so old revisions never see reminder kinds they do not understand.
+Migration `00002` adds the per-chat Hijri correction and the two weekly reminder kinds. Migration `00003` adds notification message slots and scheduled deletion tasks for pre-prayer/category cleanup. The normal global deployment runs migrations before the new webhook and sender revisions are applied.
+
+Telegram only deletes messages younger than 48 hours. The sender schedules every reminder for cleanup after 36 hours, while a new message in the same category also triggers immediate best-effort deletion of its predecessor. If direct deletion fails transiently, the durable cleanup task retries through the existing Cloud Tasks queue.
 
 ## Maps failure mode
 

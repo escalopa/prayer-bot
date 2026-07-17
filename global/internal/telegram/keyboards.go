@@ -120,12 +120,40 @@ func remindersKeyboard(state reminderState, locale i18n.Locale) *models.InlineKe
 		}
 		return callbackButton(prefix+label, "reminders:"+kind+":"+action)
 	}
+	preReminder := locale.Message("pre_reminder_off")
+	if state.PrePrayerMinutes > 0 {
+		preReminder = fmt.Sprintf(locale.Message("minutes_before"), state.PrePrayerMinutes)
+	}
 	return inlineKeyboard(
 		[]models.InlineKeyboardButton{toggle(locale.Button("prayer_reminders"), "prayer", state.Prayer)},
+		[]models.InlineKeyboardButton{callbackButton("⏳ "+preReminder, "reminders:pre:choose")},
 		[]models.InlineKeyboardButton{toggle(locale.Button("fasting_reminders"), "fasting", state.Fasting)},
 		[]models.InlineKeyboardButton{toggle(locale.Button("kahf_reminders"), "kahf", state.Kahf)},
 		[]models.InlineKeyboardButton{callbackButton(locale.Button("close"), "close")},
 	)
+}
+
+func preReminderKeyboard(current int, locale i18n.Locale) *models.InlineKeyboardMarkup {
+	values := domain.SupportedPreReminderMinutes()
+	rows := make([][]models.InlineKeyboardButton, 0, (len(values)+1)/2+1)
+	for index := 0; index < len(values); index += 2 {
+		row := make([]models.InlineKeyboardButton, 0, 2)
+		for offset := 0; offset < 2 && index+offset < len(values); offset++ {
+			minutes := values[index+offset]
+			label := locale.Message("pre_reminder_off")
+			if minutes > 0 {
+				label = fmt.Sprintf(locale.Message("minutes_before"), minutes)
+			}
+			row = append(row, callbackButton(
+				selectedLabel(label, minutes == current), fmt.Sprintf("reminders:pre:%d", minutes),
+			))
+		}
+		rows = append(rows, row)
+	}
+	rows = append(rows, []models.InlineKeyboardButton{
+		callbackButton(locale.Button("back"), "reminders:pre:back"),
+	})
+	return inlineKeyboard(rows...)
 }
 
 func languageKeyboard(current string) *models.InlineKeyboardMarkup {

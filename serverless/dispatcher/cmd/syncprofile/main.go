@@ -60,6 +60,10 @@ func main() {
 			continue
 		}
 		if err := botprofile.SyncWithRetry(ctx, b, botCfg.OwnerID, syncAttempts, syncBackoff); err != nil {
+			if errors.Is(err, botprofile.ErrRateLimited) {
+				fmt.Fprintf(os.Stderr, "warning: Telegram profile sync rate limited for bot_id %d; skipping until a future deployment: %v\n", id, err)
+				continue
+			}
 			// Profile sync is best-effort: a transient Telegram/network failure
 			// (e.g. an empty API response) must not fail the deploy. Genuine
 			// errors (bad token, invalid params) still do.

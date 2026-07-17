@@ -54,6 +54,20 @@ func main() {
 		}
 		w.WriteHeader(http.StatusNoContent)
 	})
+	mux.HandleFunc("POST /tasks/delete", func(w http.ResponseWriter, r *http.Request) {
+		r.Body = http.MaxBytesReader(w, r.Body, 64<<10)
+		var task domain.MessageDeletionTask
+		if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
+			http.Error(w, "invalid task", http.StatusBadRequest)
+			return
+		}
+		if err := sender.Delete(r.Context(), task); err != nil {
+			logger.Error("notification cleanup failed", "deletion_key", task.DeletionKey, "error", err)
+			http.Error(w, "temporary failure", http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	})
 	logger.Info("sender service listening", "port", cfg.Port)
 	if err := httpx.Serve(cfg.Port, mux); err != nil {
 		logger.Error("HTTP server failed", "error", err)

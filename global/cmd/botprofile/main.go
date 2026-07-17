@@ -31,11 +31,17 @@ func main() {
 		URL: webhookURL + "/telegram/webhook", SecretToken: cfg.WebhookSecret,
 		AllowedUpdates: []string{models.AllowedUpdateMessage, models.AllowedUpdateCallbackQuery},
 	}); err != nil {
-		fatal(fmt.Errorf("set webhook failed"))
+		fatal(fmt.Errorf("set webhook failed: %w", err))
 	}
 	if err := profile.Sync(ctx, client, cfg.TelegramToken, cfg.MiniAppURL); err != nil {
+		if retryAfter, limited := profile.RateLimitRetryAfter(err); limited {
+			fmt.Printf("PROFILE_SYNC_SKIPPED_RETRY_AFTER=%d\n", retryAfter)
+			fmt.Fprintf(os.Stderr, "warning: Telegram profile sync rate limited; skipping profile updates and retrying on a future deployment: %v\n", err)
+			return
+		}
 		fatal(fmt.Errorf("sync bot profile failed: %w", err))
 	}
+	fmt.Println("PROFILE_SYNC_STATUS=synchronized")
 }
 
 func fatal(err error) {

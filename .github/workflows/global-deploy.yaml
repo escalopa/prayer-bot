@@ -48,10 +48,12 @@ jobs:
       - uses: google-github-actions/setup-gcloud@v2
 
       - name: Test global module
+        id: tests
         working-directory: global
         run: go test ./...
 
       - name: Initialize isolated Terraform state
+        id: terraform_init
         working-directory: global/infra/gcp
         run: |
           terraform init \
@@ -59,6 +61,7 @@ jobs:
             -backend-config="prefix=prayer-bot/global-${{ inputs.environment }}"
 
       - name: Bootstrap APIs and image repository
+        id: bootstrap
         working-directory: global/infra/gcp
         env:
           TF_VAR_image: bootstrap-image-not-used
@@ -68,6 +71,7 @@ jobs:
             -target=google_artifact_registry_repository.global
 
       - name: Sync environment-specific bot secrets to Secret Manager
+        id: secrets
         env:
           GLOBAL_BOT_TOKEN: ${{ secrets.GLOBAL_BOT_TOKEN }}
           GLOBAL_WEBHOOK_SECRET: ${{ secrets.GLOBAL_WEBHOOK_SECRET }}
@@ -111,6 +115,7 @@ jobs:
           chmod +x /tmp/goose
 
       - name: Migrate isolated PostgreSQL schema
+        id: migrate
         env:
           DATABASE_URL: ${{ secrets.SUPABASE_DB_DIRECT_URL }}
           GLOBAL_DB_SCHEMA: global_bot_${{ inputs.environment }}
@@ -119,24 +124,66 @@ jobs:
           /tmp/goose -dir global/migrations -table="${GLOBAL_DB_SCHEMA}.goose_db_version" postgres "$DATABASE_URL" up
 
       - name: Apply global infrastructure
+        id: infrastructure
         working-directory: global/infra/gcp
         env:
           TF_VAR_image: ${{ steps.image.outputs.uri }}
         run: terraform apply -auto-approve
 
       - name: Configure Telegram webhook and commands
+        id: telegram
         working-directory: global
         run: |
           export GLOBAL_BOT_TOKEN="$(gcloud secrets versions access latest --secret=global-prayer-bot-token-${{ inputs.environment }} --project="$GCP_PROJECT_ID")"
           export GLOBAL_WEBHOOK_SECRET="$(gcloud secrets versions access latest --secret=global-prayer-bot-webhook-secret-${{ inputs.environment }} --project="$GCP_PROJECT_ID")"
           export WEBHOOK_URL="$(terraform -chdir=infra/gcp output -raw webhook_url)"
           export MINI_APP_URL="${WEBHOOK_URL}/app/"
-          go run ./cmd/botprofile
+          export SENDER_URL="$(terraform -chdir=infra/gcp output -raw sender_url)"
 
-      - name: Show deployment endpoints
-        working-directory: global/infra/gcp
+          set +e
+          PROFILE_OUTPUT="$(go run ./cmd/botprofile 2>&1)"
+          PROFILE_EXIT=$?
+          set -e
+          printf '%s\n' "$PROFILE_OUTPUT"
+          if [[ "$PROFILE_EXIT" -ne 0 ]]; then
+            exit "$PROFILE_EXIT"
+          fi
+
+          RETRY_AFTER="$(printf '%s\n' "$PROFILE_OUTPUT" | sed -n 's/^PROFILE_SYNC_SKIPPED_RETRY_AFTER=//p' | tail -n 1)"
+          if [[ -n "$RETRY_AFTER" ]]; then
+            echo "profile_status=rate limited; skipped (retry after ${RETRY_AFTER}s)" >> "$GITHUB_OUTPUT"
+            echo "::warning::Telegram profile updates were rate limited and skipped. Redeploy after ${RETRY_AFTER} seconds."
+          else
+            echo "profile_status=synchronized" >> "$GITHUB_OUTPUT"
+          fi
+          echo "webhook_url=$WEBHOOK_URL" >> "$GITHUB_OUTPUT"
+          echo "mini_app_url=$MINI_APP_URL" >> "$GITHUB_OUTPUT"
+          echo "sender_url=$SENDER_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Write deployment summary
+        if: always()
         run: |
-          echo "### Global prayer bot" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Webhook: $(terraform output -raw webhook_url)" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Mini App: $(terraform output -raw webhook_url)/app/" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Sender: $(terraform output -raw sender_url)" >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "## Global prayer bot deployment"
+            echo
+            echo "- Environment: \`${{ inputs.environment }}\`"
+            echo "- Commit: \`${GITHUB_SHA}\`"
+            echo
+            echo "| Stage | Result |"
+            echo "|---|---|"
+            echo "| Tests | ${{ steps.tests.outcome }} |"
+            echo "| Terraform initialization | ${{ steps.terraform_init.outcome }} |"
+            echo "| API/repository bootstrap | ${{ steps.bootstrap.outcome }} |"
+            echo "| Secret synchronization | ${{ steps.secrets.outcome }} |"
+            echo "| Image build and push | ${{ steps.image.outcome }} |"
+            echo "| Database migration | ${{ steps.migrate.outcome }} |"
+            echo "| Infrastructure apply | ${{ steps.infrastructure.outcome }} |"
+            echo "| Telegram configuration | ${{ steps.telegram.outcome }} |"
+            echo "| Telegram profile | ${{ steps.telegram.outputs.profile_status || 'not reached' }} |"
+            echo
+            if [[ -n "${{ steps.telegram.outputs.webhook_url }}" ]]; then
+              echo "- Webhook: ${{ steps.telegram.outputs.webhook_url }}"
+              echo "- Mini App: ${{ steps.telegram.outputs.mini_app_url }}"
+              echo "- Sender: ${{ steps.telegram.outputs.sender_url }}"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

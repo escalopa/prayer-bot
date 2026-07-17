@@ -340,6 +340,13 @@ func (s *Store) UpsertProfile(ctx context.Context, profile domain.PrayerProfile)
 }
 
 func (s *Store) EnableDefaultRules(ctx context.Context, chatID int64) error {
+	return s.ConfigurePrayerRules(ctx, chatID, true, 0)
+}
+
+func (s *Store) ConfigurePrayerRules(ctx context.Context, chatID int64, enabled bool, beforeMinutes int) error {
+	if beforeMinutes < 0 || beforeMinutes > 180 {
+		return fmt.Errorf("pre-prayer reminder must be between 0 and 180 minutes")
+	}
 	prayers := []domain.Prayer{
 		domain.PrayerFajr, domain.PrayerDhuhr, domain.PrayerAsr, domain.PrayerMaghrib, domain.PrayerIsha,
 	}
@@ -348,6 +355,19 @@ func (s *Store) EnableDefaultRules(ctx context.Context, chatID int64) error {
 		return err
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck
+	if _, err = tx.Exec(ctx, `DELETE FROM global_bot.reminder_schedules s
+		USING global_bot.reminder_rules r
+		WHERE s.rule_id = r.id AND r.chat_id = $1 AND r.kind IN ('before', 'at', 'tomorrow')`, chatID); err != nil {
+		return err
+	}
+	if _, err = tx.Exec(ctx, `UPDATE global_bot.reminder_rules
+		SET enabled = false, updated_at = now()
+		WHERE chat_id = $1 AND kind IN ('before', 'at', 'tomorrow')`, chatID); err != nil {
+		return err
+	}
+	if !enabled {
+		return tx.Commit(ctx)
+	}
 	for _, prayer := range prayers {
 		_, err = tx.Exec(ctx, `
 			INSERT INTO global_bot.reminder_rules (chat_id, kind, prayer, enabled)
@@ -357,26 +377,22 @@ func (s *Store) EnableDefaultRules(ctx context.Context, chatID int64) error {
 		if err != nil {
 			return err
 		}
+		if beforeMinutes > 0 {
+			_, err = tx.Exec(ctx, `
+				INSERT INTO global_bot.reminder_rules (chat_id, kind, prayer, offset_minutes, enabled)
+				VALUES ($1, 'before', $2, $3, true)
+				ON CONFLICT (chat_id, kind, prayer, offset_minutes) DO UPDATE SET enabled = true, updated_at = now()`,
+				chatID, prayer, beforeMinutes)
+			if err != nil {
+				return err
+			}
+		}
 	}
 	return tx.Commit(ctx)
 }
 
 func (s *Store) DisableRules(ctx context.Context, chatID int64) error {
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback(ctx) //nolint:errcheck
-	if _, err = tx.Exec(ctx, `UPDATE global_bot.reminder_rules SET enabled = false, updated_at = now()
-		WHERE chat_id = $1 AND kind IN ('before', 'at', 'tomorrow')`, chatID); err != nil {
-		return err
-	}
-	if _, err = tx.Exec(ctx, `DELETE FROM global_bot.reminder_schedules s
-		USING global_bot.reminder_rules r
-		WHERE s.rule_id = r.id AND r.chat_id = $1 AND r.kind IN ('before', 'at', 'tomorrow')`, chatID); err != nil {
-		return err
-	}
-	return tx.Commit(ctx)
+	return s.ConfigurePrayerRules(ctx, chatID, false, 0)
 }
 
 func (s *Store) SetWeeklyRule(ctx context.Context, chatID int64, kind domain.ReminderKind, enabled bool) error {
@@ -472,6 +488,8 @@ func (s *Store) Schedule(ctx context.Context, scheduleID int64) (domain.Reminder
 type OutboxItem struct {
 	ID          int64
 	DeliveryKey string
+	Endpoint    string
+	RunAt       time.Time
 	Payload     []byte
 }
 
@@ -526,7 +544,7 @@ func (s *Store) ClaimDue(ctx context.Context, now time.Time, limit int) (int, er
 }
 
 func (s *Store) PendingOutbox(ctx context.Context, limit int) ([]OutboxItem, error) {
-	rows, err := s.pool.Query(ctx, `SELECT id, delivery_key, payload
+	rows, err := s.pool.Query(ctx, `SELECT id, delivery_key, endpoint, run_at, payload
 		FROM global_bot.task_outbox ORDER BY id LIMIT $1`, limit)
 	if err != nil {
 		return nil, err
@@ -535,7 +553,7 @@ func (s *Store) PendingOutbox(ctx context.Context, limit int) ([]OutboxItem, err
 	var items []OutboxItem
 	for rows.Next() {
 		var item OutboxItem
-		if err := rows.Scan(&item.ID, &item.DeliveryKey, &item.Payload); err != nil {
+		if err := rows.Scan(&item.ID, &item.DeliveryKey, &item.Endpoint, &item.RunAt, &item.Payload); err != nil {
 			return nil, err
 		}
 		items = append(items, item)
@@ -587,24 +605,88 @@ func (s *Store) AcquireDelivery(ctx context.Context, task domain.DeliveryTask) (
 	return err == nil, err
 }
 
-func (s *Store) CompleteDelivery(ctx context.Context, task domain.DeliveryTask, messageID int64, next domain.ReminderSchedule) error {
+func (s *Store) CompleteDelivery(
+	ctx context.Context,
+	task domain.DeliveryTask,
+	messageID int64,
+	next domain.ReminderSchedule,
+	category string,
+	expiresAt time.Time,
+) (int64, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck
 	if _, err = tx.Exec(ctx, `UPDATE global_bot.notification_deliveries
 		SET status = 'sent', telegram_message_id = $2, lease_until = NULL, updated_at = now()
 		WHERE delivery_key = $1`, task.DeliveryKey, messageID); err != nil {
-		return err
+		return 0, err
 	}
 	if _, err = tx.Exec(ctx, `UPDATE global_bot.reminder_schedules SET
 		profile_version = $2, local_date = $3, prayer_at = $4, next_run_at = $5,
 		state = 'pending', updated_at = now() WHERE id = $1`, task.ScheduleID,
 		next.ProfileVersion, next.LocalDate, next.PrayerAt, next.NextRunAt); err != nil {
+		return 0, err
+	}
+	var previousMessageID int64
+	err = tx.QueryRow(ctx, `SELECT telegram_message_id
+		FROM global_bot.notification_message_slots
+		WHERE chat_id = $1 AND category = $2 FOR UPDATE`, task.ChatID, category).Scan(&previousMessageID)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return 0, err
+	}
+	if _, err = tx.Exec(ctx, `INSERT INTO global_bot.notification_message_slots
+		(chat_id, category, telegram_message_id) VALUES ($1, $2, $3)
+		ON CONFLICT (chat_id, category) DO UPDATE SET
+			telegram_message_id = excluded.telegram_message_id, updated_at = now()`,
+		task.ChatID, category, messageID); err != nil {
+		return 0, err
+	}
+	if previousMessageID != 0 && previousMessageID != messageID {
+		if err := enqueueMessageDeletion(
+			ctx, tx, task.ChatID, previousMessageID, time.Now(), fmt.Sprintf("replaced-by:%d", messageID),
+		); err != nil {
+			return 0, err
+		}
+	}
+	if err := enqueueMessageDeletion(ctx, tx, task.ChatID, messageID, expiresAt, "expiry"); err != nil {
+		return 0, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return 0, err
+	}
+	return previousMessageID, nil
+}
+
+func enqueueMessageDeletion(
+	ctx context.Context,
+	tx *schemaTx,
+	chatID, messageID int64,
+	runAt time.Time,
+	reason string,
+) error {
+	key := fmt.Sprintf("delete:%d:%d:%s", chatID, messageID, reason)
+	payload, err := json.Marshal(domain.MessageDeletionTask{
+		DeletionKey: key,
+		ChatID:      chatID,
+		MessageID:   messageID,
+	})
+	if err != nil {
 		return err
 	}
-	return tx.Commit(ctx)
+	_, err = tx.Exec(ctx, `INSERT INTO global_bot.task_outbox
+		(schedule_id, delivery_key, endpoint, run_at, payload)
+		VALUES (NULL, $1, '/tasks/delete', $2, $3)
+		ON CONFLICT (delivery_key) DO NOTHING`,
+		key, runAt, payload)
+	return err
+}
+
+func (s *Store) ClearNotificationMessage(ctx context.Context, chatID, messageID int64) error {
+	_, err := s.pool.Exec(ctx, `DELETE FROM global_bot.notification_message_slots
+		WHERE chat_id = $1 AND telegram_message_id = $2`, chatID, messageID)
+	return err
 }
 
 func (s *Store) MarkDeliveryStale(ctx context.Context, deliveryKey string) error {

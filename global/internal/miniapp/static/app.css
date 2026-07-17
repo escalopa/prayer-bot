@@ -144,6 +144,19 @@ button { -webkit-tap-highlight-color: transparent; }
 [dir="rtl"] .toggle::after { left: auto; right: 3px; }
 [dir="rtl"] .toggle-row input:checked + .toggle::after { transform: translateX(-19px); }
 
+.reminder-option {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(150px, .8fr);
+  align-items: center;
+  gap: 14px;
+  padding: 10px 0 16px;
+  border-bottom: 1px solid var(--line);
+  color: var(--app-muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+.reminder-option select { min-height: 40px; }
+
 .form-grid { display: grid; gap: 13px; }
 .form-grid label { display: grid; gap: 7px; color: var(--app-muted); font-size: 12px; font-weight: 650; }
 select, input[type="number"] { width: 100%; min-height: 46px; padding: 0 13px; border: 1px solid var(--line); border-radius: 14px; outline: none; color: var(--app-text); background: var(--surface-alt); }

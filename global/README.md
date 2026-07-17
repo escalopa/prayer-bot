@@ -14,6 +14,8 @@ This directory is a separate application derived from the existing city bots. It
 - Localized messages, reply keyboards, prayer names, dates, Mini App, and reminder deliveries in English, Arabic, Spanish, French, Russian, Turkish, Uzbek, and Tatar. The public Telegram bot name and description remain stable for every user.
 - Gregorian and calculated Umm al-Qura Hijri dates on every daily schedule, with a per-chat moon-sighting correction from -2 to +2 days.
 - Opt-in weekly reminders for Monday/Thursday voluntary fasting (20:00 on the preceding evening) and reading Surah Al-Kahf on Friday (09:00), scheduled in the saved local timezone.
+- Configurable pre-prayer reminders at 5, 10, 15, 20, 30, 45, or 60 minutes before each obligatory prayer, followed by the normal prayer-time notification.
+- Category-aware notification cleanup: a new prayer notice replaces the preceding prayer/pre-prayer message, weekly categories are independent, and every reminder expires within Telegram's deletion window.
 - An embedded welcome illustration sent on `/start` and a generated bot avatar installed during profile synchronization.
 - A localized feedback and bug-report flow that accepts text or screenshots in a private chat and delivers them directly to the configured owner with the sender's disclosed Telegram identity.
 - An owner-only `/admin` dashboard with aggregate user activity, onboarding, language, calculation-method, reminder-adoption, queue, and delivery-health metrics.
@@ -36,7 +38,7 @@ Feedback arrives in the owner's private bot chat as a metadata message followed 
 | --- | --- | --- |
 | `webhook` | Public URL; webhook protected by Telegram's secret header, Mini App API protected by signed init data | Commands, Mini App, location setup, calculation settings |
 | `dispatch` | Cloud Scheduler service account only | Claim due indexed schedules and create Cloud Tasks |
-| `sender` | Cloud Tasks service account only | Idempotent Telegram delivery and next-occurrence planning |
+| `sender` | Cloud Tasks service account only | Idempotent Telegram delivery, category cleanup, and next-occurrence planning |
 
 The three services use one immutable image and select `/webhook`, `/dispatch`, or `/send` as the command. The webhook binary embeds the Mini App and serves it at `/app/`, so the feature does not add another Cloud Run service, container image, database, migration, or secret.
 

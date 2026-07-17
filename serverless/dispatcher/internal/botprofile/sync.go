@@ -20,6 +20,11 @@ import (
 // treat it as non-fatal, since profile sync is best-effort at deploy time.
 var ErrTransient = errors.New("transient telegram failure")
 
+// ErrRateLimited marks cosmetic Telegram profile work that should be skipped
+// without failing a deployment. A later deployment can apply the same
+// idempotent desired state after Telegram's retry window expires.
+var ErrRateLimited = errors.New("telegram profile rate limited")
+
 func isRateLimited(err error) bool {
 	if err == nil {
 		return false
@@ -78,6 +83,9 @@ func SyncWithRetry(ctx context.Context, b *bot.Bot, ownerID int64, attempts int,
 		if err == nil {
 			return nil
 		}
+		if errors.Is(err, ErrRateLimited) {
+			return err
+		}
 		if !isTransient(err) {
 			return err
 		}
@@ -95,8 +103,11 @@ func SyncWithRetry(ctx context.Context, b *bot.Bot, ownerID int64, attempts int,
 }
 
 func wrapProfileErr(step string, err error) error {
-	if err == nil || isRateLimited(err) {
+	if err == nil {
 		return nil
+	}
+	if isRateLimited(err) {
+		return fmt.Errorf("%w at %s: %w", ErrRateLimited, step, err)
 	}
 	return fmt.Errorf("%s: %w", step, err)
 }

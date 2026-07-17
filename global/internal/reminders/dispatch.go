@@ -11,6 +11,7 @@ import (
 	cloudtaskspb "cloud.google.com/go/cloudtasks/apiv2/cloudtaskspb"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/escalopa/prayer-bot/global/internal/store"
 )
@@ -22,7 +23,7 @@ type DispatchStore interface {
 }
 
 type TaskEnqueuer interface {
-	Enqueue(context.Context, string, []byte) error
+	Enqueue(context.Context, string, string, time.Time, []byte) error
 	Close() error
 }
 
@@ -45,7 +46,7 @@ func (d *Dispatcher) Run(ctx context.Context, now time.Time) (int, error) {
 		return 0, fmt.Errorf("load outbox: %w", err)
 	}
 	for index, item := range items {
-		if err := d.enqueuer.Enqueue(ctx, item.DeliveryKey, item.Payload); err != nil {
+		if err := d.enqueuer.Enqueue(ctx, item.DeliveryKey, item.Endpoint, item.RunAt, item.Payload); err != nil {
 			return index, fmt.Errorf("enqueue delivery: %w", err)
 		}
 		if err := d.store.MarkOutboxEnqueued(ctx, item.ID); err != nil {
@@ -75,24 +76,28 @@ func NewCloudTasksEnqueuer(ctx context.Context, projectID, region, queue, sender
 	}, nil
 }
 
-func (e *CloudTasksEnqueuer) Enqueue(ctx context.Context, deliveryKey string, payload []byte) error {
+func (e *CloudTasksEnqueuer) Enqueue(ctx context.Context, deliveryKey, endpoint string, runAt time.Time, payload []byte) error {
 	digest := sha256.Sum256([]byte(deliveryKey))
 	taskName := e.queuePath + "/tasks/" + hex.EncodeToString(digest[:])
+	task := &cloudtaskspb.Task{
+		Name: taskName,
+		MessageType: &cloudtaskspb.Task_HttpRequest{HttpRequest: &cloudtaskspb.HttpRequest{
+			HttpMethod: cloudtaskspb.HttpMethod_POST,
+			Url:        e.senderURL + endpoint,
+			Headers:    map[string]string{"Content-Type": "application/json"},
+			Body:       payload,
+			AuthorizationHeader: &cloudtaskspb.HttpRequest_OidcToken{OidcToken: &cloudtaskspb.OidcToken{
+				ServiceAccountEmail: e.serviceAccountEmail,
+				Audience:            e.senderURL,
+			}},
+		}},
+	}
+	if runAt.After(time.Now()) {
+		task.ScheduleTime = timestamppb.New(runAt)
+	}
 	_, err := e.client.CreateTask(ctx, &cloudtaskspb.CreateTaskRequest{
 		Parent: e.queuePath,
-		Task: &cloudtaskspb.Task{
-			Name: taskName,
-			MessageType: &cloudtaskspb.Task_HttpRequest{HttpRequest: &cloudtaskspb.HttpRequest{
-				HttpMethod: cloudtaskspb.HttpMethod_POST,
-				Url:        e.senderURL + "/tasks/send",
-				Headers:    map[string]string{"Content-Type": "application/json"},
-				Body:       payload,
-				AuthorizationHeader: &cloudtaskspb.HttpRequest_OidcToken{OidcToken: &cloudtaskspb.OidcToken{
-					ServiceAccountEmail: e.serviceAccountEmail,
-					Audience:            e.senderURL,
-				}},
-			}},
-		},
+		Task:   task,
 	})
 	if status.Code(err) == codes.AlreadyExists {
 		return nil

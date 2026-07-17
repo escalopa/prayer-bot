@@ -94,6 +94,7 @@
     setText("reminders-title", labels.reminders);
     setText("settings-title", labels.settings);
     setText("prayer-reminders-label", labels.prayer_reminders);
+    setText("pre-prayer-reminder-label", labels.pre_prayer_reminder);
     setText("fasting-reminders-label", labels.fasting_reminders);
     setText("kahf-reminders-label", labels.kahf_reminders);
     setText("fasting-schedule", labels.fasting_schedule);
@@ -175,8 +176,14 @@
 
   function renderReminders() {
     byId("prayer-reminders").checked = state.reminders.prayer;
+    fillSelect("pre-prayer-minutes", state.options.pre_reminders, state.reminders.pre_prayer_minutes);
     byId("fasting-reminders").checked = state.reminders.fasting;
     byId("kahf-reminders").checked = state.reminders.kahf;
+    syncPreReminderAvailability();
+  }
+
+  function syncPreReminderAvailability() {
+    byId("pre-prayer-minutes").disabled = !byId("prayer-reminders").checked;
   }
 
   function applyState(next) {
@@ -282,6 +289,7 @@
   function collectReminders() {
     return {
       prayer: byId("prayer-reminders").checked,
+      pre_prayer_minutes: Number(byId("pre-prayer-minutes").value),
       fasting: byId("fasting-reminders").checked,
       kahf: byId("kahf-reminders").checked,
     };
@@ -292,6 +300,7 @@
     document.querySelectorAll("#dashboard select, #dashboard input").forEach((control) => {
       control.disabled = value;
     });
+    if (!value) syncPreReminderAvailability();
   }
 
   async function savePreferences() {
@@ -354,8 +363,9 @@
   byId("location-secondary").addEventListener("click", (event) => updateLocation(event.currentTarget));
   byId("save-preferences").addEventListener("click", savePreferences);
   byId("retry-app").addEventListener("click", bootstrapApp);
-  ["prayer-reminders", "fasting-reminders", "kahf-reminders", "language", "method", "madhab", "highlat", "hijri-adjustment"]
+  ["prayer-reminders", "pre-prayer-minutes", "fasting-reminders", "kahf-reminders", "language", "method", "madhab", "highlat", "hijri-adjustment"]
     .forEach((id) => byId(id).addEventListener("change", () => setDirty(true)));
+  byId("prayer-reminders").addEventListener("change", syncPreReminderAvailability);
   byId("adjustment-grid").addEventListener("input", () => setDirty(true));
   window.addEventListener("pageshow", (event) => {
     if (event.persisted) bootstrapApp();

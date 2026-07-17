@@ -34,6 +34,7 @@ func TestLocalizedFormatStringsAcceptExpectedArguments(t *testing.T) {
 		"reminder_before":   {"Fajr", 10, "04:15"},
 		"reminder_tomorrow": {"Fajr", "04:15"},
 		"hijri_setting":     {1},
+		"minutes_before":    {20},
 	}
 	for _, locale := range Supported() {
 		for key, arguments := range samples {
@@ -57,6 +58,7 @@ func TestLocalesAreCompleteAndWithinTelegramLimits(t *testing.T) {
 		"reminders_on", "reminders_off", "reminders_enabled", "reminders_disabled", "choose_language",
 		"language_saved", "admin_only", "unknown", "deleted", "help", "privacy", "reminder_at",
 		"reminder_before", "reminder_tomorrow", "enabled", "disabled", "fasting_schedule", "kahf_schedule",
+		"pre_prayer_reminder", "pre_reminder_off", "minutes_before", "choose_pre_reminder",
 		"hijri_date", "hijri_era", "hijri_setting", "hijri_note", "choose_hijri", "reminder_fasting", "reminder_kahf",
 		"feedback_prompt", "feedback_placeholder", "feedback_sent", "feedback_private",
 	}

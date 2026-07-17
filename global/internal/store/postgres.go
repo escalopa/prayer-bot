@@ -123,8 +123,25 @@ func (s *Store) UpsertChat(ctx context.Context, chat domain.Chat) error {
 		INSERT INTO global_bot.chats (telegram_chat_id, chat_type, language_code)
 		VALUES ($1, $2, $3)
 		ON CONFLICT (telegram_chat_id) DO UPDATE SET
-			chat_type = excluded.chat_type, language_code = excluded.language_code,
+			chat_type = excluded.chat_type,
 			blocked_at = NULL, updated_at = now()`, chat.TelegramChatID, chat.Type, chat.LanguageCode)
+	return err
+}
+
+func (s *Store) Chat(ctx context.Context, chatID int64) (domain.Chat, error) {
+	var chat domain.Chat
+	err := s.pool.QueryRow(ctx, `
+		SELECT telegram_chat_id, chat_type, language_code, blocked_at
+		FROM global_bot.chats WHERE telegram_chat_id = $1`, chatID).Scan(
+		&chat.TelegramChatID, &chat.Type, &chat.LanguageCode, &chat.BlockedAt,
+	)
+	return chat, err
+}
+
+func (s *Store) SetLanguage(ctx context.Context, chatID int64, languageCode string) error {
+	_, err := s.pool.Exec(ctx, `
+		UPDATE global_bot.chats SET language_code = $2, updated_at = now()
+		WHERE telegram_chat_id = $1`, chatID, languageCode)
 	return err
 }
 

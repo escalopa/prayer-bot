@@ -8,11 +8,14 @@ This directory is a separate application derived from the existing city bots. It
 - Google Time Zone and reverse-geocoding lookups only when the location changes.
 - Local calculation of prayer times with MWL, Egyptian, Umm al-Qura, Karachi, ISNA, Diyanet, Kemenag, MUIS, and JAKIM methods.
 - Shafii/Hanafi Asr selection, three high-latitude rules, and per-prayer minute adjustments.
-- `/today`, `/tomorrow`, `/next`, `/settings`, `/method`, `/madhab`, `/highlat`, `/adjust`, `/remind`, `/privacy`, and `/delete_me`.
+- A persistent two-column Telegram menu for today, tomorrow, the next prayer, location, settings, reminders, language, and help.
+- Inline button pickers for calculation method, madhab, high-latitude rule, per-prayer adjustments, reminder state, and language. The equivalent typed commands remain available.
+- Localized interface, prayer names, dates, command menus, profile descriptions, and reminder deliveries in English, Arabic, Spanish, French, Russian, Turkish, Uzbek, and Tatar.
+- An embedded welcome illustration sent on `/start` and a generated bot avatar installed during profile synchronization.
 - Indexed reminder scheduling through Cloud Scheduler, an outbox, Cloud Tasks, a private sender service, leases, and delivery idempotency keys.
 - Dedicated `global_bot_testing` and `global_bot_production` PostgreSQL schemas, each with its own Goose migration table.
 
-English is the initial UI language. The stored Telegram language code gives us a clean path to add the existing translations without coupling the two applications.
+The initial UI language follows the user's Telegram language when supported and otherwise falls back to English. A language selected inside the bot is persisted and is not overwritten by later Telegram updates.
 
 ## Services
 
@@ -83,6 +86,6 @@ The bootstrap command only creates the selected empty global schema. `GLOBAL_DB_
 
 ## Deployment
 
-Run the separate **Deploy global prayer bot** GitHub workflow and choose `testing` or `production`. It uses a distinct state prefix (`prayer-bot/global-testing` or `prayer-bot/global-production`), migrates the matching `global_bot_testing` or `global_bot_production` schema, builds the global image, provisions the global resources, and then configures the selected Telegram webhook.
+Run the separate **Deploy global prayer bot** GitHub workflow and choose `testing` or `production`. It uses a distinct state prefix (`prayer-bot/global-testing` or `prayer-bot/global-production`), migrates the matching `global_bot_testing` or `global_bot_production` schema, builds the global image, provisions the global resources, and then configures the selected Telegram webhook, localized command menus, names, descriptions, and avatar.
 
 The workflow is intentionally manual until the new token, secrets, API quotas, privacy text, and prayer-time samples are approved through the logical `testing` deployment.

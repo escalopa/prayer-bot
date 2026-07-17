@@ -3,13 +3,13 @@ package reminders
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	botapi "github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
 
 	"github.com/escalopa/prayer-bot/global/internal/domain"
+	"github.com/escalopa/prayer-bot/global/internal/i18n"
 	"github.com/escalopa/prayer-bot/global/internal/store"
 )
 
@@ -63,8 +63,14 @@ func (s *Sender) Process(ctx context.Context, task domain.DeliveryTask) error {
 		return s.store.MarkDeliveryStale(ctx, task.DeliveryKey)
 	}
 
-	text := reminderText(rule, schedule, profile)
-	message, err := s.bot.SendMessage(ctx, &botapi.SendMessageParams{ChatID: task.ChatID, Text: text})
+	chat, err := s.store.Chat(ctx, task.ChatID)
+	if err != nil {
+		return fail(fmt.Errorf("load chat language: %w", err))
+	}
+	text := reminderText(rule, schedule, profile, i18n.Resolve(chat.LanguageCode))
+	message, err := s.bot.SendMessage(ctx, &botapi.SendMessageParams{
+		ChatID: task.ChatID, Text: text, ParseMode: models.ParseModeHTML,
+	})
 	if err != nil {
 		return fail(fmt.Errorf("Telegram reminder send failed"))
 	}
@@ -78,18 +84,16 @@ func (s *Sender) Process(ctx context.Context, task domain.DeliveryTask) error {
 	return nil
 }
 
-func reminderText(rule domain.ReminderRule, schedule domain.ReminderSchedule, profile domain.PrayerProfile) string {
-	name := string(rule.Prayer)
-	if len(name) > 0 {
-		name = strings.ToUpper(name[:1]) + name[1:]
-	}
+func reminderText(rule domain.ReminderRule, schedule domain.ReminderSchedule, profile domain.PrayerProfile, locale i18n.Locale) string {
+	name := locale.Prayer(rule.Prayer)
+	timeText := schedule.PrayerAt.In(mustLocation(profile.Timezone)).Format("15:04")
 	switch rule.Kind {
 	case domain.ReminderBefore:
-		return fmt.Sprintf("%s is in %d minutes, at %s.", name, rule.OffsetMinutes, schedule.PrayerAt.In(mustLocation(profile.Timezone)).Format("15:04"))
+		return fmt.Sprintf(locale.Message("reminder_before"), name, rule.OffsetMinutes, timeText)
 	case domain.ReminderTomorrow:
-		return fmt.Sprintf("Tomorrow's %s is at %s.", name, schedule.PrayerAt.In(mustLocation(profile.Timezone)).Format("15:04"))
+		return fmt.Sprintf(locale.Message("reminder_tomorrow"), name, timeText)
 	default:
-		return fmt.Sprintf("It is time for %s.", name)
+		return fmt.Sprintf(locale.Message("reminder_at"), name)
 	}
 }
 

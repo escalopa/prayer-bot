@@ -30,3 +30,20 @@ func TestWeeklyReminderTextUsesSelectedLocale(t *testing.T) {
 		t.Fatalf("unexpected Turkish Al-Kahf reminder: %s", text)
 	}
 }
+
+func TestPrayerNotificationsShareOneCleanupCategory(t *testing.T) {
+	for _, kind := range []domain.ReminderKind{domain.ReminderBefore, domain.ReminderAt} {
+		if got := notificationCategory(kind); got != "prayer" {
+			t.Fatalf("notificationCategory(%q) = %q", kind, got)
+		}
+	}
+	if notificationCategory(domain.ReminderWeeklyKahf) == notificationCategory(domain.ReminderWeeklyFasting) {
+		t.Fatal("weekly reminder categories must be cleaned independently")
+	}
+}
+
+func TestNotificationLifetimeFitsTelegramDeletionWindow(t *testing.T) {
+	if notificationLifetime <= 0 || notificationLifetime >= 48*time.Hour {
+		t.Fatalf("notification lifetime %s must remain inside Telegram's 48-hour deletion window", notificationLifetime)
+	}
+}

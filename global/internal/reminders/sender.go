@@ -15,7 +15,10 @@ import (
 
 type MessageSender interface {
 	SendMessage(context.Context, *botapi.SendMessageParams) (*models.Message, error)
+	DeleteMessages(context.Context, *botapi.DeleteMessagesParams) (bool, error)
 }
+
+const notificationLifetime = 36 * time.Hour
 
 type Sender struct {
 	store   *store.Store
@@ -78,10 +81,57 @@ func (s *Sender) Process(ctx context.Context, task domain.DeliveryTask) error {
 	if err != nil {
 		return fail(fmt.Errorf("plan next reminder: %w", err))
 	}
-	if err := s.store.CompleteDelivery(ctx, task, int64(message.ID), next); err != nil {
+	previousMessageID, err := s.store.CompleteDelivery(
+		ctx,
+		task,
+		int64(message.ID),
+		next,
+		notificationCategory(rule.Kind),
+		time.Now().Add(notificationLifetime),
+	)
+	if err != nil {
 		return fail(fmt.Errorf("complete delivery: %w", err))
 	}
+	if previousMessageID != 0 && previousMessageID != int64(message.ID) {
+		// Best effort for immediate chat cleanup. The transaction also created
+		// a durable deletion task, so a transient Telegram error is retried.
+		_, _ = s.bot.DeleteMessages(ctx, &botapi.DeleteMessagesParams{
+			ChatID: task.ChatID, MessageIDs: []int{int(previousMessageID)},
+		})
+	}
 	return nil
+}
+
+func (s *Sender) Delete(ctx context.Context, task domain.MessageDeletionTask) error {
+	if task.DeletionKey == "" || task.ChatID == 0 || task.MessageID == 0 {
+		return fmt.Errorf("invalid message deletion task")
+	}
+	if _, err := s.bot.DeleteMessages(ctx, &botapi.DeleteMessagesParams{
+		ChatID:     task.ChatID,
+		MessageIDs: []int{int(task.MessageID)},
+	}); err != nil {
+		return fmt.Errorf("Telegram reminder cleanup failed: %w", err)
+	}
+	if err := s.store.ClearNotificationMessage(ctx, task.ChatID, task.MessageID); err != nil {
+		return fmt.Errorf("clear notification message slot: %w", err)
+	}
+	return nil
+}
+
+func notificationCategory(kind domain.ReminderKind) string {
+	switch kind {
+	case domain.ReminderWeeklyFasting:
+		return "weekly_fasting"
+	case domain.ReminderWeeklyKahf:
+		return "weekly_kahf"
+	case domain.ReminderTomorrow:
+		return "tomorrow"
+	default:
+		// Before-prayer and at-prayer messages intentionally share a slot.
+		// A pre-reminder replaces the previous prayer, and the arrival message
+		// replaces that pre-reminder.
+		return "prayer"
+	}
 }
 
 func reminderText(rule domain.ReminderRule, schedule domain.ReminderSchedule, profile domain.PrayerProfile, locale i18n.Locale) string {

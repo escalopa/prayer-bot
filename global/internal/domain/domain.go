@@ -175,6 +175,19 @@ type ReminderRule struct {
 	Enabled       bool
 }
 
+func SupportedPreReminderMinutes() []int {
+	return []int{0, 5, 10, 15, 20, 30, 45, 60}
+}
+
+func ValidPreReminderMinutes(value int) bool {
+	for _, candidate := range SupportedPreReminderMinutes() {
+		if value == candidate {
+			return true
+		}
+	}
+	return false
+}
+
 type ReminderSchedule struct {
 	ID             int64
 	RuleID         int64
@@ -193,4 +206,10 @@ type DeliveryTask struct {
 	ChatID         int64     `json:"chat_id"`
 	ProfileVersion int64     `json:"profile_version"`
 	ScheduledFor   time.Time `json:"scheduled_for"`
+}
+
+type MessageDeletionTask struct {
+	DeletionKey string `json:"deletion_key"`
+	ChatID      int64  `json:"chat_id"`
+	MessageID   int64  `json:"message_id"`
 }

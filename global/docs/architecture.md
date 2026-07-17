@@ -38,7 +38,11 @@ Daily schedule headers use the calculated Umm al-Qura calendar from `github.com/
 
 ## Delivery behavior
 
-The dispatcher selects only due rows from the partial due-time index using `FOR UPDATE SKIP LOCKED`. It writes a durable outbox record in the same transaction and uses a deterministic Cloud Task name. The sender leases a delivery key before calling Telegram and records the next occurrence after a successful send. Prayer reminders and opt-in weekly fasting/Al-Kahf reminders share this delivery path; all recurrence calculations use the profile's IANA timezone.
+The dispatcher selects only due rows from the partial due-time index using `FOR UPDATE SKIP LOCKED`. It writes a durable outbox record in the same transaction and uses a deterministic Cloud Task name. The sender leases a delivery key before calling Telegram and records the next occurrence after a successful send. Prayer reminders, configurable pre-prayer notices, and opt-in weekly fasting/Al-Kahf reminders share this delivery path; all recurrence calculations use the profile's IANA timezone.
+
+The sender also maintains one active Telegram message slot per cleanup category. Before-prayer and at-prayer notifications share the `prayer` slot, so Asr's arrival replaces its pre-reminder, or the prior Dhuhr notification when no pre-reminder is enabled. Tomorrow, fasting, and Al-Kahf reminders have independent slots. Replaced messages are deleted immediately on a best-effort basis and through a durable Cloud Task fallback.
+
+Telegram only permits message deletion for messages sent less than 48 hours ago. Every notification therefore receives a scheduled 36-hour cleanup task. This is especially important for weekly categories, whose next occurrence is too late to delete the previous Telegram message.
 
 Outbox rows are removed after Cloud Tasks accepts them. A daily authenticated maintenance request deletes processed update keys after 7 days and terminal delivery records after 30 days, in bounded batches.
 
@@ -49,6 +53,6 @@ This prevents ordinary duplicate deliveries. A process crash after Telegram acce
 1. Add the three new secrets to the GitHub `testing` environment.
 2. Run the manual global deploy workflow for `testing`.
 3. Compare a sample matrix covering Cairo, Makkah, Istanbul, Karachi, New York, London, Stockholm, and a southern-hemisphere city against trusted local authority timetables.
-4. Verify private-chat location sharing, group-admin authorization, Hijri correction boundaries, all three reminder toggles and deliveries, secret-header rejection, reminder retries, and `/delete_me`.
+4. Verify private-chat location sharing, group-admin authorization, Hijri correction boundaries, all reminder toggles, pre-prayer lead times, category cleanup, secret-header rejection, reminder retries, and `/delete_me`.
 5. Review Google API quotas/budget alerts and privacy wording.
 6. Add the independent production values to the GitHub `production` environment and deploy it using the production bot token.

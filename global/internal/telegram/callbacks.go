@@ -164,6 +164,39 @@ func (h *Handler) handleReminderCallback(ctx context.Context, message *models.Me
 	if len(parts) == 2 { // Backward-compatible buttons from the first UX build.
 		parts = []string{"reminders", "prayer", parts[1]}
 	}
+	if len(parts) == 3 && parts[1] == "pre" {
+		state, err := h.loadReminderState(ctx, message.Chat.ID)
+		if err != nil {
+			return err
+		}
+		switch parts[2] {
+		case "choose":
+			return h.edit(ctx, message.Chat.ID, message.ID,
+				locale.Message("choose_pre_reminder"), preReminderKeyboard(state.PrePrayerMinutes, locale))
+		case "back":
+			return h.edit(ctx, message.Chat.ID, message.ID,
+				formatReminders(state, locale), remindersKeyboard(state, locale))
+		}
+		minutes, err := strconv.Atoi(parts[2])
+		if err != nil || !domain.ValidPreReminderMinutes(minutes) {
+			return nil
+		}
+		if _, ok, err := h.profileOrPrompt(ctx, message.Chat.ID, locale); err != nil || !ok {
+			return err
+		}
+		if err := h.store.ConfigurePrayerRules(ctx, message.Chat.ID, true, minutes); err != nil {
+			return err
+		}
+		if err := h.planner.RebuildChat(ctx, message.Chat.ID, h.now()); err != nil {
+			return err
+		}
+		state, err = h.loadReminderState(ctx, message.Chat.ID)
+		if err != nil {
+			return err
+		}
+		return h.edit(ctx, message.Chat.ID, message.ID,
+			formatReminders(state, locale), remindersKeyboard(state, locale))
+	}
 	if len(parts) != 3 || (parts[2] != "on" && parts[2] != "off") {
 		return nil
 	}
@@ -176,7 +209,7 @@ func (h *Handler) handleReminderCallback(ctx context.Context, message *models.Me
 	switch parts[1] {
 	case "prayer":
 		if enabled {
-			if err := h.store.EnableDefaultRules(ctx, message.Chat.ID); err != nil {
+			if err := h.store.ConfigurePrayerRules(ctx, message.Chat.ID, true, 0); err != nil {
 				return err
 			}
 		} else if err := h.store.DisableRules(ctx, message.Chat.ID); err != nil {

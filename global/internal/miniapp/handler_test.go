@@ -175,7 +175,7 @@ func TestPreferencesUpdateSavesSettingsAndRemindersTogether(t *testing.T) {
 	body := `{
 		"settings":{"language":"ar","method":"isna","madhab":"hanafi","high_latitude_rule":"middle_of_night","hijri_adjustment":1,
 		"adjustments":{"fajr":2,"sunrise":0,"dhuhr":0,"asr":1,"maghrib":0,"isha":-1}},
-		"reminders":{"prayer":true,"fasting":true,"kahf":false}
+		"reminders":{"prayer":true,"pre_prayer_minutes":20,"fasting":true,"kahf":false}
 	}`
 	request := httptest.NewRequest(http.MethodPut, "/api/miniapp/preferences", strings.NewReader(body))
 	request.Header.Set("X-Telegram-Init-Data", signedInitData(t, "test-token", now, initDataUser{ID: 42, FirstName: "Amina", LanguageCode: "en"}))
@@ -194,7 +194,8 @@ func TestPreferencesUpdateSavesSettingsAndRemindersTogether(t *testing.T) {
 	if err := json.Unmarshal(response.Body.Bytes(), &data); err != nil {
 		t.Fatal(err)
 	}
-	if data.Locale != "ar" || !data.Reminders.Prayer || !data.Reminders.Fasting || data.Reminders.Kahf || planner.rebuilds != 1 {
+	if data.Locale != "ar" || !data.Reminders.Prayer || data.Reminders.PrePrayerMinutes != 20 ||
+		!data.Reminders.Fasting || data.Reminders.Kahf || planner.rebuilds != 1 {
 		t.Fatalf("unexpected updated state: response=%+v rebuilds=%d", data.Reminders, planner.rebuilds)
 	}
 }
@@ -207,6 +208,20 @@ func TestParseAdjustmentsRequiresCompleteSnapshot(t *testing.T) {
 	adjustments, err := parseAdjustments(values)
 	if err != nil || adjustments.Fajr != 1 || adjustments.Isha != -1 {
 		t.Fatalf("unexpected adjustments: %+v, %v", adjustments, err)
+	}
+}
+
+func TestValidateRemindersRejectsUnsupportedLeadTime(t *testing.T) {
+	enabled, disabled := true, false
+	if err := validateReminders(remindersRequest{
+		Prayer: &enabled, PrePrayerMinutes: 20, Fasting: &disabled, Kahf: &disabled,
+	}); err != nil {
+		t.Fatalf("20-minute pre-reminder was rejected: %v", err)
+	}
+	if err := validateReminders(remindersRequest{
+		Prayer: &enabled, PrePrayerMinutes: 17, Fasting: &disabled, Kahf: &disabled,
+	}); err == nil {
+		t.Fatal("unsupported pre-reminder lead time was accepted")
 	}
 }
 
@@ -278,6 +293,25 @@ func (s *fakeStorage) DisableRules(_ context.Context, chatID int64) error {
 	for index := range s.rules[chatID] {
 		if !s.rules[chatID][index].Kind.Weekly() {
 			s.rules[chatID][index].Enabled = false
+		}
+	}
+	return nil
+}
+
+func (s *fakeStorage) ConfigurePrayerRules(_ context.Context, chatID int64, enabled bool, beforeMinutes int) error {
+	for index := range s.rules[chatID] {
+		if !s.rules[chatID][index].Kind.Weekly() {
+			s.rules[chatID][index].Enabled = false
+		}
+	}
+	if enabled {
+		s.rules[chatID] = append(s.rules[chatID], domain.ReminderRule{
+			ChatID: chatID, Kind: domain.ReminderAt, Enabled: true,
+		})
+		if beforeMinutes > 0 {
+			s.rules[chatID] = append(s.rules[chatID], domain.ReminderRule{
+				ChatID: chatID, Kind: domain.ReminderBefore, OffsetMinutes: beforeMinutes, Enabled: true,
+			})
 		}
 	}
 	return nil

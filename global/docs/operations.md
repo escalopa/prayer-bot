@@ -33,7 +33,9 @@ The welcome illustration is embedded in the webhook binary and sent with the loc
 
 Set `GLOBAL_DB_SCHEMA` to `global_bot_testing` or `global_bot_production`, then run Goose with `-table="${GLOBAL_DB_SCHEMA}.goose_db_version"`. Never run global migrations with the legacy default migration table. The initial down migration drops only the selected global schema, but production rollback should normally use a forward corrective migration rather than dropping user data.
 
-Migration `00002` adds the per-chat Hijri correction and the two weekly reminder kinds. The normal global deployment runs it before the new webhook and sender revisions are applied, so old revisions never see reminder kinds they do not understand.
+Migration `00002` adds the per-chat Hijri correction and the two weekly reminder kinds. Migration `00003` adds notification message slots and scheduled deletion tasks for pre-prayer/category cleanup. The normal global deployment runs migrations before the new webhook and sender revisions are applied.
+
+Telegram only deletes messages younger than 48 hours. The sender schedules every reminder for cleanup after 36 hours, while a new message in the same category also triggers immediate best-effort deletion of its predecessor. If direct deletion fails transiently, the durable cleanup task retries through the existing Cloud Tasks queue.
 
 ## Maps failure mode
 

@@ -55,7 +55,7 @@ button { -webkit-tap-highlight-color: transparent; }
 }
 
 .hero h1 { margin: 1px 0 2px; font-size: 25px; letter-spacing: -.03em; }
-.eyebrow, .section-kicker { margin: 0; color: var(--accent); font-size: 12px; font-weight: 750; letter-spacing: .09em; text-transform: uppercase; }
+.eyebrow { margin: 0; color: var(--accent); font-size: 12px; font-weight: 750; letter-spacing: .09em; text-transform: uppercase; }
 .muted { margin: 0; color: var(--app-muted); font-size: 14px; }
 
 .hidden { display: none !important; }
@@ -75,8 +75,9 @@ button { -webkit-tap-highlight-color: transparent; }
   padding: 38px 24px;
 }
 
-.state-card { flex-direction: row; justify-content: center; gap: 12px; }
+.state-card { justify-content: center; gap: 12px; }
 .state-card p, .location-card p { color: var(--app-muted); line-height: 1.5; }
+.state-action { margin-top: 6px; }
 .location-card h2 { margin: 8px 0 0; }
 .state-icon { font-size: 34px; color: var(--accent); }
 
@@ -157,6 +158,15 @@ select:focus, input[type="number"]:focus { border-color: var(--accent); box-shad
 .primary-button { width: 100%; min-height: 50px; padding: 0 18px; border: 0; border-radius: 16px; color: var(--accent-text); background: var(--accent); font-weight: 800; cursor: pointer; box-shadow: 0 10px 24px color-mix(in srgb, var(--accent) 24%, transparent); }
 .primary-button:disabled { opacity: .55; cursor: wait; }
 .text-button { padding: 8px 0; border: 0; color: var(--accent); background: transparent; font-size: 12px; font-weight: 750; cursor: pointer; }
+
+.save-bar {
+  position: sticky;
+  z-index: 5;
+  bottom: 0;
+  margin: 14px -8px -16px;
+  padding: 12px 8px calc(12px + env(safe-area-inset-bottom));
+  background: linear-gradient(transparent, var(--app-bg) 24%);
+}
 
 .toast { position: fixed; z-index: 10; right: 16px; bottom: calc(18px + env(safe-area-inset-bottom)); left: 16px; max-width: 520px; margin: auto; padding: 14px 16px; border-radius: 15px; color: var(--accent-text); background: var(--accent); box-shadow: 0 12px 34px rgba(0,0,0,.2); font-size: 13px; font-weight: 700; text-align: center; }
 .toast.error { color: white; background: #a84040; }

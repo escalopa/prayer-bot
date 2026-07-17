@@ -28,8 +28,19 @@ func TestStaticMiniAppIsEmbeddedWithSecurityHeaders(t *testing.T) {
 	if response.Code != http.StatusOK {
 		t.Fatalf("status = %d", response.Code)
 	}
-	if !strings.Contains(response.Body.String(), "telegram-web-app.js") {
+	html := response.Body.String()
+	if !strings.Contains(html, "telegram-web-app.js?63") {
 		t.Fatal("embedded Mini App HTML is missing Telegram SDK")
+	}
+	if strings.Contains(html, "section-kicker") {
+		t.Fatal("Mini App HTML contains a duplicate section icon")
+	}
+	script, err := embeddedStatic.ReadFile("static/app.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(script), "tgWebAppData") || !strings.Contains(string(script), "/api/miniapp/preferences") {
+		t.Fatal("Mini App script is missing resilient Telegram launch data or unified preference saving")
 	}
 	if !strings.Contains(response.Header().Get("Content-Security-Policy"), "telegram.org") {
 		t.Fatal("Mini App response is missing its CSP")
@@ -146,6 +157,48 @@ func TestLocationUpdatePreservesCalculationSettingsAndRoundsCoordinates(t *testi
 	}
 }
 
+func TestPreferencesUpdateSavesSettingsAndRemindersTogether(t *testing.T) {
+	now := time.Date(2026, time.July, 17, 12, 0, 0, 0, time.UTC)
+	storage := newFakeStorage()
+	storage.chats[42] = domain.Chat{TelegramChatID: 42, Type: "private", LanguageCode: "en"}
+	storage.profiles[42] = domain.PrayerProfile{
+		ChatID: 42, Latitude: 30.044, Longitude: 31.236, Timezone: "UTC",
+		Method: domain.MethodEgyptian, Madhab: domain.MadhabShafii,
+		HighLatitudeRule: domain.HighLatitudeAngleBased,
+	}
+	planner := &fakePlanner{}
+	handler := NewHandler("test-token", storage, nil, prayertime.New(), planner, nil)
+	handler.now = func() time.Time { return now }
+	mux := http.NewServeMux()
+	handler.Register(mux)
+
+	body := `{
+		"settings":{"language":"ar","method":"isna","madhab":"hanafi","high_latitude_rule":"middle_of_night","hijri_adjustment":1,
+		"adjustments":{"fajr":2,"sunrise":0,"dhuhr":0,"asr":1,"maghrib":0,"isha":-1}},
+		"reminders":{"prayer":true,"fasting":true,"kahf":false}
+	}`
+	request := httptest.NewRequest(http.MethodPut, "/api/miniapp/preferences", strings.NewReader(body))
+	request.Header.Set("X-Telegram-Init-Data", signedInitData(t, "test-token", now, initDataUser{ID: 42, FirstName: "Amina", LanguageCode: "en"}))
+	response := httptest.NewRecorder()
+	mux.ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", response.Code, response.Body.String())
+	}
+	profile := storage.profiles[42]
+	if storage.chats[42].LanguageCode != "ar" || profile.Method != domain.MethodISNA || profile.Madhab != domain.MadhabHanafi ||
+		profile.HighLatitudeRule != domain.HighLatitudeMiddleNight || profile.HijriAdjustment != 1 || profile.Adjustments.Fajr != 2 {
+		t.Fatalf("preferences were not saved together: chat=%+v profile=%+v", storage.chats[42], profile)
+	}
+	var data bootstrapResponse
+	if err := json.Unmarshal(response.Body.Bytes(), &data); err != nil {
+		t.Fatal(err)
+	}
+	if data.Locale != "ar" || !data.Reminders.Prayer || !data.Reminders.Fasting || data.Reminders.Kahf || planner.rebuilds != 1 {
+		t.Fatalf("unexpected updated state: response=%+v rebuilds=%d", data.Reminders, planner.rebuilds)
+	}
+}
+
 func TestParseAdjustmentsRequiresCompleteSnapshot(t *testing.T) {
 	if _, err := parseAdjustments(map[string]int{"fajr": 1}); err == nil {
 		t.Fatal("expected an incomplete adjustment snapshot to fail")
@@ -207,7 +260,13 @@ func (s *fakeStorage) UpsertProfile(_ context.Context, profile domain.PrayerProf
 }
 
 func (s *fakeStorage) EnabledRules(_ context.Context, chatID int64) ([]domain.ReminderRule, error) {
-	return s.rules[chatID], nil
+	var enabled []domain.ReminderRule
+	for _, rule := range s.rules[chatID] {
+		if rule.Enabled {
+			enabled = append(enabled, rule)
+		}
+	}
+	return enabled, nil
 }
 
 func (s *fakeStorage) EnableDefaultRules(_ context.Context, chatID int64) error {

@@ -150,9 +150,13 @@ jobs:
           fi
 
           RETRY_AFTER="$(printf '%s\n' "$PROFILE_OUTPUT" | sed -n 's/^PROFILE_SYNC_SKIPPED_RETRY_AFTER=//p' | tail -n 1)"
+          TRANSIENT_SKIPPED="$(printf '%s\n' "$PROFILE_OUTPUT" | sed -n 's/^PROFILE_SYNC_SKIPPED_TRANSIENT=//p' | tail -n 1)"
           if [[ -n "$RETRY_AFTER" ]]; then
             echo "profile_status=rate limited; skipped (retry after ${RETRY_AFTER}s)" >> "$GITHUB_OUTPUT"
             echo "::warning::Telegram profile updates were rate limited and skipped. Redeploy after ${RETRY_AFTER} seconds."
+          elif [[ "$TRANSIENT_SKIPPED" == "1" ]]; then
+            echo "profile_status=temporary Telegram failure; skipped after retries" >> "$GITHUB_OUTPUT"
+            echo "::warning::Telegram profile synchronization remained temporarily unavailable after retries. Infrastructure deployment succeeded; redeploy later to retry profile synchronization."
           else
             echo "profile_status=synchronized" >> "$GITHUB_OUTPUT"
           fi

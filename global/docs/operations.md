@@ -29,6 +29,7 @@ payload.
 | Old notification remains | Immediate Telegram deletion failed and its durable deletion task is retrying or expired past Telegram's limit | [Reminder delivery](reminder-delivery.md#cleanup-categories) |
 | Existing schedules work but location update fails | Google Time Zone or Geocoding failure | [Maps failure mode](#maps-failure-mode) |
 | Mini App says to open it in Telegram | Missing, expired, or invalid signed Telegram init data | [Request flows](request-flows.md#mini-app-session-and-api) |
+| Profile sync reports an empty or malformed Telegram response | The deploy command retries the idempotent sync three times, then skips only the cosmetic profile step | [Runtime and deployment](runtime-and-deployment.md#deployment-workflow) |
 
 For a duplicate reminder, reconstruct the sequence in this order:
 

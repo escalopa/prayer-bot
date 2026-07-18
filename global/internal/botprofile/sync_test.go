@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"image/jpeg"
 	"net/http"
@@ -150,6 +151,86 @@ func TestProfilePhotoRateLimitIsRecognized(t *testing.T) {
 	if !ok || retryAfter != 3600 {
 		t.Fatalf("RateLimitRetryAfter() = %d, %t", retryAfter, ok)
 	}
+}
+
+func TestTransientProfileSyncRetriesThenSucceeds(t *testing.T) {
+	originalDelay := transientSyncRetryDelay
+	transientSyncRetryDelay = 0
+	t.Cleanup(func() { transientSyncRetryDelay = originalDelay })
+
+	attempts := 0
+	err := retryTransientSync(context.Background(), func() error {
+		attempts++
+		if attempts < transientSyncMaxAttempts {
+			return emptyTelegramResponseError(t)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if attempts != transientSyncMaxAttempts {
+		t.Fatalf("profile sync attempts = %d, want %d", attempts, transientSyncMaxAttempts)
+	}
+}
+
+func TestTransientProfileSyncExhaustionIsSkippable(t *testing.T) {
+	originalDelay := transientSyncRetryDelay
+	transientSyncRetryDelay = 0
+	t.Cleanup(func() { transientSyncRetryDelay = originalDelay })
+
+	attempts := 0
+	err := retryTransientSync(context.Background(), func() error {
+		attempts++
+		return emptyTelegramResponseError(t)
+	})
+	if !IsTransientFailure(err) {
+		t.Fatalf("expected a skippable transient failure, got %v", err)
+	}
+	if attempts != transientSyncMaxAttempts {
+		t.Fatalf("profile sync attempts = %d, want %d", attempts, transientSyncMaxAttempts)
+	}
+}
+
+func TestPermanentProfileSyncFailureIsNotRetried(t *testing.T) {
+	permanent := errors.New("unauthorized")
+	attempts := 0
+	err := retryTransientSync(context.Background(), func() error {
+		attempts++
+		return permanent
+	})
+	if !errors.Is(err, permanent) || IsTransientFailure(err) {
+		t.Fatalf("expected permanent failure, got %v", err)
+	}
+	if attempts != 1 {
+		t.Fatalf("permanent profile sync attempts = %d, want 1", attempts)
+	}
+}
+
+func TestRateLimitedProfileSyncIsNotRetried(t *testing.T) {
+	limited := &botapi.TooManyRequestsError{Message: "Too Many Requests", RetryAfter: 60}
+	attempts := 0
+	err := retryTransientSync(context.Background(), func() error {
+		attempts++
+		return limited
+	})
+	retryAfter, ok := RateLimitRetryAfter(err)
+	if !ok || retryAfter != 60 {
+		t.Fatalf("expected rate limit to be preserved, got %v", err)
+	}
+	if attempts != 1 {
+		t.Fatalf("rate-limited profile sync attempts = %d, want 1", attempts)
+	}
+}
+
+func emptyTelegramResponseError(t *testing.T) error {
+	t.Helper()
+	var response any
+	err := json.Unmarshal(nil, &response)
+	if err == nil {
+		t.Fatal("empty Telegram response unexpectedly decoded")
+	}
+	return fmt.Errorf("decode Telegram response: %w", err)
 }
 
 func TestProfilePhotoComparisonAllowsJPEGRecompression(t *testing.T) {

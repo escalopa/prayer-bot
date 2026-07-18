@@ -36,7 +36,11 @@ func Open(ctx context.Context, databaseURL, databaseSchema string) (*Store, erro
 	if err := database.ValidateSchema(databaseSchema); err != nil {
 		return nil, fmt.Errorf("validate postgres schema: %w", err)
 	}
-	pool, err := pgxpool.New(ctx, databaseURL)
+	poolConfig, err := runtimePoolConfig(databaseURL)
+	if err != nil {
+		return nil, fmt.Errorf("parse postgres config: %w", err)
+	}
+	pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
 	if err != nil {
 		return nil, fmt.Errorf("open postgres: %w", err)
 	}
@@ -45,6 +49,20 @@ func Open(ctx context.Context, databaseURL, databaseSchema string) (*Store, erro
 		return nil, fmt.Errorf("ping postgres: %w", err)
 	}
 	return &Store{pool: &schemaPool{pool: pool, schema: databaseSchema}}, nil
+}
+
+func runtimePoolConfig(databaseURL string) (*pgxpool.Config, error) {
+	config, err := pgxpool.ParseConfig(databaseURL)
+	if err != nil {
+		return nil, err
+	}
+	// Supabase's transaction pooler can execute consecutive queries on
+	// different PostgreSQL connections. Named prepared statements are scoped
+	// to one connection, so pgx's default statement cache produces 42P05
+	// ("already exists") and 26000 ("does not exist") errors through the
+	// pooler. Exec mode uses the extended protocol without named statements.
+	config.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeExec
+	return config, nil
 }
 
 func (p *schemaPool) Close() { p.pool.Close() }

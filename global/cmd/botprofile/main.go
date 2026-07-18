@@ -39,6 +39,11 @@ func main() {
 			fmt.Fprintf(os.Stderr, "warning: Telegram profile sync rate limited; skipping profile updates and retrying on a future deployment: %v\n", err)
 			return
 		}
+		if profile.IsTransientFailure(err) {
+			fmt.Println("PROFILE_SYNC_SKIPPED_TRANSIENT=1")
+			fmt.Fprintf(os.Stderr, "warning: Telegram profile sync remained temporarily unavailable after retries; skipping profile updates and retrying on a future deployment: %v\n", err)
+			return
+		}
 		fatal(fmt.Errorf("sync bot profile failed: %w", err))
 	}
 	fmt.Println("PROFILE_SYNC_STATUS=synchronized")

@@ -12,6 +12,7 @@ import (
 	"io"
 	"math/bits"
 	"mime/multipart"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -34,9 +35,15 @@ var startDescriptions = map[string]string{
 	"tt": "Ботны ачу һәм төп менюны күрсәтү",
 }
 
-var profileSyncDelay = 50 * time.Millisecond
+var (
+	profileSyncDelay        = 50 * time.Millisecond
+	transientSyncRetryDelay = 250 * time.Millisecond
+)
 
-const profilePhotoHashTolerance = 16
+const (
+	profilePhotoHashTolerance = 16
+	transientSyncMaxAttempts  = 3
+)
 
 type profilePhotoAPIResponse struct {
 	OK          bool   `json:"ok"`
@@ -49,8 +56,16 @@ type profilePhotoAPIResponse struct {
 // Sync applies one stable Telegram-facing identity and removes old localized
 // profile variants. User-selected languages belong to chat data and must never
 // mutate global bot metadata. The avatar is uploaded only when the bot does not
-// yet have a profile photo.
+// yet have a profile photo. The complete operation is idempotent, so transient
+// Telegram response failures can safely restart it without repeating unchanged
+// writes.
 func Sync(ctx context.Context, client *botapi.Bot, token, miniAppURL string) error {
+	return retryTransientSync(ctx, func() error {
+		return syncOnce(ctx, client, token, miniAppURL)
+	})
+}
+
+func syncOnce(ctx context.Context, client *botapi.Bot, token, miniAppURL string) error {
 	if err := syncStableIdentity(ctx, client); err != nil {
 		return err
 	}
@@ -92,6 +107,63 @@ func Sync(ctx context.Context, client *botapi.Bot, token, miniAppURL string) err
 		}
 	}
 	return nil
+}
+
+type transientSyncError struct {
+	cause error
+}
+
+func (e *transientSyncError) Error() string {
+	return fmt.Sprintf("Telegram profile sync remained transiently unavailable after %d attempts: %v", transientSyncMaxAttempts, e.cause)
+}
+
+func (e *transientSyncError) Unwrap() error {
+	return e.cause
+}
+
+// IsTransientFailure reports that profile synchronization exhausted its
+// bounded retries on a temporary Telegram or network response. Deployments may
+// safely skip this cosmetic step and try it again on a future run.
+func IsTransientFailure(err error) bool {
+	var transient *transientSyncError
+	return errors.As(err, &transient)
+}
+
+func retryTransientSync(ctx context.Context, operation func() error) error {
+	var lastErr error
+	for attempt := 1; attempt <= transientSyncMaxAttempts; attempt++ {
+		lastErr = operation()
+		if lastErr == nil || !isTransientTelegramError(lastErr) {
+			return lastErr
+		}
+		if attempt == transientSyncMaxAttempts {
+			break
+		}
+		delay := transientSyncRetryDelay * time.Duration(1<<(attempt-1))
+		timer := time.NewTimer(delay)
+		select {
+		case <-ctx.Done():
+			if !timer.Stop() {
+				<-timer.C
+			}
+			return ctx.Err()
+		case <-timer.C:
+		}
+	}
+	return &transientSyncError{cause: lastErr}
+}
+
+func isTransientTelegramError(err error) bool {
+	if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) ||
+		errors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+	var syntaxError *json.SyntaxError
+	if errors.As(err, &syntaxError) {
+		return true
+	}
+	var networkError net.Error
+	return errors.As(err, &networkError)
 }
 
 // RateLimitRetryAfter reports Telegram's requested retry delay through wrapped

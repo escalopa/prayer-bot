@@ -3,8 +3,26 @@ package store
 import (
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/escalopa/prayer-bot/global/internal/database"
 )
+
+func TestRuntimePoolConfigDisablesNamedPreparedStatements(t *testing.T) {
+	config, err := runtimePoolConfig(
+		"postgres://user:password@localhost:5432/database?default_query_exec_mode=cache_statement",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if config.ConnConfig.DefaultQueryExecMode != pgx.QueryExecModeExec {
+		t.Fatalf(
+			"default query execution mode = %s, want %s",
+			config.ConnConfig.DefaultQueryExecMode,
+			pgx.QueryExecModeExec,
+		)
+	}
+}
 
 func TestQualifySQLUsesIsolatedSchema(t *testing.T) {
 	query := qualifySQL("SELECT * FROM global_bot.chats", database.TestingSchema)

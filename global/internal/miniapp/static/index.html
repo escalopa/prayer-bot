@@ -66,6 +66,18 @@
         </article>
       </section>
 
+      <section class="panel occasions-panel">
+        <div class="panel-heading occasions-heading">
+          <div>
+            <h2 id="occasions-title">Upcoming Islamic dates</h2>
+            <p id="occasions-help" class="panel-help">Calculated from your corrected Hijri calendar.</p>
+          </div>
+          <span class="section-icon" aria-hidden="true">🌙</span>
+        </div>
+        <div id="occasion-list" class="occasion-list"></div>
+        <p id="occasions-disclaimer" class="occasion-disclaimer"></p>
+      </section>
+
       <section class="panel tools-panel">
         <div class="panel-heading">
           <h2 id="tools-title">Tools</h2>
@@ -174,6 +186,21 @@
         <label class="toggle-row">
           <span><strong id="kahf-reminders-label">Friday Al-Kahf</strong><small id="kahf-schedule"></small></span>
           <input id="kahf-reminders" type="checkbox">
+          <span class="toggle" aria-hidden="true"></span>
+        </label>
+        <label class="toggle-row">
+          <span><strong id="occasion-major-reminders-label">Major Islamic occasions</strong><small id="occasion-major-schedule"></small></span>
+          <input id="occasion-major-reminders" type="checkbox">
+          <span class="toggle" aria-hidden="true"></span>
+        </label>
+        <label class="toggle-row">
+          <span><strong id="occasion-fasting-reminders-label">Special fasting days</strong><small id="occasion-fasting-schedule"></small></span>
+          <input id="occasion-fasting-reminders" type="checkbox">
+          <span class="toggle" aria-hidden="true"></span>
+        </label>
+        <label class="toggle-row">
+          <span><strong id="occasion-observed-reminders-label">Commonly observed dates</strong><small id="occasion-observed-schedule"></small></span>
+          <input id="occasion-observed-reminders" type="checkbox">
           <span class="toggle" aria-hidden="true"></span>
         </label>
       </section>

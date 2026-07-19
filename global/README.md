@@ -22,6 +22,9 @@ in the same pull request.
 - Inline button pickers for calculation method, madhab, high-latitude rule, per-prayer adjustments, reminder state, and language. The equivalent typed commands remain available.
 - Localized messages, reply keyboards, prayer names, dates, Mini App, and reminder deliveries in English, Arabic, Spanish, French, Russian, Turkish, Uzbek, and Tatar. The public Telegram bot name and description remain stable for every user.
 - Gregorian and calculated Umm al-Qura Hijri dates on every daily schedule, with a per-chat moon-sighting correction from -2 to +2 days.
+- The next three Islamic occasions in the Mini App and matching all-day events in the private rolling calendar, using the same corrected Hijri date.
+- A curated, localized occasion catalog covering major dates, voluntary fasting opportunities, and commonly observed dates, with cautious explanatory text and Quran/Hadith source links where available.
+- Three independent, opt-in occasion reminder groups delivered at 20:00 on the preceding local evening.
 - Opt-in weekly reminders for Monday/Thursday voluntary fasting (20:00 on the preceding evening) and reading Surah Al-Kahf on Friday (09:00), scheduled in the saved local timezone.
 - Configurable pre-prayer reminders at 5, 10, 15, 20, 30, 45, or 60 minutes before each obligatory prayer, followed by the normal prayer-time notification.
 - Category-aware notification cleanup: a new prayer notice replaces the preceding prayer/pre-prayer message, weekly categories are independent, and every reminder expires within Telegram's deletion window.
@@ -36,7 +39,7 @@ in the same pull request.
 
 The initial UI language follows the user's Telegram language when supported and otherwise falls back to English. A language selected inside the bot is persisted and is not overwritten by later Telegram updates.
 
-Hijri dates use the calculated Umm al-Qura calendar. Because official local moon-sighting dates can differ by a day or two, users can correct the displayed date under **Settings → Hijri date correction**. The correction is applied only to the Hijri display; it never shifts prayer calculations.
+Hijri dates use the calculated Umm al-Qura calendar. Because official local moon-sighting dates can differ by a day or two, users can correct the date under **Settings → Hijri date correction**. The correction shifts Hijri labels and Islamic occasion dates consistently; it never shifts prayer calculations.
 
 ## Owner dashboard and feedback
 
@@ -54,7 +57,7 @@ Feedback arrives in the owner's private bot chat as a metadata message followed 
 
 The three services use one immutable image and select `/webhook`, `/dispatch`, or `/send` as the command. The webhook binary embeds the Mini App and serves it at `/app/`, so the feature does not add another Cloud Run service, container image, database, migration, or secret. Offline snapshots remain on the user's device, and prayer cards are rendered in the browser; neither feature adds server storage or scheduled work.
 
-Calendar subscriptions use a random private bearer URL created only after the Mini App session has been authenticated. The URL exposes neither the Telegram user ID nor the bot token and can be revoked from the Mini App. Each fetch calculates today and the following 29 local days, so no daily cron or stored calendar events are required. Google controls when subscribed calendars refresh, so updates are not guaranteed to appear exactly at local midnight. Qibla calculations and calendar generation use the existing saved profile and prayer engine, so neither feature adds an external API call from the bot or a recurring job.
+Calendar subscriptions use a random private bearer URL created only after the Mini App session has been authenticated. The URL exposes neither the Telegram user ID nor the bot token and can be revoked from the Mini App. Each fetch calculates today and the following 29 local days, including prayer times and Islamic occasions, so no daily cron or stored calendar events are required. Google controls when subscribed calendars refresh, so updates are not guaranteed to appear exactly at local midnight. Qibla calculations and calendar generation use the existing saved profile and local calculation engines, so neither feature adds an external API call from the bot or a recurring job.
 
 ## Testing and production secrets
 

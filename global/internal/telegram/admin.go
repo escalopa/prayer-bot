@@ -204,13 +204,19 @@ func formatAdminReminders(metrics store.AdminDashboard) string {
 		"<b>Reminder adoption</b> 🔔\n\n"+
 			"🕌 Prayer times: <b>%d</b>\n"+
 			"🌙 Monday &amp; Thursday fasting: <b>%d</b>\n"+
-			"📖 Friday Al-Kahf: <b>%d</b>\n\n"+
+			"📖 Friday Al-Kahf: <b>%d</b>\n"+
+			"🕋 Major Islamic occasions: <b>%d</b>\n"+
+			"🤲 Special fasting days: <b>%d</b>\n"+
+			"🌙 Commonly observed dates: <b>%d</b>\n\n"+
 			"Users with any reminder: %d · %.1f%%\n"+
 			"Enabled rules: %d\n"+
 			"Pending schedules: %d",
 		counts["prayer"],
 		counts["fasting"],
 		counts["kahf"],
+		counts["occasion_major"],
+		counts["occasion_fasting"],
+		counts["occasion_observed"],
 		metrics.ReminderUsers,
 		percentage(metrics.ReminderUsers, metrics.Users),
 		metrics.EnabledRules,

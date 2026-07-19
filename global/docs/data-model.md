@@ -110,7 +110,9 @@ profile change.
 
 Represents desired behavior, not a queued job. The unique key prevents duplicate
 rules with the same chat, kind, prayer, and offset. Weekly reminders use their
-own kinds and local times.
+own kinds and local times. Islamic occasions use `occasion_major`,
+`occasion_fasting`, and `occasion_observed`; all are opt-in and run at 20:00 on
+the preceding local evening.
 
 ### `reminder_schedules`
 
@@ -140,8 +142,10 @@ category:
 - `tomorrow`
 - `weekly_fasting`
 - `weekly_kahf`
+- `islamic_occasion`
 
-Before-prayer and at-prayer messages deliberately share `prayer`.
+Before-prayer and at-prayer messages deliberately share `prayer`. All three
+Islamic occasion rule kinds deliberately share `islamic_occasion`.
 
 ### `calendar_subscriptions`
 

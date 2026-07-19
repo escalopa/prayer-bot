@@ -104,8 +104,23 @@ Both the conversational bot and Mini App use the same profile and
 4. Format Gregorian and corrected Hijri dates.
 5. Localize prayer names and explanatory labels.
 
-The Hijri correction changes only the displayed Hijri date. It never changes
-the Gregorian date or prayer instants.
+The Hijri correction changes the displayed Hijri date and which Gregorian date
+matches an Islamic occasion. It never changes prayer instants.
+
+## Islamic occasions
+
+`internal/occasions` is the single catalog used by the Mini App, calendar, and
+reminder planner. Each definition contains a Hijri month/day, category, emoji,
+and optional HTTPS Quran/Hadith references; localized explanatory and
+recommended-action text lives in `internal/i18n`.
+
+The Mini App returns the next three occurrences after applying the profile's
+Hijri correction. The calendar adds matching all-day events within its rolling
+30-day window. Users can independently opt into major, fasting, and commonly
+observed reminder groups in either interface. The planner sends the next
+matching reminder at 20:00 on the preceding local evening. Commonly observed
+dates remain clearly labelled because exact dates, evidence, or community
+practice may differ.
 
 ## Qibla and calendar tools
 
@@ -129,7 +144,8 @@ fetching:
 6. Disconnecting the calendar disables the token. Future feed requests return
    HTTP 401.
 
-The feed always rolls forward when fetched and includes refresh hints, but
+The feed contains timed prayer events and corrected all-day Islamic occasion
+events. It always rolls forward when fetched and includes refresh hints, but
 Google decides when it refreshes subscribed calendars. The URL is a bearer
 credential and must remain private. It and the event UIDs expose neither the
 Telegram user ID nor bot token.

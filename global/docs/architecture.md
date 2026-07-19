@@ -56,6 +56,12 @@ neither the Telegram user ID nor bot token. Users can revoke the URL from the
 Mini App. Google controls its subscription refresh schedule, so midnight
 rollover is eventually consistent rather than immediate.
 
+The Mini App bootstrap also calculates the next three entries from the curated
+Islamic occasion catalog. These entries use the profile's Hijri correction,
+localize titles and recommendations, and expose HTTPS Quran/Hadith references
+from the catalog. Commonly observed dates are explicitly labelled and carry a
+moon-sighting and scholarly-practice disclaimer.
+
 ## Data ownership
 
 The legacy `public.chats` and `public.prayers` tables remain untouched. Global testing data is owned by `global_bot_testing`, production data is owned by `global_bot_production`, foreign keys cascade from each schema's `chats` table, and `/delete_me` deletes the chat root.
@@ -70,13 +76,13 @@ Every persisted profile records coordinates, IANA timezone, calculation method, 
 
 The current calculation engine is `github.com/hablullah/go-prayer`, hidden behind `prayertime.Calculator`. That boundary lets us replace or compare engines without changing handlers, storage, or reminders.
 
-Daily schedule headers use the calculated Umm al-Qura calendar from `github.com/hablullah/go-hijri`. The independently stored -2 to +2 day correction accounts for local moon-sighting differences and does not affect prayer-time calculations.
+Daily schedule headers use the calculated Umm al-Qura calendar from `github.com/hablullah/go-hijri`. The independently stored -2 to +2 day correction accounts for local moon-sighting differences. It is applied to displayed Hijri dates and occasion matching, but does not affect prayer-time calculations.
 
 ## Delivery behavior
 
 The dispatcher selects only due rows from the partial due-time index using `FOR UPDATE SKIP LOCKED`. It writes a durable outbox record in the same transaction and uses a deterministic Cloud Task name. The sender leases a delivery key before calling Telegram and records the next occurrence after a successful send. Prayer reminders, configurable pre-prayer notices, and opt-in weekly fasting/Al-Kahf reminders share this delivery path; all recurrence calculations use the profile's IANA timezone.
 
-The sender also maintains one active Telegram message slot per cleanup category. Before-prayer and at-prayer notifications share the `prayer` slot, so Asr's arrival replaces its pre-reminder, or the prior Dhuhr notification when no pre-reminder is enabled. Tomorrow, fasting, and Al-Kahf reminders have independent slots. Replaced messages are deleted immediately on a best-effort basis and through a durable Cloud Task fallback.
+The sender also maintains one active Telegram message slot per cleanup category. Before-prayer and at-prayer notifications share the `prayer` slot, so Asr's arrival replaces its pre-reminder, or the prior Dhuhr notification when no pre-reminder is enabled. Tomorrow, weekly fasting, Al-Kahf, and Islamic occasions have independent slots. All three occasion reminder groups share `islamic_occasion`, so a new occasion replaces the prior occasion notice. Replaced messages are deleted immediately on a best-effort basis and through a durable Cloud Task fallback.
 
 Telegram only permits message deletion for messages sent less than 48 hours ago. Every notification therefore receives a scheduled 36-hour cleanup task. This is especially important for weekly categories, whose next occurrence is too late to delete the previous Telegram message.
 

@@ -10,6 +10,7 @@ import (
 
 	"github.com/escalopa/prayer-bot/global/internal/domain"
 	"github.com/escalopa/prayer-bot/global/internal/i18n"
+	"github.com/escalopa/prayer-bot/global/internal/occasions"
 	"github.com/escalopa/prayer-bot/global/internal/prayertime"
 )
 
@@ -70,8 +71,52 @@ func Generate(
 			writeEvent(&calendar, profile, locale, prayer, at, createdAt, uidNamespace)
 		}
 	}
+	upcoming, err := occasions.Between(start, days, profile.HijriAdjustment)
+	if err != nil {
+		return nil, fmt.Errorf("calculate Islamic occasions: %w", err)
+	}
+	for _, occurrence := range upcoming {
+		writeOccasionEvent(&calendar, locale, occurrence, createdAt, uidNamespace)
+	}
 	writeLine(&calendar, "END:VCALENDAR")
 	return calendar.Bytes(), nil
+}
+
+func writeOccasionEvent(
+	calendar *bytes.Buffer,
+	locale i18n.Locale,
+	occurrence occasions.Occurrence,
+	createdAt time.Time,
+	uidNamespace string,
+) {
+	copy := locale.Occasion(occurrence.Definition.ID)
+	date := occurrence.Date
+	uid := fmt.Sprintf(
+		"%s-%s-%s@global-prayer-bot",
+		uidNamespace,
+		date.Format("20060102"),
+		occurrence.Definition.ID,
+	)
+	description := copy.Summary + "\n\n" + copy.Action
+	if len(occurrence.Definition.Sources) > 0 {
+		description += "\n\n"
+		for index, source := range occurrence.Definition.Sources {
+			if index > 0 {
+				description += "\n"
+			}
+			description += source.Label + ": " + source.URL
+		}
+	}
+
+	writeLine(calendar, "BEGIN:VEVENT")
+	writeLine(calendar, "UID:"+uid)
+	writeLine(calendar, "DTSTAMP:"+createdAt.UTC().Format("20060102T150405Z"))
+	writeLine(calendar, "DTSTART;VALUE=DATE:"+date.Format("20060102"))
+	writeLine(calendar, "DTEND;VALUE=DATE:"+date.AddDate(0, 0, 1).Format("20060102"))
+	writeLine(calendar, "SUMMARY:"+escapeText(occurrence.Definition.Emoji+" "+copy.Title))
+	writeLine(calendar, "DESCRIPTION:"+escapeText(description))
+	writeLine(calendar, "CATEGORIES:Islamic Occasions")
+	writeLine(calendar, "END:VEVENT")
 }
 
 func writeEvent(

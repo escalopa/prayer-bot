@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/escalopa/prayer-bot/global/internal/domain"
+	"github.com/escalopa/prayer-bot/global/internal/occasions"
 )
 
 type fixedCalculator struct{ prayerAt time.Time }
@@ -66,5 +67,33 @@ func TestNextFridayKahfReminderUsesFridayMorning(t *testing.T) {
 	}
 	if got := next.NextRunAt.In(location).Format("Monday 2006-01-02 15:04"); got != "Friday 2026-07-24 09:00" {
 		t.Fatalf("unexpected Al-Kahf reminder: %s", got)
+	}
+}
+
+func TestNextIslamicOccasionUsesCorrectedHijriDateAndPreviousEvening(t *testing.T) {
+	location, _ := time.LoadLocation("Africa/Cairo")
+	after := time.Date(2026, 1, 1, 12, 0, 0, 0, location)
+	profile := domain.PrayerProfile{Timezone: "Africa/Cairo", Version: 5, HijriAdjustment: 1}
+	rule := domain.ReminderRule{
+		ID: 10, ChatID: 20, Kind: domain.ReminderOccasionFasting, LocalTime: "20:00",
+	}
+	occurrence, err := occasions.Next(after, profile.HijriAdjustment, occasions.CategoryFasting)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	next, err := (&Planner{}).Next(context.Background(), profile, rule, after)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if next.LocalDate != occurrence.Date.Format("2006-01-02") {
+		t.Fatalf("occasion date = %s, want %s", next.LocalDate, occurrence.Date.Format("2006-01-02"))
+	}
+	expectedRun := time.Date(
+		occurrence.Date.Year(), occurrence.Date.Month(), occurrence.Date.Day()-1,
+		20, 0, 0, 0, location,
+	)
+	if !next.NextRunAt.Equal(expectedRun.UTC()) {
+		t.Fatalf("occasion run = %s, want %s", next.NextRunAt, expectedRun.UTC())
 	}
 }

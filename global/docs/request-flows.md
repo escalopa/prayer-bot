@@ -76,6 +76,22 @@ snapshot only after the user presses **Save changes**. A successful response is
 a new complete bootstrap snapshot, allowing the UI to re-render immediately in
 the newly selected language.
 
+### Cached startup and offline behavior
+
+On a returning launch, the Mini App reads a device-local snapshot scoped to the
+Telegram user and renders it immediately while requesting a fresh bootstrap.
+Snapshots older than 48 hours or missing a complete today/tomorrow schedule are
+discarded. If refresh succeeds, the live response replaces the cache. If it
+fails temporarily, the cached schedule remains visible with an offline banner,
+but all server-side mutations stay disabled. An expired or invalid signed
+Telegram session still fails closed with the normal reopen-from-Telegram state;
+the cache never bypasses server authentication.
+
+The selected day's schedule can be rendered into a localized portrait PNG and
+sent to the platform share sheet without an API request. When file sharing is
+unavailable, the browser saves the PNG instead. No card contents leave the
+device through the bot backend.
+
 ## Prayer schedule display
 
 Both the conversational bot and Mini App use the same profile and

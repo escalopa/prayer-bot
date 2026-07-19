@@ -17,7 +17,8 @@ in the same pull request.
 - Local calculation of prayer times with MWL, Egyptian, Umm al-Qura, Karachi, ISNA, Diyanet, Kemenag, MUIS, and JAKIM methods.
 - Shafii/Hanafi Asr selection, three high-latitude rules, and per-prayer minute adjustments.
 - A persistent two-column Telegram menu for today, tomorrow, the next prayer, location, settings, reminders, language, and help.
-- A Telegram Mini App, opened from the bot menu, for today/tomorrow schedules, location, calculation settings, Hijri correction, and all reminder toggles without typed commands.
+- A Telegram Mini App, opened from the bot menu or an optional Telegram home-screen shortcut, for today/tomorrow schedules, location, calculation settings, Hijri correction, and all reminder toggles without typed commands.
+- A privacy-safe, per-user 48-hour Mini App cache for instant startup and read-only access to saved schedules, Qibla data, and prayer-card sharing during temporary network failures.
 - Inline button pickers for calculation method, madhab, high-latitude rule, per-prayer adjustments, reminder state, and language. The equivalent typed commands remain available.
 - Localized messages, reply keyboards, prayer names, dates, Mini App, and reminder deliveries in English, Arabic, Spanish, French, Russian, Turkish, Uzbek, and Tatar. The public Telegram bot name and description remain stable for every user.
 - Gregorian and calculated Umm al-Qura Hijri dates on every daily schedule, with a per-chat moon-sighting correction from -2 to +2 days.
@@ -26,6 +27,7 @@ in the same pull request.
 - Category-aware notification cleanup: a new prayer notice replaces the preceding prayer/pre-prayer message, weekly categories are independent, and every reminder expires within Telegram's deletion window.
 - A Qibla tool that calculates the initial great-circle bearing and distance to the Kaaba from the saved rounded coordinates, with optional live compass orientation on supported Telegram clients.
 - A revocable private Google Calendar subscription that serves a localized rolling 30-day prayer feed and automatically reflects the saved location and calculation settings when Google refreshes it.
+- Localized 1080×1350 prayer cards generated entirely in the Mini App and shared through the device share sheet, with a gallery-download fallback.
 - An embedded welcome illustration sent on `/start` and a generated bot avatar installed during profile synchronization.
 - A localized feedback and bug-report flow that accepts text or screenshots in a private chat and delivers them directly to the configured owner with the sender's disclosed Telegram identity.
 - An owner-only `/admin` dashboard with aggregate user activity, onboarding, language, calculation-method, reminder-adoption, queue, and delivery-health metrics.
@@ -50,7 +52,7 @@ Feedback arrives in the owner's private bot chat as a metadata message followed 
 | `dispatch` | Cloud Scheduler service account only | Claim due indexed schedules and create Cloud Tasks |
 | `sender` | Cloud Tasks service account only | Idempotent Telegram delivery, category cleanup, and next-occurrence planning |
 
-The three services use one immutable image and select `/webhook`, `/dispatch`, or `/send` as the command. The webhook binary embeds the Mini App and serves it at `/app/`, so the feature does not add another Cloud Run service, container image, database, migration, or secret.
+The three services use one immutable image and select `/webhook`, `/dispatch`, or `/send` as the command. The webhook binary embeds the Mini App and serves it at `/app/`, so the feature does not add another Cloud Run service, container image, database, migration, or secret. Offline snapshots remain on the user's device, and prayer cards are rendered in the browser; neither feature adds server storage or scheduled work.
 
 Calendar subscriptions use a random private bearer URL created only after the Mini App session has been authenticated. The URL exposes neither the Telegram user ID nor the bot token and can be revoked from the Mini App. Each fetch calculates today and the following 29 local days, so no daily cron or stored calendar events are required. Google controls when subscribed calendars refresh, so updates are not guaranteed to appear exactly at local midnight. Qibla calculations and calendar generation use the existing saved profile and prayer engine, so neither feature adds an external API call from the bot or a recurring job.
 

@@ -26,6 +26,26 @@ The backend never trusts a Telegram user ID sent in JSON. Every Mini App API req
 
 The Qibla tool derives a great-circle bearing from the rounded coordinates already present in the profile and sends only the resulting bearing and distance to the browser. Supported Telegram clients can rotate the displayed needle with absolute device-orientation data; unsupported clients retain the numeric bearing and static compass.
 
+After an authenticated bootstrap, the Mini App stores a rendering snapshot for
+at most 48 hours. Storage is namespaced by the signed Telegram user and uses
+Telegram Device Storage when the client supports it, with browser local storage
+as a compatibility fallback. A same-origin service worker caches the versioned
+HTML, CSS, JavaScript, and Telegram SDK application shell so a previously opened
+Mini App can start during a network interruption. The snapshot omits the numeric
+Telegram ID and never contains raw coordinates, the bot token, signed init data,
+or the private calendar feed URL. A cached launch is read-only until the
+same-origin API responds: schedules, Qibla, and prayer-card sharing remain
+available, while location, settings, reminders, and calendar mutations are
+disabled. A fresh bootstrap replaces the snapshot.
+
+Supported Telegram clients may add a Mini App shortcut to their home screen.
+This is a client-side entry point to the same signed Mini App and creates no new
+service or authentication path. Prayer cards are likewise generated entirely
+in the browser as localized PNG files from the selected today/tomorrow
+schedule. The native device share sheet is used when file sharing is supported;
+otherwise the image is downloaded for manual sharing. Cards are not uploaded or
+stored by the bot.
+
 Calendar connection first creates or reuses a random private subscription URL
 from an authenticated Mini App request. Google Calendar fetches that URL without
 Telegram authentication, so possession of the URL is the access credential. The

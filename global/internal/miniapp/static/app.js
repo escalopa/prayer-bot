@@ -9,6 +9,10 @@
   let dirty = false;
   let compassStarted = false;
   let calendarFeedURL = "";
+  let offlineMode = false;
+  let homeScreenStatus = "unknown";
+  const offlineCacheVersion = 1;
+  const offlineCacheMaxAge = 48 * 60 * 60 * 1000;
 
   const launchCopy = {
     en: { open: "Open this page from the bot inside Telegram.", expired: "Your Telegram session expired. Close this window and reopen the app from the bot menu.", failed: "The app could not load. Please try again.", retry: "Try again" },
@@ -52,6 +56,14 @@
     }
   }
 
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./sw.js", { scope: "./" }).catch(() => {
+        // Offline shell caching is an enhancement; live Mini App use continues.
+      });
+    });
+  }
+
   async function request(path, method = "POST", body) {
     const signedData = currentInitData();
     const response = await fetch(path, {
@@ -71,6 +83,84 @@
       throw error;
     }
     return data;
+  }
+
+  function telegramUserID() {
+    const user = telegram && telegram.initDataUnsafe && telegram.initDataUnsafe.user;
+    return user && Number.isSafeInteger(Number(user.id)) ? String(user.id) : "";
+  }
+
+  function offlineCacheKey() {
+    const userID = telegramUserID();
+    return userID ? `global-prayer-miniapp-v${offlineCacheVersion}-${userID}` : "";
+  }
+
+  function telegramVersionAtLeast(version) {
+    return Boolean(telegram && telegram.isVersionAtLeast && telegram.isVersionAtLeast(version));
+  }
+
+  function deviceStorageAvailable() {
+    return Boolean(telegramVersionAtLeast("9.0") && telegram.DeviceStorage);
+  }
+
+  function readStoredValue(key) {
+    if (!key) return Promise.resolve("");
+    if (deviceStorageAvailable()) {
+      return new Promise((resolve) => {
+        telegram.DeviceStorage.getItem(key, (error, value) => resolve(error ? "" : (value || "")));
+      });
+    }
+    try {
+      return Promise.resolve(window.localStorage.getItem(key) || "");
+    } catch (_) {
+      return Promise.resolve("");
+    }
+  }
+
+  function writeStoredValue(key, value) {
+    if (!key) return Promise.resolve();
+    if (deviceStorageAvailable()) {
+      return new Promise((resolve) => {
+        telegram.DeviceStorage.setItem(key, value, () => resolve());
+      });
+    }
+    try {
+      window.localStorage.setItem(key, value);
+    } catch (_) {
+      // A denied or full browser store must never prevent the live app loading.
+    }
+    return Promise.resolve();
+  }
+
+  function offlineSnapshot(next) {
+    if (!next || next.needs_location || !next.today || !next.tomorrow || !next.labels) return null;
+    const snapshot = JSON.parse(JSON.stringify(next));
+    // The cache key is already scoped to Telegram's signed user. The numeric
+    // account identifier is unnecessary for rendering and is not persisted.
+    if (snapshot.user) delete snapshot.user.id;
+    // The calendar path is a bearer credential and must remain memory-only.
+    if (snapshot.calendar) delete snapshot.calendar.path;
+    return snapshot;
+  }
+
+  async function cacheState(next) {
+    const snapshot = offlineSnapshot(next);
+    if (!snapshot) return;
+    await writeStoredValue(offlineCacheKey(), JSON.stringify({
+      saved_at: Date.now(),
+      state: snapshot,
+    }));
+  }
+
+  async function cachedState() {
+    try {
+      const stored = JSON.parse(await readStoredValue(offlineCacheKey()));
+      const age = Date.now() - Number(stored.saved_at);
+      if (!stored.state || age < 0 || age > offlineCacheMaxAge || !offlineSnapshot(stored.state)) return null;
+      return stored;
+    } catch (_) {
+      return null;
+    }
   }
 
   function setText(id, value) {
@@ -119,6 +209,12 @@
     setText("connect-calendar", labels.calendar_connect);
     setText("copy-calendar-link", labels.calendar_copy);
     setText("disconnect-calendar", labels.calendar_disconnect);
+    setText("home-screen-title", labels.home_title);
+    setText("home-screen-help", labels.home_help);
+    setText("add-home-screen", homeScreenStatus === "added" ? labels.home_added : labels.home_add);
+    setText("share-card-title", labels.share_title);
+    setText("share-card-help", labels.share_help);
+    setText("share-prayer-card", labels.share_action);
   }
 
   function fillSelect(id, options, selected) {
@@ -184,6 +280,9 @@
       item.append(emoji, name, time);
       grid.append(item);
     });
+    setText("share-preview-date", schedule.gregorian);
+    const nextPrayer = schedule.prayers.find((prayer) => prayer.time) || schedule.prayers[0];
+    setText("share-preview-time", nextPrayer ? `${nextPrayer.name} · ${nextPrayer.time}` : "");
   }
 
   function formatLabel(template, values) {
@@ -208,6 +307,7 @@
     setText("start-compass", state.labels.compass_start);
     byId("compass-status").classList.add("hidden");
     renderCalendarSubscription();
+    renderHomeScreen();
   }
 
   function renderCalendarSubscription() {
@@ -217,6 +317,37 @@
     setText("connect-calendar", state.labels.calendar_connect);
     setText("copy-calendar-link", state.labels.calendar_copy);
     setText("disconnect-calendar", state.labels.calendar_disconnect);
+  }
+
+  function updateHomeScreenStatus(status) {
+    homeScreenStatus = status || "unknown";
+    if (homeScreenStatus === "unsupported") {
+      byId("home-screen-card").classList.add("hidden");
+      return;
+    }
+    const button = byId("add-home-screen");
+    const statusElement = byId("home-screen-status");
+    const added = homeScreenStatus === "added";
+    button.disabled = added;
+    setText("add-home-screen", added ? state.labels.home_added : state.labels.home_add);
+    setText("home-screen-status", added ? state.labels.home_added : "");
+    statusElement.classList.toggle("hidden", !added);
+  }
+
+  function renderHomeScreen() {
+    const supported = telegramVersionAtLeast("8.0") &&
+      telegram && typeof telegram.addToHomeScreen === "function";
+    byId("home-screen-card").classList.toggle("hidden", !supported);
+    if (!supported) return;
+    updateHomeScreenStatus(homeScreenStatus);
+    if (typeof telegram.checkHomeScreenStatus === "function") {
+      telegram.checkHomeScreenStatus((status) => updateHomeScreenStatus(status));
+    }
+  }
+
+  function addToHomeScreen() {
+    if (!telegram || typeof telegram.addToHomeScreen !== "function") return;
+    telegram.addToHomeScreen();
   }
 
   function renderReminders() {
@@ -250,6 +381,34 @@
     renderReminders();
     renderSettings();
     setDirty(false);
+  }
+
+  function setOnlineControlsDisabled(value) {
+    offlineMode = value;
+    byId("location-primary").disabled = value;
+    byId("location-secondary").disabled = value;
+    setPreferencesDisabled(value);
+    setCalendarButtonsDisabled(value);
+  }
+
+  function showConnectionState(kind, savedAt) {
+    const banner = byId("connection-banner");
+    banner.classList.remove("hidden");
+    banner.classList.toggle("refreshing", kind === "refreshing");
+    if (kind === "refreshing") {
+      setText("connection-title", state.labels.offline_updating);
+      setText("connection-message", state.labels.offline_updating_help);
+      return;
+    }
+    const time = new Intl.DateTimeFormat(state.locale, {
+      hour: "2-digit", minute: "2-digit",
+    }).format(new Date(savedAt));
+    setText("connection-title", state.labels.offline_title);
+    setText("connection-message", formatLabel(state.labels.offline_help, { time }));
+  }
+
+  function hideConnectionState() {
+    byId("connection-banner").classList.add("hidden");
   }
 
   function setDirty(value) {
@@ -307,6 +466,9 @@
         longitude: location.longitude,
       });
       applyState(next);
+      setOnlineControlsDisabled(false);
+      hideConnectionState();
+      void cacheState(next);
       showToast(next.labels.saved);
       if (telegram && telegram.HapticFeedback) telegram.HapticFeedback.notificationOccurred("success");
     } catch (_) {
@@ -358,6 +520,9 @@
         reminders: collectReminders(),
       });
       applyState(next);
+      setOnlineControlsDisabled(false);
+      hideConnectionState();
+      void cacheState(next);
       showToast(next.labels.saved);
       if (telegram && telegram.HapticFeedback) telegram.HapticFeedback.notificationOccurred("success");
     } catch (_) {
@@ -423,6 +588,7 @@
     state.calendar = subscription;
     calendarFeedURL = new URL(subscription.path, window.location.origin).href;
     renderCalendarSubscription();
+    void cacheState(state);
     return calendarFeedURL;
   }
 
@@ -481,11 +647,173 @@
       state.calendar = await request("/api/miniapp/calendar-subscription", "DELETE");
       calendarFeedURL = "";
       renderCalendarSubscription();
+      void cacheState(state);
       showToast(state.labels.calendar_disconnected);
     } catch (_) {
       showToast(state.labels.temporary_failure, true);
     } finally {
       setCalendarButtonsDisabled(false);
+    }
+  }
+
+  function roundedRectangle(context, x, y, width, height, radius) {
+    const r = Math.min(radius, width / 2, height / 2);
+    context.beginPath();
+    context.moveTo(x + r, y);
+    context.arcTo(x + width, y, x + width, y + height, r);
+    context.arcTo(x + width, y + height, x, y + height, r);
+    context.arcTo(x, y + height, x, y, r);
+    context.arcTo(x, y, x + width, y, r);
+    context.closePath();
+  }
+
+  function fitCanvasText(context, text, maxWidth, initialSize, weight = 700) {
+    let size = initialSize;
+    do {
+      context.font = `${weight} ${size}px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif`;
+      size -= 2;
+    } while (size > 24 && context.measureText(text).width > maxWidth);
+  }
+
+  function prayerCardCanvas() {
+    const schedule = state[activeDay];
+    const canvas = document.createElement("canvas");
+    canvas.width = 1080;
+    canvas.height = 1350;
+    const context = canvas.getContext("2d");
+    const rtl = state.locale === "ar";
+    const start = rtl ? 940 : 140;
+    const end = rtl ? 140 : 940;
+
+    const background = context.createLinearGradient(0, 0, 1080, 1350);
+    background.addColorStop(0, "#174d40");
+    background.addColorStop(.55, "#0b2d31");
+    background.addColorStop(1, "#061b29");
+    context.fillStyle = background;
+    context.fillRect(0, 0, 1080, 1350);
+
+    const glow = context.createRadialGradient(875, 130, 10, 875, 130, 360);
+    glow.addColorStop(0, "rgba(228,190,88,.34)");
+    glow.addColorStop(1, "rgba(228,190,88,0)");
+    context.fillStyle = glow;
+    context.fillRect(500, 0, 580, 560);
+
+    context.strokeStyle = "rgba(240,207,114,.18)";
+    context.lineWidth = 2;
+    context.beginPath();
+    context.arc(930, 170, 235, 0, Math.PI * 2);
+    context.stroke();
+    context.beginPath();
+    context.arc(930, 170, 176, 0, Math.PI * 2);
+    context.stroke();
+
+    context.direction = rtl ? "rtl" : "ltr";
+    context.textAlign = rtl ? "right" : "left";
+    context.textBaseline = "alphabetic";
+    context.fillStyle = "#f0cf72";
+    context.font = '700 76px Georgia, "Times New Roman", serif';
+    context.fillText("☾", start, 135);
+
+    context.fillStyle = "#fffdf2";
+    fitCanvasText(context, state.labels.share_card_heading, 780, 52, 800);
+    context.fillText(state.labels.share_card_heading, start, 220);
+
+    context.fillStyle = "rgba(255,253,242,.72)";
+    fitCanvasText(context, schedule.gregorian, 800, 35, 650);
+    context.fillText(schedule.gregorian, start, 278);
+    context.fillStyle = "#d9bd6e";
+    fitCanvasText(context, schedule.hijri, 800, 31, 650);
+    context.fillText(schedule.hijri, start, 326);
+
+    roundedRectangle(context, 90, 365, 900, 760, 38);
+    context.fillStyle = "rgba(255,255,255,.095)";
+    context.fill();
+    context.strokeStyle = "rgba(255,255,255,.12)";
+    context.stroke();
+
+    schedule.prayers.forEach((prayer, index) => {
+      const y = 455 + index * 108;
+      context.direction = rtl ? "rtl" : "ltr";
+      context.textAlign = rtl ? "right" : "left";
+      context.fillStyle = "#fffdf2";
+      fitCanvasText(context, prayer.name, 500, 36, 700);
+      context.fillText(prayer.name, start, y);
+
+      context.direction = "ltr";
+      context.textAlign = rtl ? "left" : "right";
+      context.fillStyle = "#f0cf72";
+      context.font = '800 42px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+      context.fillText(prayer.time, end, y);
+
+      if (index < schedule.prayers.length - 1) {
+        context.strokeStyle = "rgba(255,255,255,.09)";
+        context.beginPath();
+        context.moveTo(140, y + 42);
+        context.lineTo(940, y + 42);
+        context.stroke();
+      }
+    });
+
+    const method = state.options.methods.find((item) => item.value === state.profile.method);
+    const footer = `${schedule.timezone} · ${method ? method.label : state.profile.method}`;
+    context.direction = rtl ? "rtl" : "ltr";
+    context.textAlign = rtl ? "right" : "left";
+    context.fillStyle = "rgba(255,253,242,.62)";
+    fitCanvasText(context, footer, 800, 27, 600);
+    context.fillText(footer, start, 1196);
+    context.fillStyle = "#f0cf72";
+    context.font = '650 25px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+    context.fillText(state.labels.share_card_footer, start, 1250);
+
+    return canvas;
+  }
+
+  function canvasBlob(canvas) {
+    const dataURL = canvas.toDataURL("image/png", 1);
+    const [header, encoded] = dataURL.split(",");
+    const mediaType = (/^data:([^;]+)/.exec(header) || [])[1] || "image/png";
+    const binary = window.atob(encoded);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+    return new Blob([bytes], { type: mediaType });
+  }
+
+  function downloadPrayerCard(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  async function sharePrayerCard() {
+    const button = byId("share-prayer-card");
+    button.disabled = true;
+    setText("share-prayer-card", state.labels.share_preparing);
+    try {
+      // Keep generation synchronous until navigator.share is called so the
+      // browser preserves the button click's required transient activation.
+      const blob = canvasBlob(prayerCardCanvas());
+      const filename = `prayer-times-${activeDay}.png`;
+      const file = typeof File === "function" ? new File([blob], filename, { type: "image/png" }) : null;
+      if (file && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: state.labels.share_card_heading,
+          text: `${state.labels.share_message}\n${state[activeDay].gregorian}`,
+          files: [file],
+        });
+      } else {
+        downloadPrayerCard(blob, filename);
+        showToast(state.labels.share_downloaded);
+      }
+    } catch (error) {
+      if (!error || error.name !== "AbortError") showToast(state.labels.share_failed, true);
+    } finally {
+      button.disabled = false;
+      setText("share-prayer-card", state.labels.share_action);
     }
   }
 
@@ -506,11 +834,27 @@
       return;
     }
     standalone.classList.add("hidden");
-    loading.classList.remove("hidden");
+    const cached = await cachedState();
+    if (cached) {
+      applyState(cached.state);
+      setOnlineControlsDisabled(true);
+      showConnectionState("refreshing", cached.saved_at);
+    } else {
+      loading.classList.remove("hidden");
+    }
     try {
-      applyState(await request("/api/miniapp/bootstrap"));
+      const fresh = await request("/api/miniapp/bootstrap");
+      applyState(fresh);
+      setOnlineControlsDisabled(false);
+      hideConnectionState();
+      await cacheState(fresh);
     } catch (error) {
-      showLaunchError(error.status === 401 ? "expired" : "failed");
+      if (error.status === 401 || !cached) {
+        showLaunchError(error.status === 401 ? "expired" : "failed");
+        return;
+      }
+      setOnlineControlsDisabled(true);
+      showConnectionState("offline", cached.saved_at);
     }
   }
 
@@ -533,6 +877,8 @@
   byId("connect-calendar").addEventListener("click", connectGoogleCalendar);
   byId("copy-calendar-link").addEventListener("click", copyCalendarLink);
   byId("disconnect-calendar").addEventListener("click", disconnectCalendar);
+  byId("add-home-screen").addEventListener("click", addToHomeScreen);
+  byId("share-prayer-card").addEventListener("click", sharePrayerCard);
   byId("save-preferences").addEventListener("click", savePreferences);
   byId("retry-app").addEventListener("click", bootstrapApp);
   ["prayer-reminders", "pre-prayer-minutes", "fasting-reminders", "kahf-reminders", "language", "method", "madhab", "highlat", "hijri-adjustment"]
@@ -542,6 +888,9 @@
   window.addEventListener("pageshow", (event) => {
     if (event.persisted) bootstrapApp();
   });
+  window.addEventListener("online", () => {
+    if (offlineMode) bootstrapApp();
+  });
   window.addEventListener("pagehide", () => {
     const sensor = telegram && telegram.DeviceOrientation;
     if (sensor && sensor.isStarted) sensor.stop();
@@ -549,6 +898,8 @@
   if (telegram && telegram.onEvent) {
     telegram.onEvent("deviceOrientationChanged", updateCompassOrientation);
     telegram.onEvent("deviceOrientationFailed", showCompassUnavailable);
+    telegram.onEvent("homeScreenAdded", () => updateHomeScreenStatus("added"));
+    telegram.onEvent("homeScreenChecked", updateHomeScreenStatus);
   }
 
   bootstrapApp();

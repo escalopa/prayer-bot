@@ -63,9 +63,17 @@ same task twice returns `AlreadyExists` and is treated as success.
 | Tomorrow reminder | `tomorrow` | Replaces the prior tomorrow reminder |
 | Monday/Thursday fasting | `weekly_fasting` | Replaces only the prior fasting reminder |
 | Friday Al-Kahf | `weekly_kahf` | Replaces only the prior Al-Kahf reminder |
+| Major, fasting, or commonly observed Islamic occasion | `islamic_occasion` | Replaces the prior Islamic occasion reminder |
 
 Every message also expires after 36 hours because Telegram cannot delete bot
 messages once they are older than 48 hours.
+
+Islamic occasion recurrence is calculated, not stored as a list of Gregorian
+dates. The planner scans the curated Hijri catalog with the profile's -2 to +2
+day correction, selects the next event in the enabled category, and schedules
+20:00 on its preceding local evening. Major, fasting, and commonly observed
+categories are independent opt-ins, while their delivered messages share one
+cleanup slot to avoid accumulating occasion notices.
 
 ## Delivery guarantee
 

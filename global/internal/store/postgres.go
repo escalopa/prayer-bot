@@ -272,6 +272,9 @@ func (s *Store) AdminMetrics(ctx context.Context) (AdminDashboard, error) {
 				WHEN kind IN ('before', 'at', 'tomorrow') THEN 'prayer'
 				WHEN kind = 'weekly_fasting' THEN 'fasting'
 				WHEN kind = 'weekly_kahf' THEN 'kahf'
+				WHEN kind = 'occasion_major' THEN 'occasion_major'
+				WHEN kind = 'occasion_fasting' THEN 'occasion_fasting'
+				WHEN kind = 'occasion_observed' THEN 'occasion_observed'
 			END AS category
 			FROM global_bot.reminder_rules r
 			JOIN global_bot.chats c ON c.telegram_chat_id = r.chat_id
@@ -433,6 +436,38 @@ func (s *Store) SetWeeklyRule(ctx context.Context, chatID int64, kind domain.Rem
 			ON CONFLICT (chat_id, kind, prayer, offset_minutes) DO UPDATE SET
 				local_time = excluded.local_time, enabled = true, updated_at = now()`,
 			chatID, kind, localTime); err != nil {
+			return err
+		}
+	} else {
+		if _, err = tx.Exec(ctx, `UPDATE global_bot.reminder_rules SET enabled = false, updated_at = now()
+			WHERE chat_id = $1 AND kind = $2`, chatID, kind); err != nil {
+			return err
+		}
+		if _, err = tx.Exec(ctx, `DELETE FROM global_bot.reminder_schedules s
+			USING global_bot.reminder_rules r
+			WHERE s.rule_id = r.id AND r.chat_id = $1 AND r.kind = $2`, chatID, kind); err != nil {
+			return err
+		}
+	}
+	return tx.Commit(ctx)
+}
+
+func (s *Store) SetOccasionRule(ctx context.Context, chatID int64, kind domain.ReminderKind, enabled bool) error {
+	if !kind.Occasion() {
+		return fmt.Errorf("unsupported occasion reminder kind %q", kind)
+	}
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+	if enabled {
+		if _, err = tx.Exec(ctx, `
+			INSERT INTO global_bot.reminder_rules (chat_id, kind, prayer, local_time, enabled)
+			VALUES ($1, $2, 'fajr', '20:00', true)
+			ON CONFLICT (chat_id, kind, prayer, offset_minutes) DO UPDATE SET
+				local_time = excluded.local_time, enabled = true, updated_at = now()`,
+			chatID, kind); err != nil {
 			return err
 		}
 	} else {

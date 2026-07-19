@@ -305,6 +305,9 @@ type reminderState struct {
 	PrePrayerMinutes int
 	Fasting          bool
 	Kahf             bool
+	OccasionMajor    bool
+	OccasionFasting  bool
+	OccasionObserved bool
 }
 
 func (h *Handler) loadReminderState(ctx context.Context, chatID int64) (reminderState, error) {
@@ -319,6 +322,12 @@ func (h *Handler) loadReminderState(ctx context.Context, chatID int64) (reminder
 			state.Fasting = true
 		case domain.ReminderWeeklyKahf:
 			state.Kahf = true
+		case domain.ReminderOccasionMajor:
+			state.OccasionMajor = true
+		case domain.ReminderOccasionFasting:
+			state.OccasionFasting = true
+		case domain.ReminderOccasionObserved:
+			state.OccasionObserved = true
 		case domain.ReminderAt:
 			state.Prayer = true
 		case domain.ReminderBefore:
@@ -339,11 +348,14 @@ func formatReminders(state reminderState, locale i18n.Locale) string {
 	if state.PrePrayerMinutes > 0 {
 		preReminder = fmt.Sprintf(locale.Message("minutes_before"), state.PrePrayerMinutes)
 	}
-	return fmt.Sprintf("%s\n\n🔔 <b>%s</b> · %s\n   ⏳ %s\n\n🌙 <b>%s</b> · %s\n   %s\n\n📖 <b>%s</b> · %s\n   %s",
+	return fmt.Sprintf("%s\n\n🔔 <b>%s</b> · %s\n   ⏳ %s\n\n🌙 <b>%s</b> · %s\n   %s\n\n📖 <b>%s</b> · %s\n   %s\n\n🕌 <b>%s</b> · %s\n   %s\n\n🤲 <b>%s</b> · %s\n   %s\n\n🌙 <b>%s</b> · %s\n   %s",
 		locale.Message("reminders_title"), escape(locale.Button("prayer_reminders")), status(state.Prayer),
 		escape(preReminder),
 		escape(locale.Button("fasting_reminders")), status(state.Fasting), escape(locale.Message("fasting_schedule")),
-		escape(locale.Button("kahf_reminders")), status(state.Kahf), escape(locale.Message("kahf_schedule")))
+		escape(locale.Button("kahf_reminders")), status(state.Kahf), escape(locale.Message("kahf_schedule")),
+		escape(locale.OccasionUI("major_reminders")), status(state.OccasionMajor), escape(locale.OccasionUI("schedule")),
+		escape(locale.OccasionUI("fasting_reminders")), status(state.OccasionFasting), escape(locale.OccasionUI("schedule")),
+		escape(locale.OccasionUI("observed_reminders")), status(state.OccasionObserved), escape(locale.OccasionUI("schedule")))
 }
 
 func localizedDate(date time.Time, locale i18n.Locale) string {

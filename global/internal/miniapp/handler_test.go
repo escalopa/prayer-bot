@@ -12,6 +12,7 @@ import (
 	"github.com/escalopa/prayer-bot/global/internal/domain"
 	"github.com/escalopa/prayer-bot/global/internal/i18n"
 	"github.com/escalopa/prayer-bot/global/internal/location"
+	"github.com/escalopa/prayer-bot/global/internal/occasions"
 	"github.com/escalopa/prayer-bot/global/internal/prayertime"
 	"github.com/jackc/pgx/v5"
 )
@@ -53,6 +54,11 @@ func TestStaticMiniAppIsEmbeddedWithSecurityHeaders(t *testing.T) {
 		!strings.Contains(string(script), "navigator.share") ||
 		!strings.Contains(string(script), "canvas.toDataURL") {
 		t.Fatal("Mini App is missing offline, home-screen, or prayer-card sharing support")
+	}
+	if !strings.Contains(html, "occasion-list") ||
+		!strings.Contains(html, "occasion-observed-reminders") ||
+		!strings.Contains(string(script), "renderOccasions") {
+		t.Fatal("Mini App is missing Islamic occasion cards or opt-in reminder controls")
 	}
 	serviceWorker, err := embeddedStatic.ReadFile("static/sw.js")
 	if err != nil {
@@ -197,6 +203,9 @@ func TestLocationUpdatePreservesCalculationSettingsAndRoundsCoordinates(t *testi
 	if data.Qibla.BearingDegrees < 135 || data.Qibla.BearingDegrees > 137 || data.Qibla.DistanceKilometres < 1250 {
 		t.Fatalf("unexpected Qibla result: %+v", data.Qibla)
 	}
+	if len(data.Occasions) != 3 || data.Occasions[0].Title == "" || data.Occasions[0].Hijri == "" {
+		t.Fatalf("unexpected upcoming Islamic occasions: %+v", data.Occasions)
+	}
 }
 
 func TestCalendarSubscriptionProducesRollingThirtyDayFeed(t *testing.T) {
@@ -249,8 +258,20 @@ func TestCalendarSubscriptionProducesRollingThirtyDayFeed(t *testing.T) {
 	if !strings.Contains(downloadResponse.Body.String(), "REFRESH-INTERVAL;VALUE=DURATION:PT12H") {
 		t.Fatal("calendar response is missing its refresh hint")
 	}
-	if events := strings.Count(downloadResponse.Body.String(), "BEGIN:VEVENT\r\n"); events != 180 {
-		t.Fatalf("calendar event count = %d, want 180", events)
+	local, err := time.LoadLocation(storage.profiles[42].Timezone)
+	if err != nil {
+		t.Fatal(err)
+	}
+	upcoming, err := occasions.Between(now.In(local), 30, storage.profiles[42].HijriAdjustment)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expectedEvents := 180 + len(upcoming)
+	if events := strings.Count(downloadResponse.Body.String(), "BEGIN:VEVENT\r\n"); events != expectedEvents {
+		t.Fatalf("calendar event count = %d, want %d", events, expectedEvents)
+	}
+	if len(upcoming) > 0 && !strings.Contains(downloadResponse.Body.String(), "CATEGORIES:Islamic Occasions") {
+		t.Fatal("calendar response is missing its Islamic occasion events")
 	}
 	if !strings.Contains(downloadResponse.Body.String(), subscription.UIDNamespace+"-20260717-fajr@global-prayer-bot") {
 		t.Fatal("calendar response is missing its stable event UID")
@@ -383,7 +404,8 @@ func TestPreferencesUpdateSavesSettingsAndRemindersTogether(t *testing.T) {
 	body := `{
 		"settings":{"language":"ar","method":"isna","madhab":"hanafi","high_latitude_rule":"middle_of_night","hijri_adjustment":1,
 		"adjustments":{"fajr":2,"sunrise":0,"dhuhr":0,"asr":1,"maghrib":0,"isha":-1}},
-		"reminders":{"prayer":true,"pre_prayer_minutes":20,"fasting":true,"kahf":false}
+		"reminders":{"prayer":true,"pre_prayer_minutes":20,"fasting":true,"kahf":false,
+		"occasion_major":true,"occasion_fasting":true,"occasion_observed":false}
 	}`
 	request := httptest.NewRequest(http.MethodPut, "/api/miniapp/preferences", strings.NewReader(body))
 	request.Header.Set("X-Telegram-Init-Data", signedInitData(t, "test-token", now, initDataUser{ID: 42, FirstName: "Amina", LanguageCode: "en"}))
@@ -403,7 +425,8 @@ func TestPreferencesUpdateSavesSettingsAndRemindersTogether(t *testing.T) {
 		t.Fatal(err)
 	}
 	if data.Locale != "ar" || !data.Reminders.Prayer || data.Reminders.PrePrayerMinutes != 20 ||
-		!data.Reminders.Fasting || data.Reminders.Kahf || planner.rebuilds != 1 {
+		!data.Reminders.Fasting || data.Reminders.Kahf || !data.Reminders.OccasionMajor ||
+		!data.Reminders.OccasionFasting || data.Reminders.OccasionObserved || planner.rebuilds != 1 {
 		t.Fatalf("unexpected updated state: response=%+v rebuilds=%d", data.Reminders, planner.rebuilds)
 	}
 }
@@ -423,11 +446,13 @@ func TestValidateRemindersRejectsUnsupportedLeadTime(t *testing.T) {
 	enabled, disabled := true, false
 	if err := validateReminders(remindersRequest{
 		Prayer: &enabled, PrePrayerMinutes: 20, Fasting: &disabled, Kahf: &disabled,
+		OccasionMajor: &disabled, OccasionFasting: &disabled, OccasionObserved: &disabled,
 	}); err != nil {
 		t.Fatalf("20-minute pre-reminder was rejected: %v", err)
 	}
 	if err := validateReminders(remindersRequest{
 		Prayer: &enabled, PrePrayerMinutes: 17, Fasting: &disabled, Kahf: &disabled,
+		OccasionMajor: &disabled, OccasionFasting: &disabled, OccasionObserved: &disabled,
 	}); err == nil {
 		t.Fatal("unsupported pre-reminder lead time was accepted")
 	}
@@ -501,7 +526,7 @@ func (s *fakeStorage) EnableDefaultRules(_ context.Context, chatID int64) error 
 
 func (s *fakeStorage) DisableRules(_ context.Context, chatID int64) error {
 	for index := range s.rules[chatID] {
-		if !s.rules[chatID][index].Kind.Weekly() {
+		if prayerReminderKind(s.rules[chatID][index].Kind) {
 			s.rules[chatID][index].Enabled = false
 		}
 	}
@@ -510,7 +535,7 @@ func (s *fakeStorage) DisableRules(_ context.Context, chatID int64) error {
 
 func (s *fakeStorage) ConfigurePrayerRules(_ context.Context, chatID int64, enabled bool, beforeMinutes int) error {
 	for index := range s.rules[chatID] {
-		if !s.rules[chatID][index].Kind.Weekly() {
+		if prayerReminderKind(s.rules[chatID][index].Kind) {
 			s.rules[chatID][index].Enabled = false
 		}
 	}
@@ -527,7 +552,22 @@ func (s *fakeStorage) ConfigurePrayerRules(_ context.Context, chatID int64, enab
 	return nil
 }
 
+func prayerReminderKind(kind domain.ReminderKind) bool {
+	return kind == domain.ReminderBefore || kind == domain.ReminderAt || kind == domain.ReminderTomorrow
+}
+
 func (s *fakeStorage) SetWeeklyRule(_ context.Context, chatID int64, kind domain.ReminderKind, enabled bool) error {
+	for index := range s.rules[chatID] {
+		if s.rules[chatID][index].Kind == kind {
+			s.rules[chatID][index].Enabled = enabled
+			return nil
+		}
+	}
+	s.rules[chatID] = append(s.rules[chatID], domain.ReminderRule{ChatID: chatID, Kind: kind, Enabled: enabled})
+	return nil
+}
+
+func (s *fakeStorage) SetOccasionRule(_ context.Context, chatID int64, kind domain.ReminderKind, enabled bool) error {
 	for index := range s.rules[chatID] {
 		if s.rules[chatID][index].Kind == kind {
 			s.rules[chatID][index].Enabled = enabled

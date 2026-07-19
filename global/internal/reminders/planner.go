@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/escalopa/prayer-bot/global/internal/domain"
+	"github.com/escalopa/prayer-bot/global/internal/occasions"
 	"github.com/escalopa/prayer-bot/global/internal/prayertime"
 )
 
@@ -55,6 +56,9 @@ func (p *Planner) Next(ctx context.Context, profile domain.PrayerProfile, rule d
 	if rule.Kind.Weekly() {
 		return nextWeekly(profile, rule, after, location)
 	}
+	if rule.Kind.Occasion() {
+		return nextOccasion(profile, rule, after, location)
+	}
 	localAfter := after.In(location)
 	for dayOffset := 0; dayOffset < 8; dayOffset++ {
 		date := localAfter.AddDate(0, 0, dayOffset)
@@ -90,6 +94,55 @@ func (p *Planner) Next(ctx context.Context, profile domain.PrayerProfile, rule d
 		}, nil
 	}
 	return domain.ReminderSchedule{}, fmt.Errorf("no valid occurrence found in the next eight days")
+}
+
+func nextOccasion(profile domain.PrayerProfile, rule domain.ReminderRule, after time.Time, location *time.Location) (domain.ReminderSchedule, error) {
+	category, ok := occasionCategory(rule.Kind)
+	if !ok {
+		return domain.ReminderSchedule{}, fmt.Errorf("unsupported occasion reminder kind %q", rule.Kind)
+	}
+	hour, minute, err := parseLocalTime(rule.LocalTime)
+	if err != nil {
+		return domain.ReminderSchedule{}, err
+	}
+	localAfter := after.In(location)
+	upcoming, err := occasions.Between(localAfter, 400, profile.HijriAdjustment)
+	if err != nil {
+		return domain.ReminderSchedule{}, err
+	}
+	for _, occurrence := range upcoming {
+		if occurrence.Definition.Category != category {
+			continue
+		}
+		target := time.Date(
+			occurrence.Date.Year(), occurrence.Date.Month(), occurrence.Date.Day(),
+			0, 0, 0, 0, location,
+		)
+		previous := target.AddDate(0, 0, -1)
+		nextRun := time.Date(previous.Year(), previous.Month(), previous.Day(), hour, minute, 0, 0, location)
+		if !nextRun.After(after) {
+			continue
+		}
+		return domain.ReminderSchedule{
+			RuleID: rule.ID, ChatID: rule.ChatID, ProfileVersion: profile.Version,
+			LocalDate: target.Format("2006-01-02"), PrayerAt: target,
+			NextRunAt: nextRun.UTC(), State: "pending",
+		}, nil
+	}
+	return domain.ReminderSchedule{}, fmt.Errorf("no valid occasion found in the next 400 days")
+}
+
+func occasionCategory(kind domain.ReminderKind) (occasions.Category, bool) {
+	switch kind {
+	case domain.ReminderOccasionMajor:
+		return occasions.CategoryMajor, true
+	case domain.ReminderOccasionFasting:
+		return occasions.CategoryFasting, true
+	case domain.ReminderOccasionObserved:
+		return occasions.CategoryObserved, true
+	default:
+		return "", false
+	}
 }
 
 func nextWeekly(profile domain.PrayerProfile, rule domain.ReminderRule, after time.Time, location *time.Location) (domain.ReminderSchedule, error) {

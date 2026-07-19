@@ -3,6 +3,8 @@ package reminders
 import (
 	"context"
 	"fmt"
+	"html"
+	"strings"
 	"time"
 
 	botapi "github.com/go-telegram/bot"
@@ -10,6 +12,7 @@ import (
 
 	"github.com/escalopa/prayer-bot/global/internal/domain"
 	"github.com/escalopa/prayer-bot/global/internal/i18n"
+	"github.com/escalopa/prayer-bot/global/internal/occasions"
 	"github.com/escalopa/prayer-bot/global/internal/store"
 )
 
@@ -126,6 +129,8 @@ func notificationCategory(kind domain.ReminderKind) string {
 		return "weekly_kahf"
 	case domain.ReminderTomorrow:
 		return "tomorrow"
+	case domain.ReminderOccasionMajor, domain.ReminderOccasionFasting, domain.ReminderOccasionObserved:
+		return "islamic_occasion"
 	default:
 		// Before-prayer and at-prayer messages intentionally share a slot.
 		// A pre-reminder replaces the previous prayer, and the arrival message
@@ -146,9 +151,47 @@ func reminderText(rule domain.ReminderRule, schedule domain.ReminderSchedule, pr
 		return fmt.Sprintf(locale.Message("reminder_before"), name, rule.OffsetMinutes, timeText)
 	case domain.ReminderTomorrow:
 		return fmt.Sprintf(locale.Message("reminder_tomorrow"), name, timeText)
+	case domain.ReminderOccasionMajor, domain.ReminderOccasionFasting, domain.ReminderOccasionObserved:
+		return occasionReminderText(rule, schedule, profile, locale)
 	default:
 		return fmt.Sprintf(locale.Message("reminder_at"), name)
 	}
+}
+
+func occasionReminderText(rule domain.ReminderRule, schedule domain.ReminderSchedule, profile domain.PrayerProfile, locale i18n.Locale) string {
+	category, ok := occasionCategory(rule.Kind)
+	if !ok {
+		return ""
+	}
+	location := mustLocation(profile.Timezone)
+	date, err := time.ParseInLocation("2006-01-02", schedule.LocalDate, location)
+	if err != nil {
+		return ""
+	}
+	occurrence, ok := occasions.OnDate(date, profile.HijriAdjustment, category)
+	if !ok {
+		return ""
+	}
+	copy := locale.Occasion(occurrence.Definition.ID)
+	var builder strings.Builder
+	fmt.Fprintf(&builder, "<b>%s %s</b>\n📅 %d %s %d\n\n%s\n\n💡 %s",
+		html.EscapeString(occurrence.Definition.Emoji),
+		html.EscapeString(copy.Title),
+		date.Day(), html.EscapeString(locale.Month(int(date.Month()))), date.Year(),
+		html.EscapeString(copy.Summary),
+		html.EscapeString(copy.Action),
+	)
+	if len(occurrence.Definition.Sources) > 0 {
+		builder.WriteString("\n\n📚 ")
+		for index, source := range occurrence.Definition.Sources {
+			if index > 0 {
+				builder.WriteString(" · ")
+			}
+			fmt.Fprintf(&builder, `<a href="%s">%s</a>`,
+				html.EscapeString(source.URL), html.EscapeString(source.Label))
+		}
+	}
+	return builder.String()
 }
 
 func mustLocation(name string) *time.Location {

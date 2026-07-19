@@ -154,15 +154,24 @@ func (s DaySchedule) At(prayer Prayer) (time.Time, bool) {
 type ReminderKind string
 
 const (
-	ReminderBefore        ReminderKind = "before"
-	ReminderAt            ReminderKind = "at"
-	ReminderTomorrow      ReminderKind = "tomorrow"
-	ReminderWeeklyFasting ReminderKind = "weekly_fasting"
-	ReminderWeeklyKahf    ReminderKind = "weekly_kahf"
+	ReminderBefore           ReminderKind = "before"
+	ReminderAt               ReminderKind = "at"
+	ReminderTomorrow         ReminderKind = "tomorrow"
+	ReminderWeeklyFasting    ReminderKind = "weekly_fasting"
+	ReminderWeeklyKahf       ReminderKind = "weekly_kahf"
+	ReminderOccasionMajor    ReminderKind = "occasion_major"
+	ReminderOccasionFasting  ReminderKind = "occasion_fasting"
+	ReminderOccasionObserved ReminderKind = "occasion_observed"
 )
 
 func (kind ReminderKind) Weekly() bool {
 	return kind == ReminderWeeklyFasting || kind == ReminderWeeklyKahf
+}
+
+func (kind ReminderKind) Occasion() bool {
+	return kind == ReminderOccasionMajor ||
+		kind == ReminderOccasionFasting ||
+		kind == ReminderOccasionObserved
 }
 
 type ReminderRule struct {

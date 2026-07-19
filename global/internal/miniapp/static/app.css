@@ -150,6 +150,69 @@ button { -webkit-tap-highlight-color: transparent; }
 .panel { margin-top: 14px; padding: 20px; }
 .panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
 .panel-heading h2 { margin: 3px 0 0; font-size: 19px; letter-spacing: -.02em; }
+.panel-help { margin: 5px 0 0; color: var(--app-muted); font-size: 11px; line-height: 1.45; }
+.section-icon { font-size: 25px; }
+
+.occasions-panel { padding-bottom: 16px; }
+.occasions-heading { align-items: flex-start; margin-bottom: 15px; }
+.occasion-list { display: grid; gap: 11px; }
+.occasion-card {
+  padding: 15px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--surface-alt) 66%, var(--surface));
+}
+.occasion-card-heading { display: flex; align-items: flex-start; gap: 11px; }
+.occasion-card-heading > div { min-width: 0; }
+.occasion-emoji {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  border-radius: 12px;
+  background: var(--surface);
+  font-size: 19px;
+  box-shadow: 0 5px 15px rgba(25, 57, 45, .07);
+}
+.occasion-category {
+  display: inline-flex;
+  padding: 4px 7px;
+  border-radius: 999px;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: .02em;
+}
+.occasion-category-fasting { color: #8a6117; background: rgba(196, 147, 48, .13); }
+.occasion-category-observed { color: var(--app-muted); background: color-mix(in srgb, var(--app-muted) 10%, transparent); }
+.occasion-card h3 { margin: 7px 0 3px; font-size: 15px; letter-spacing: -.01em; }
+.occasion-dates { margin: 0; color: var(--app-muted); font-size: 10px; }
+.occasion-summary, .occasion-recommendation { margin: 11px 0 0; font-size: 11px; line-height: 1.55; }
+.occasion-recommendation {
+  padding: 10px 11px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+}
+.occasion-sources { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.occasion-source {
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--accent);
+  background: var(--surface);
+  font-size: 9px;
+  font-weight: 750;
+  text-decoration: none;
+}
+.occasion-disclaimer {
+  margin: 13px 2px 0;
+  color: var(--app-muted);
+  font-size: 10px;
+  line-height: 1.45;
+  text-align: center;
+}
 
 .tools-panel { padding-bottom: 18px; }
 .tool-grid { display: grid; gap: 12px; }

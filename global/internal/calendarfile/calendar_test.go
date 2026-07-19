@@ -10,6 +10,7 @@ import (
 
 	"github.com/escalopa/prayer-bot/global/internal/domain"
 	"github.com/escalopa/prayer-bot/global/internal/i18n"
+	"github.com/escalopa/prayer-bot/global/internal/occasions"
 )
 
 type fakeCalculator struct{}
@@ -73,6 +74,42 @@ func TestGenerateValidatesRange(t *testing.T) {
 		time.Now(), 30, time.Now(), "invalid",
 	); err == nil {
 		t.Fatal("expected invalid UID namespace to fail")
+	}
+}
+
+func TestGenerateIncludesLocalizedIslamicOccasionWithStableSource(t *testing.T) {
+	profile := domain.PrayerProfile{
+		Timezone: "UTC", HijriAdjustment: 1,
+		Method: domain.MethodMWL, Madhab: domain.MadhabShafii,
+		HighLatitudeRule: domain.HighLatitudeAngleBased,
+	}
+	occurrence, err := occasions.Next(time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC), 1, occasions.CategoryMajor)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := Generate(
+		context.Background(), fakeCalculator{}, profile, i18n.Resolve("en"),
+		occurrence.Date, 1, occurrence.Date, "0123456789abcdef0123456789abcdef",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	content := string(data)
+	unfolded := strings.ReplaceAll(content, "\r\n ", "")
+	expectedUID := "0123456789abcdef0123456789abcdef-" +
+		occurrence.Date.Format("20060102") + "-" + occurrence.Definition.ID + "@global-prayer-bot"
+	for _, expected := range []string{
+		"CATEGORIES:Islamic Occasions",
+		expectedUID,
+		"DTSTART;VALUE=DATE:" + occurrence.Date.Format("20060102"),
+	} {
+		if !strings.Contains(unfolded, expected) {
+			t.Errorf("calendar is missing %q:\n%s", expected, content)
+		}
+	}
+	if len(occurrence.Definition.Sources) > 0 &&
+		!strings.Contains(unfolded, occurrence.Definition.Sources[0].URL) {
+		t.Fatal("calendar occasion is missing its source URL")
 	}
 }
 

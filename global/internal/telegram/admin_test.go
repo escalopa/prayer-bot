@@ -76,7 +76,11 @@ func TestAdminDashboardFormatsAggregateViews(t *testing.T) {
 		FailedUpdates24Hours:    4,
 		Languages:               []store.MetricCount{{Key: "en", Count: 70}, {Key: "ar", Count: 30}},
 		Methods:                 []store.MetricCount{{Key: "egyptian", Count: 60}, {Key: "mwl", Count: 20}},
-		ReminderKinds:           []store.MetricCount{{Key: "prayer", Count: 30}, {Key: "fasting", Count: 10}, {Key: "kahf", Count: 8}},
+		ReminderKinds: []store.MetricCount{
+			{Key: "prayer", Count: 30}, {Key: "fasting", Count: 10}, {Key: "kahf", Count: 8},
+			{Key: "occasion_major", Count: 6}, {Key: "occasion_fasting", Count: 5},
+			{Key: "occasion_observed", Count: 3},
+		},
 	}
 	now := time.Date(2026, time.July, 17, 12, 30, 0, 0, time.FixedZone("EET", 2*60*60))
 	expectations := map[adminView]string{

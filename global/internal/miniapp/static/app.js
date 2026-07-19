@@ -191,6 +191,14 @@
     setText("kahf-reminders-label", labels.kahf_reminders);
     setText("fasting-schedule", labels.fasting_schedule);
     setText("kahf-schedule", labels.kahf_schedule);
+    setText("occasions-title", labels.occasions_title);
+    setText("occasions-help", labels.occasions_help);
+    setText("occasions-disclaimer", labels.occasions_disclaimer);
+    setText("occasion-major-reminders-label", labels.occasion_major_reminders);
+    setText("occasion-fasting-reminders-label", labels.occasion_fasting_reminders);
+    setText("occasion-observed-reminders-label", labels.occasion_observed_reminders);
+    ["occasion-major-schedule", "occasion-fasting-schedule", "occasion-observed-schedule"]
+      .forEach((id) => setText(id, labels.occasion_schedule));
     setText("language-label", labels.language);
     setText("method-label", labels.method);
     setText("madhab-label", labels.madhab);
@@ -355,7 +363,74 @@
     fillSelect("pre-prayer-minutes", state.options.pre_reminders, state.reminders.pre_prayer_minutes);
     byId("fasting-reminders").checked = state.reminders.fasting;
     byId("kahf-reminders").checked = state.reminders.kahf;
+    byId("occasion-major-reminders").checked = state.reminders.occasion_major;
+    byId("occasion-fasting-reminders").checked = state.reminders.occasion_fasting;
+    byId("occasion-observed-reminders").checked = state.reminders.occasion_observed;
     syncPreReminderAvailability();
+  }
+
+  function sourceLink(source) {
+    let url;
+    try {
+      url = new URL(source.url);
+    } catch (_) {
+      return null;
+    }
+    if (url.protocol !== "https:") return null;
+    const link = document.createElement("a");
+    link.className = "occasion-source";
+    link.href = url.href;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = source.label;
+    return link;
+  }
+
+  function renderOccasions() {
+    const list = byId("occasion-list");
+    list.replaceChildren();
+    (state.occasions || []).forEach((occasion) => {
+      const article = document.createElement("article");
+      article.className = "occasion-card";
+
+      const header = document.createElement("div");
+      header.className = "occasion-card-heading";
+      const emoji = document.createElement("span");
+      emoji.className = "occasion-emoji";
+      emoji.textContent = occasion.emoji;
+      const heading = document.createElement("div");
+      const category = document.createElement("span");
+      category.className = `occasion-category occasion-category-${occasion.category}`;
+      category.textContent = occasion.category_label;
+      const title = document.createElement("h3");
+      title.textContent = occasion.title;
+      const dates = document.createElement("p");
+      dates.className = "occasion-dates";
+      dates.textContent = `${occasion.hijri} · ${occasion.gregorian}`;
+      heading.append(category, title, dates);
+      header.append(emoji, heading);
+
+      const summary = document.createElement("p");
+      summary.className = "occasion-summary";
+      summary.textContent = occasion.summary;
+      const recommendation = document.createElement("p");
+      recommendation.className = "occasion-recommendation";
+      const recommendationLabel = document.createElement("strong");
+      recommendationLabel.textContent = `${state.labels.occasion_recommended}: `;
+      recommendation.append(recommendationLabel, document.createTextNode(occasion.action));
+
+      const sources = document.createElement("div");
+      sources.className = "occasion-sources";
+      (occasion.sources || []).forEach((source) => {
+        const link = sourceLink(source);
+        if (link) sources.append(link);
+      });
+      if (sources.childElementCount > 0) {
+        sources.setAttribute("aria-label", state.labels.occasion_sources);
+      }
+      article.append(header, summary, recommendation, sources);
+      list.append(article);
+    });
   }
 
   function syncPreReminderAvailability() {
@@ -378,6 +453,7 @@
     dashboard.classList.remove("hidden");
     renderSchedule();
     renderTools();
+    renderOccasions();
     renderReminders();
     renderSettings();
     setDirty(false);
@@ -500,6 +576,9 @@
       pre_prayer_minutes: Number(byId("pre-prayer-minutes").value),
       fasting: byId("fasting-reminders").checked,
       kahf: byId("kahf-reminders").checked,
+      occasion_major: byId("occasion-major-reminders").checked,
+      occasion_fasting: byId("occasion-fasting-reminders").checked,
+      occasion_observed: byId("occasion-observed-reminders").checked,
     };
   }
 
@@ -881,7 +960,9 @@
   byId("share-prayer-card").addEventListener("click", sharePrayerCard);
   byId("save-preferences").addEventListener("click", savePreferences);
   byId("retry-app").addEventListener("click", bootstrapApp);
-  ["prayer-reminders", "pre-prayer-minutes", "fasting-reminders", "kahf-reminders", "language", "method", "madhab", "highlat", "hijri-adjustment"]
+  ["prayer-reminders", "pre-prayer-minutes", "fasting-reminders", "kahf-reminders",
+    "occasion-major-reminders", "occasion-fasting-reminders", "occasion-observed-reminders",
+    "language", "method", "madhab", "highlat", "hijri-adjustment"]
     .forEach((id) => byId(id).addEventListener("change", () => setDirty(true)));
   byId("prayer-reminders").addEventListener("change", syncPreReminderAvailability);
   byId("adjustment-grid").addEventListener("input", () => setDirty(true));

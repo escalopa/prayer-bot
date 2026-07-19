@@ -223,6 +223,18 @@ func (h *Handler) handleReminderCallback(ctx context.Context, message *models.Me
 		if err := h.store.SetWeeklyRule(ctx, message.Chat.ID, domain.ReminderWeeklyKahf, enabled); err != nil {
 			return err
 		}
+	case "occasion_major":
+		if err := h.store.SetOccasionRule(ctx, message.Chat.ID, domain.ReminderOccasionMajor, enabled); err != nil {
+			return err
+		}
+	case "occasion_fasting":
+		if err := h.store.SetOccasionRule(ctx, message.Chat.ID, domain.ReminderOccasionFasting, enabled); err != nil {
+			return err
+		}
+	case "occasion_observed":
+		if err := h.store.SetOccasionRule(ctx, message.Chat.ID, domain.ReminderOccasionObserved, enabled); err != nil {
+			return err
+		}
 	default:
 		return nil
 	}

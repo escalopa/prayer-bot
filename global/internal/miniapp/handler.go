@@ -17,6 +17,7 @@ import (
 	"github.com/escalopa/prayer-bot/global/internal/hijri"
 	"github.com/escalopa/prayer-bot/global/internal/i18n"
 	"github.com/escalopa/prayer-bot/global/internal/location"
+	"github.com/escalopa/prayer-bot/global/internal/occasions"
 	"github.com/escalopa/prayer-bot/global/internal/prayertime"
 	"github.com/escalopa/prayer-bot/global/internal/qibla"
 	"github.com/escalopa/prayer-bot/global/internal/store"
@@ -38,6 +39,7 @@ type Storage interface {
 	DisableRules(context.Context, int64) error
 	ConfigurePrayerRules(context.Context, int64, bool, int) error
 	SetWeeklyRule(context.Context, int64, domain.ReminderKind, bool) error
+	SetOccasionRule(context.Context, int64, domain.ReminderKind, bool) error
 	CalendarSubscription(context.Context, int64) (domain.CalendarSubscription, error)
 	CalendarSubscriptionByToken(context.Context, string) (domain.CalendarSubscription, error)
 	EnableCalendarSubscription(context.Context, int64, string, string) (domain.CalendarSubscription, error)
@@ -233,6 +235,9 @@ type remindersRequest struct {
 	PrePrayerMinutes int   `json:"pre_prayer_minutes"`
 	Fasting          *bool `json:"fasting"`
 	Kahf             *bool `json:"kahf"`
+	OccasionMajor    *bool `json:"occasion_major"`
+	OccasionFasting  *bool `json:"occasion_fasting"`
+	OccasionObserved *bool `json:"occasion_observed"`
 }
 
 type preferencesRequest struct {
@@ -262,6 +267,7 @@ func validateSettings(request settingsRequest) (validatedSettings, error) {
 
 func validateReminders(request remindersRequest) error {
 	if request.Prayer == nil || request.Fasting == nil || request.Kahf == nil ||
+		request.OccasionMajor == nil || request.OccasionFasting == nil || request.OccasionObserved == nil ||
 		!domain.ValidPreReminderMinutes(request.PrePrayerMinutes) {
 		return badRequest("invalid_request")
 	}
@@ -330,7 +336,8 @@ func (h *Handler) updateReminders(w http.ResponseWriter, r *http.Request, identi
 	if err != nil {
 		return err
 	}
-	if changed && (desired.Prayer || desired.Fasting || desired.Kahf) {
+	if changed && (desired.Prayer || desired.Fasting || desired.Kahf ||
+		desired.OccasionMajor || desired.OccasionFasting || desired.OccasionObserved) {
 		if err := h.planner.RebuildChat(r.Context(), identity.UserID, h.now()); err != nil {
 			return fmt.Errorf("rebuild reminders: %w", err)
 		}
@@ -350,6 +357,8 @@ func (h *Handler) applyReminders(ctx context.Context, chatID int64, request remi
 	desired := reminderResponse{
 		Prayer: *request.Prayer, PrePrayerMinutes: request.PrePrayerMinutes,
 		Fasting: *request.Fasting, Kahf: *request.Kahf,
+		OccasionMajor: *request.OccasionMajor, OccasionFasting: *request.OccasionFasting,
+		OccasionObserved: *request.OccasionObserved,
 	}
 	if !desired.Prayer {
 		desired.PrePrayerMinutes = 0
@@ -370,6 +379,23 @@ func (h *Handler) applyReminders(ctx context.Context, chatID int64, request remi
 			return false, reminderResponse{}, fmt.Errorf("update Al-Kahf reminders: %w", err)
 		}
 	}
+	for _, change := range []struct {
+		current bool
+		desired bool
+		kind    domain.ReminderKind
+		name    string
+	}{
+		{current.OccasionMajor, desired.OccasionMajor, domain.ReminderOccasionMajor, "major occasion"},
+		{current.OccasionFasting, desired.OccasionFasting, domain.ReminderOccasionFasting, "occasion fasting"},
+		{current.OccasionObserved, desired.OccasionObserved, domain.ReminderOccasionObserved, "commonly observed occasion"},
+	} {
+		if change.current == change.desired {
+			continue
+		}
+		if err := h.store.SetOccasionRule(ctx, chatID, change.kind, change.desired); err != nil {
+			return false, reminderResponse{}, fmt.Errorf("update %s reminders: %w", change.name, err)
+		}
+	}
 	return current != desired, desired, nil
 }
 
@@ -383,6 +409,7 @@ type bootstrapResponse struct {
 	Tomorrow      *scheduleResponse            `json:"tomorrow,omitempty"`
 	Qibla         *qiblaResponse               `json:"qibla,omitempty"`
 	Calendar      calendarSubscriptionResponse `json:"calendar"`
+	Occasions     []occasionResponse           `json:"occasions,omitempty"`
 	Reminders     reminderResponse             `json:"reminders"`
 	Options       optionsResponse              `json:"options"`
 	Labels        map[string]string            `json:"labels"`
@@ -426,6 +453,27 @@ type reminderResponse struct {
 	PrePrayerMinutes int  `json:"pre_prayer_minutes"`
 	Fasting          bool `json:"fasting"`
 	Kahf             bool `json:"kahf"`
+	OccasionMajor    bool `json:"occasion_major"`
+	OccasionFasting  bool `json:"occasion_fasting"`
+	OccasionObserved bool `json:"occasion_observed"`
+}
+
+type occasionSourceResponse struct {
+	Label string `json:"label"`
+	URL   string `json:"url"`
+}
+
+type occasionResponse struct {
+	ID            string                   `json:"id"`
+	Emoji         string                   `json:"emoji"`
+	Category      string                   `json:"category"`
+	CategoryLabel string                   `json:"category_label"`
+	Title         string                   `json:"title"`
+	Summary       string                   `json:"summary"`
+	Action        string                   `json:"action"`
+	Gregorian     string                   `json:"gregorian"`
+	Hijri         string                   `json:"hijri"`
+	Sources       []occasionSourceResponse `json:"sources"`
 }
 
 type option struct {
@@ -499,6 +547,28 @@ func (h *Handler) build(ctx context.Context, identity Identity) (bootstrapRespon
 	formattedTomorrow := formatSchedule(tomorrow, profile, locale)
 	response.Today = &formattedToday
 	response.Tomorrow = &formattedTomorrow
+	upcoming, err := occasions.Between(now.In(today.Date.Location()), 400, profile.HijriAdjustment)
+	if err != nil {
+		return bootstrapResponse{}, fmt.Errorf("calculate upcoming Islamic occasions: %w", err)
+	}
+	for _, occurrence := range upcoming {
+		copy := locale.Occasion(occurrence.Definition.ID)
+		item := occasionResponse{
+			ID: occurrence.Definition.ID, Emoji: occurrence.Definition.Emoji,
+			Category:      string(occurrence.Definition.Category),
+			CategoryLabel: locale.OccasionCategory(string(occurrence.Definition.Category)),
+			Title:         copy.Title, Summary: copy.Summary, Action: copy.Action,
+			Gregorian: fmt.Sprintf("%d %s %d", occurrence.Date.Day(), locale.Month(int(occurrence.Date.Month())), occurrence.Date.Year()),
+			Hijri:     fmt.Sprintf("%d %s %d", occurrence.Hijri.Day, locale.HijriMonth(occurrence.Hijri.Month), occurrence.Hijri.Year),
+		}
+		for _, source := range occurrence.Definition.Sources {
+			item.Sources = append(item.Sources, occasionSourceResponse{Label: source.Label, URL: source.URL})
+		}
+		response.Occasions = append(response.Occasions, item)
+		if len(response.Occasions) == 3 {
+			break
+		}
+	}
 	return response, nil
 }
 
@@ -524,6 +594,12 @@ func (h *Handler) reminderState(ctx context.Context, chatID int64) (reminderResp
 			state.Fasting = true
 		case domain.ReminderWeeklyKahf:
 			state.Kahf = true
+		case domain.ReminderOccasionMajor:
+			state.OccasionMajor = true
+		case domain.ReminderOccasionFasting:
+			state.OccasionFasting = true
+		case domain.ReminderOccasionObserved:
+			state.OccasionObserved = true
 		case domain.ReminderAt:
 			state.Prayer = true
 		case domain.ReminderBefore:
@@ -672,7 +748,14 @@ func labels(locale i18n.Locale) map[string]string {
 		"pre_prayer_reminder": locale.Message("pre_prayer_reminder"),
 		"fasting_reminders":   locale.Button("fasting_reminders"), "kahf_reminders": locale.Button("kahf_reminders"),
 		"fasting_schedule": locale.Message("fasting_schedule"), "kahf_schedule": locale.Message("kahf_schedule"),
-		"save": copy.Save, "saved": copy.Saved, "loading": copy.Loading,
+		"occasions_title": locale.OccasionUI("title"), "occasions_help": locale.OccasionUI("help"),
+		"occasions_disclaimer": locale.OccasionUI("disclaimer"),
+		"occasion_recommended": locale.OccasionUI("recommended"), "occasion_sources": locale.OccasionUI("sources"),
+		"occasion_major_reminders":    locale.OccasionUI("major_reminders"),
+		"occasion_fasting_reminders":  locale.OccasionUI("fasting_reminders"),
+		"occasion_observed_reminders": locale.OccasionUI("observed_reminders"),
+		"occasion_schedule":           locale.OccasionUI("schedule"),
+		"save":                        copy.Save, "saved": copy.Saved, "loading": copy.Loading,
 		"location_help": copy.LocationHelp, "location_error": copy.LocationError,
 		"open_in_telegram": copy.OpenInTelegram, "temporary_failure": copy.TemporaryFailure,
 		"calculated_locally": copy.CalculatedLocally, "companion": copy.Companion,

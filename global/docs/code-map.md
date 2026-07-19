@@ -26,13 +26,14 @@ with the container command, so the three Cloud Run services use the same build.
 | `internal/store` | All PostgreSQL queries and transaction boundaries | `domain`, pgx |
 | `internal/prayertime` | Prayer calculation interface and `go-prayer` adapter | `domain` |
 | `internal/hijri` | Umm al-Qura conversion and per-chat display correction | `go-hijri` |
+| `internal/occasions` | Curated Hijri occasion definitions, corrected Gregorian matching, category filtering, and recurrence lookup | `hijri` |
 | `internal/location` | Google Time Zone and reverse-geocoding integration | Google HTTP APIs |
 | `internal/reminders` | Recurrence planning, due dispatch, Cloud Tasks enqueueing, Telegram delivery, and cleanup categories | `domain`, `store`, `prayertime`, Telegram and GCP clients |
 | `internal/telegram` | Bot commands, callbacks, keyboards, update routing, feedback, and owner dashboard | `store`, `location`, `prayertime`, `reminders`, `i18n` |
 | `internal/miniapp` | Embedded web UI, signed init-data authentication, settings APIs, Qibla/bootstrap data, and private calendar subscriptions | `store`, `location`, `prayertime`, `reminders`, `qibla`, `calendarfile`, `i18n` |
 | `internal/i18n` | All supported locales, messages, buttons, prayer names, method names, and dates | `domain` |
 | `internal/qibla` | Great-circle bearing and distance to the Kaaba | Standard library only |
-| `internal/calendarfile` | Localized RFC 5545 prayer-calendar generation | `domain`, `i18n`, `prayertime` |
+| `internal/calendarfile` | Localized RFC 5545 prayer and Islamic-occasion calendar generation | `domain`, `i18n`, `prayertime`, `occasions` |
 | `internal/botprofile` | Read-before-write Telegram profile synchronization and rate-limit handling | Telegram Bot API |
 | `internal/assets` | Embedded bot avatar and welcome media | Go embed |
 | `internal/httpx` | Shared HTTP response helpers | Standard library only |
@@ -54,6 +55,7 @@ with the container command, so the three Cloud Run services use the same build.
 | Add a Mini App setting | `internal/miniapp`, `internal/store`, possibly migrations | [Request flows](request-flows.md), [Data model](data-model.md) |
 | Add a calculation method | `internal/domain`, `internal/prayertime`, `internal/i18n` | Public calculation methodology and [Architecture](architecture.md) |
 | Change reminder timing | `internal/reminders/planner.go`, `internal/store` | [Reminder delivery](reminder-delivery.md) |
+| Add or revise an Islamic occasion | `internal/occasions`, `internal/i18n/occasions.go` | [Request flows](request-flows.md), [Reminder delivery](reminder-delivery.md) |
 | Change retry or deletion behavior | `internal/reminders/sender.go`, `internal/store`, `infra/gcp` | [Reminder delivery](reminder-delivery.md), [Operations](operations.md) |
 | Add persistent state | `migrations`, `internal/store`, `internal/domain` | [Data model](data-model.md) |
 | Add a service or cloud dependency | `infra/gcp`, `internal/config`, relevant `cmd` | [Architecture](architecture.md), [Runtime and deployment](runtime-and-deployment.md) |

@@ -43,8 +43,9 @@ This is a client-side entry point to the same signed Mini App and creates no new
 service or authentication path. Prayer cards are likewise generated entirely
 in the browser as localized PNG files from the selected today/tomorrow
 schedule. The native device share sheet is used when file sharing is supported;
-otherwise the image is downloaded for manual sharing. Cards are not uploaded or
-stored by the bot.
+otherwise an authenticated, size- and dimension-validated request sends the PNG
+to the user's private bot chat for reliable saving or forwarding. The service
+streams that fallback image directly to Telegram and does not retain it.
 
 Calendar connection first creates or reuses a random private subscription URL
 from an authenticated Mini App request. Google Calendar fetches that URL without

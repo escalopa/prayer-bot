@@ -11,7 +11,7 @@
   let calendarFeedURL = "";
   let offlineMode = false;
   let homeScreenStatus = "unknown";
-  const offlineCacheVersion = 1;
+  const offlineCacheVersion = 2;
   const offlineCacheMaxAge = 48 * 60 * 60 * 1000;
 
   const launchCopy = {
@@ -857,15 +857,22 @@
     return new Blob([bytes], { type: mediaType });
   }
 
-  function downloadPrayerCard(blob, filename) {
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = filename;
-    document.body.append(link);
-    link.click();
-    link.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  async function sendPrayerCardToChat(blob, filename) {
+    const body = new FormData();
+    body.append("card", blob, filename);
+    const response = await fetch("/api/miniapp/prayer-card", {
+      method: "POST",
+      headers: { "X-Telegram-Init-Data": currentInitData() },
+      body,
+      credentials: "same-origin",
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const error = new Error(data.error || "temporary_failure");
+      error.code = data.error;
+      error.status = response.status;
+      throw error;
+    }
   }
 
   async function sharePrayerCard() {
@@ -878,16 +885,26 @@
       const blob = canvasBlob(prayerCardCanvas());
       const filename = `prayer-times-${activeDay}.png`;
       const file = typeof File === "function" ? new File([blob], filename, { type: "image/png" }) : null;
-      if (file && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          title: state.labels.share_card_heading,
-          text: `${state.labels.share_message}\n${state[activeDay].gregorian}`,
-          files: [file],
-        });
-      } else {
-        downloadPrayerCard(blob, filename);
-        showToast(state.labels.share_downloaded);
+      if (file && typeof navigator.share === "function") {
+        try {
+          // Some Telegram WebViews implement file sharing without exposing a
+          // reliable navigator.canShare result, so attempt the native sheet.
+          await navigator.share({
+            title: state.labels.share_card_heading,
+            text: `${state.labels.share_message}\n${state[activeDay].gregorian}`,
+            files: [file],
+          });
+          return;
+        } catch (error) {
+          if (error && error.name === "AbortError") return;
+          // Fall through to a Telegram chat upload when the WebView rejects
+          // file sharing. An <a download> click is silently ignored on many
+          // Android Telegram clients.
+        }
       }
+      await sendPrayerCardToChat(blob, filename);
+      showToast(state.labels.share_sent);
+      if (telegram && telegram.HapticFeedback) telegram.HapticFeedback.notificationOccurred("success");
     } catch (error) {
       if (!error || error.name !== "AbortError") showToast(state.labels.share_failed, true);
     } finally {

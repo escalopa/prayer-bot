@@ -71,6 +71,12 @@ disable the named prepared-statement cache by selecting
 `SQLSTATE 42P05 prepared statement already exists` and
 `SQLSTATE 26000 prepared statement does not exist`.
 
+In this execution mode, JSONB parameters must be passed as JSON text rather than
+Go `[]byte`. pgx otherwise encodes the byte slice as PostgreSQL `bytea` before
+the target JSONB type is resolved, causing `SQLSTATE 22P02 invalid input syntax
+for type json`. All profile adjustments and outbox payloads use the shared
+JSON-text encoder in `internal/store`.
+
 ## Deployment workflow
 
 The **Deploy global prayer bot** workflow is manual and accepts `testing` or

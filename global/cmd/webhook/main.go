@@ -45,7 +45,7 @@ func main() {
 	handler := telegramhandler.NewHandler(
 		telegramBot, storage, resolver, calculator, planner, cfg.OwnerID,
 	)
-	miniApp := miniapp.NewHandler(cfg.TelegramToken, storage, resolver, calculator, planner, logger)
+	miniApp := miniapp.NewHandler(cfg.TelegramToken, storage, resolver, calculator, planner, logger, telegramBot)
 
 	mux := http.NewServeMux()
 	httpx.HealthMux(mux)

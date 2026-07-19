@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="A transparent technical specification of how Global Prayer Times calculates prayer times, high-latitude adjustments, and Hijri dates.">
+  <meta name="description" content="How Global Prayer Times calculates prayer times, high-latitude adjustments, Qibla direction, Hijri dates, Islamic occasions, and calendar events.">
   <meta name="theme-color" content="#123f33">
-  <title>How Global Prayer Times Calculates Prayer Times</title>
+  <title>How Global Prayer Times Calculates What It Shows</title>
   <link rel="stylesheet" href="./styles.css">
   <script>
     window.MathJax = {
@@ -22,23 +22,25 @@
       <div class="nav-links">
         <a href="#methods">Methods</a>
         <a href="#high-latitude">High latitude</a>
+        <a href="#qibla">Qibla</a>
         <a href="#hijri">Hijri</a>
+        <a href="#occasions">Islamic dates</a>
         <a href="https://github.com/escalopa/prayer-bot">Source</a>
       </div>
     </nav>
     <div id="top" class="hero-content">
-      <p class="eyebrow">Public calculation specification</p>
-      <h1>How the bot calculates prayer times</h1>
-      <p class="lede">A transparent, equation-level explanation of solar events, all nine calculation methods, Asr conventions, high-latitude rules, corrections, and Gregorian–Hijri conversion.</p>
+      <p class="eyebrow">Public calculation guide</p>
+      <h1>How the bot calculates what it shows</h1>
+      <p class="lede">A transparent explanation of prayer times, high-latitude rules, Qibla direction, Hijri conversion, Islamic occasions, and the rolling calendar.</p>
       <div class="actions">
         <a class="button primary" href="./downloads/prayer-time-calculations.pdf">Download the PDF</a>
         <a class="button secondary" href="https://github.com/escalopa/prayer-bot/blob/main/docs/calculation-methods.tex">Read the LaTeX source</a>
       </div>
       <div class="summary-grid" aria-label="Calculation summary">
         <div><strong>9</strong><span>twilight methods</span></div>
-        <div><strong>2</strong><span>Asr conventions</span></div>
         <div><strong>3</strong><span>high-latitude rules</span></div>
-        <div><strong>±2</strong><span>Hijri correction days</span></div>
+        <div><strong>360°</strong><span>Qibla bearing</span></div>
+        <div><strong>10</strong><span>Islamic dates</span></div>
       </div>
     </div>
   </header>
@@ -53,7 +55,10 @@
       <a href="#asr">Asr</a>
       <a href="#high-latitude">High latitude</a>
       <a href="#corrections">Corrections</a>
+      <a href="#qibla">Qibla direction</a>
       <a href="#hijri">Hijri calendar</a>
+      <a href="#occasions">Islamic dates</a>
+      <a href="#calendar">Rolling calendar</a>
       <a href="#differences">Differences</a>
       <a href="#references">References</a>
     </aside>
@@ -62,12 +67,12 @@
       <section id="scope">
         <p class="section-label">01 · Scope</p>
         <h2>What this document represents</h2>
-        <p>This page describes the behavior of the <strong>global</strong> Telegram bot as implemented in its source code. It is a technical specification, not a religious ruling. Local mosques and recognized authorities may publish schedules with different conventions, observation decisions, or safety margins.</p>
+        <p>This public guide explains the user-facing calculations and Islamic information shown by the <strong>global</strong> Telegram bot. It covers prayer times, high-latitude adjustments, Qibla direction, Hijri dates, Islamic occasions, and the rolling calendar—not deployment or infrastructure.</p>
+        <p>It is a transparent calculation guide, not a religious ruling. Local mosques and recognized authorities may publish schedules with different conventions, observation decisions, safety margins, or moon-sighting decisions.</p>
         <div class="callout">
           <strong>Prayer times are calculated locally.</strong>
           <p>Google Maps is consulted only when a user sets a location, to resolve an IANA timezone, ISO country code, city label, and place identifier. Google does not provide the prayer schedule.</p>
         </div>
-        <p>The runtime uses <a href="https://github.com/hablullah/go-prayer/tree/v1.1.1">Go Prayer v1.1.1</a>, whose solar events come from <a href="https://github.com/hablullah/go-sampa/tree/v1.0.0">Go SAMPA v1.0.0</a> and the NREL Solar Position Algorithm. Calendar conversion uses <a href="https://github.com/hablullah/go-hijri/tree/v1.0.2">Go Hijri v1.0.2</a>.</p>
       </section>
 
       <section id="pipeline">
@@ -79,7 +84,7 @@
           <li><span>3</span><div><strong>Select a default</strong><p>The country chooses an initial twilight method. The user can replace it at any time.</p></div></li>
           <li><span>4</span><div><strong>Calculate solar events</strong><p>The requested instant is converted to the local timezone, and the bot calculates/caches the entire local year.</p></div></li>
           <li><span>5</span><div><strong>Adapt and finalize</strong><p>It applies the high-latitude rule when necessary, per-prayer minute corrections, and nearest-minute rounding.</p></div></li>
-          <li><span>6</span><div><strong>Display the Hijri date</strong><p>The same local Gregorian date is converted separately. Hijri correction never moves prayer times.</p></div></li>
+          <li><span>6</span><div><strong>Calculate Hijri information</strong><p>The local Gregorian date is converted separately. Hijri correction changes the displayed date and occasion matching, but never moves prayer times.</p></div></li>
         </ol>
         <div class="formula">
           \[
@@ -191,10 +196,42 @@
         <p>A correction changes only that prayer. Year schedules are cached by rounded coordinates, timezone, method, madhab, high-latitude rule, all six corrections, and year. Caching changes performance, never the result.</p>
       </section>
 
+      <section id="qibla">
+        <p class="section-label">08 · Direction</p>
+        <h2>How the Qibla bearing is calculated</h2>
+        <p>The Qibla tool uses the saved rounded coordinates and the Kaaba coordinates \(21.4225^\circ\text{ N}, 39.8262^\circ\text{ E}\). It calculates the <strong>initial great-circle bearing</strong>: the direction in which the shortest path over the Earth's surface begins.</p>
+        <p>Let the user location be \((\phi,\lambda)\), the Kaaba be \((\phi_K,\lambda_K)\), and \(\Delta\lambda=\lambda_K-\lambda\). In radians:</p>
+        <div class="formula prominent">
+          \[
+          \beta=\operatorname{atan2}\!\left(
+            \sin\Delta\lambda\cos\phi_K,\,
+            \cos\phi\sin\phi_K-\sin\phi\cos\phi_K\cos\Delta\lambda
+          \right)
+          \]
+          \[
+          B=\left(\frac{180\beta}{\pi}+360\right)\bmod 360
+          \]
+          <p>\(B\) is clockwise from geographic north: north \(0^\circ\), east \(90^\circ\), south \(180^\circ\), west \(270^\circ\).</p>
+        </div>
+        <p>The displayed surface distance uses the haversine formula with mean Earth radius \(R=6371.0088\text{ km}\):</p>
+        <div class="formula">
+          \[
+          a=\sin^2\!\frac{\phi_K-\phi}{2}+
+          \cos\phi\cos\phi_K\sin^2\!\frac{\Delta\lambda}{2},
+          \qquad d=2R\arcsin\sqrt{a}
+          \]
+        </div>
+        <div class="callout warning">
+          <strong>Compass readings are device-dependent.</strong>
+          <p>The numeric result is a geographic great-circle bearing. The optional live arrow uses the phone's absolute orientation sensor, which can be affected by calibration, nearby metal, magnetic interference, and the difference between magnetic and geographic north.</p>
+        </div>
+      </section>
+
       <section id="hijri">
-        <p class="section-label">08 · Calendars</p>
+        <p class="section-label">09 · Hijri calendar</p>
         <h2>Gregorian to Hijri, and back</h2>
-        <p>The bot converts the requested instant to the saved timezone and takes its local Gregorian date \(G\). A user correction \(a\in\{-2,-1,0,1,2\}\) is applied only to the calendar display: \(G'=G+a\) civil days.</p>
+        <p>The bot converts the requested instant to the saved timezone and takes its local Gregorian date \(G\). A user correction \(a\in\{-2,-1,0,1,2\}\) is applied before Hijri conversion: \(G'=G+a\) civil days.</p>
+        <p>Prayer times remain attached to \(G\). The correction changes the displayed Hijri label and the Gregorian day on which a Hijri occasion matches.</p>
 
         <h3>1. Convert Gregorian date to Julian day</h3>
         <p>January and February are treated as months 13 and 14 of the previous year. For adjusted \(Y',M'\), day \(d\), fraction \(f\), and Gregorian correction \(B\):</p>
@@ -229,11 +266,50 @@
           29(m-1)+\left\lfloor\frac{m}{2}\right\rfloor+d
           \]
         </div>
-        <p>This fallback and Umm al-Qura are calculated calendars. Local crescent observation can differ, which is why the bot allows the ±2-day display correction.</p>
+        <p>This fallback and Umm al-Qura are calculated calendars. Local crescent observation can differ, which is why the bot allows a ±2-day Hijri correction for both the label and occasion matching.</p>
+      </section>
+
+      <section id="occasions">
+        <p class="section-label">10 · Islamic dates</p>
+        <h2>How Islamic occasions are selected</h2>
+        <p>The bot does not keep a separate list of Gregorian dates. It calculates the corrected Hijri date for each local Gregorian day and compares its Hijri month and day with a curated catalog. Therefore location timezone and the user's Hijri correction determine which local Gregorian day displays an occasion.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Hijri date</th><th>Category</th><th>Occasion</th><th>Reference or qualification</th></tr></thead>
+            <tbody>
+              <tr><td>10 Muharram</td><td>Fasting</td><td>Ashura</td><td><a href="https://sunnah.com/muslim:1162a">Sahih Muslim 1162a</a></td></tr>
+              <tr><td>12 Rabi al-Awwal</td><td>Commonly observed</td><td>Mawlid al-Nabi</td><td>Exact historical date and observance differ; <a href="https://quran.com/33/56">Quran 33:56</a>, <a href="https://sunnah.com/muslim:1162e">Sahih Muslim 1162e</a></td></tr>
+              <tr><td>27 Rajab</td><td>Commonly observed</td><td>Isra and Mi'raj</td><td>Precise date is not established; <a href="https://quran.com/17/1">Quran 17:1</a></td></tr>
+              <tr><td>15 Sha'ban</td><td>Commonly observed</td><td>Mid-Sha'ban</td><td>Practices and scholarly assessment of specific evidence differ</td></tr>
+              <tr><td>1 Ramadan</td><td>Major</td><td>Beginning of Ramadan</td><td><a href="https://quran.com/2/185">Quran 2:185</a></td></tr>
+              <tr><td>21 Ramadan</td><td>Major</td><td>Last ten nights begin</td><td><a href="https://quran.com/al-qadr">Surah Al-Qadr</a>, <a href="https://sunnah.com/bukhari:2017">Sahih al-Bukhari 2017</a></td></tr>
+              <tr><td>1 Shawwal</td><td>Major</td><td>Eid al-Fitr</td><td>Confirm the local date; <a href="https://quran.com/2/185">Quran 2:185</a></td></tr>
+              <tr><td>1 Dhu al-Hijjah</td><td>Major</td><td>First ten days begin</td><td><a href="https://sunnah.com/bukhari:969">Sahih al-Bukhari 969</a></td></tr>
+              <tr><td>9 Dhu al-Hijjah</td><td>Fasting</td><td>Day of Arafah</td><td>Recommended fast for non-pilgrims; <a href="https://sunnah.com/muslim:1162a">Sahih Muslim 1162a</a></td></tr>
+              <tr><td>10 Dhu al-Hijjah</td><td>Major</td><td>Eid al-Adha</td><td>Confirm the local date; <a href="https://quran.com/22/36">Quran 22:36</a></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout warning">
+          <strong>Calculated date does not replace local confirmation.</strong>
+          <p>Ramadan, Eid, and other lunar dates can differ with local crescent observation. “Commonly observed” is a deliberate label: those dates or practices are not presented as universally agreed. All three occasion reminder categories are opt-in.</p>
+        </div>
+      </section>
+
+      <section id="calendar">
+        <p class="section-label">11 · Rolling calendar</p>
+        <h2>How each user's calendar is generated</h2>
+        <p>The private calendar feed uses the user's saved location, timezone, calculation method, madhab, high-latitude rule, minute corrections, and Hijri correction. Every time a calendar provider fetches the URL, the bot recalculates today and the following 29 local days.</p>
+        <div class="event-grid">
+          <div><span>Prayer events</span><p>Timed events use each day's calculated local prayer instants.</p></div>
+          <div><span>Islamic occasions</span><p>Matching corrected Hijri dates become all-day events with guidance and sources.</p></div>
+          <div><span>Stable updates</span><p>Stable event identifiers let a provider update changed times instead of duplicating them.</p></div>
+        </div>
+        <p>The feed rolls forward when fetched; the bot does not permanently store 30 future days or run a separate calendar cron job. Google Calendar controls its own refresh schedule, so a new day or settings change may not appear immediately.</p>
       </section>
 
       <section id="differences">
-        <p class="section-label">09 · Interpretation</p>
+        <p class="section-label">12 · Interpretation</p>
         <h2>Why another timetable may differ</h2>
         <div class="difference-grid">
           <div><strong>Convention</strong><p>Different Fajr/Isha angles or Asr factor.</p></div>
@@ -242,27 +318,26 @@
           <div><strong>Civil time</strong><p>Timezone or daylight-saving assumptions.</p></div>
           <div><strong>Institution</strong><p>Safety margins and local adjustments.</p></div>
           <div><strong>Calendar</strong><p>Observed crescent versus calculated date.</p></div>
+          <div><strong>Compass</strong><p>Sensor calibration, magnetic interference, and north reference.</p></div>
         </div>
       </section>
 
       <section id="references">
-        <p class="section-label">10 · Reproducibility</p>
-        <h2>Primary references and source code</h2>
+        <p class="section-label">13 · References</p>
+        <h2>Calculation references</h2>
         <ul class="references">
-          <li><a href="https://github.com/escalopa/prayer-bot/blob/main/global/internal/prayertime/calculator.go">Bot prayer calculator</a></li>
-          <li><a href="https://github.com/escalopa/prayer-bot/blob/main/global/internal/hijri/calendar.go">Bot Hijri wrapper</a></li>
-          <li><a href="https://github.com/hablullah/go-prayer/tree/v1.1.1">Go Prayer v1.1.1</a></li>
-          <li><a href="https://github.com/hablullah/go-sampa/tree/v1.0.0">Go SAMPA v1.0.0</a></li>
-          <li><a href="https://github.com/hablullah/go-hijri/tree/v1.0.2">Go Hijri v1.0.2</a></li>
+          <li><a href="https://github.com/hablullah/go-prayer/tree/v1.1.1">Go Prayer v1.1.1 prayer-time definitions</a></li>
+          <li><a href="https://github.com/hablullah/go-sampa/tree/v1.0.0">Go SAMPA v1.0.0 solar calculations</a></li>
+          <li><a href="https://github.com/hablullah/go-hijri/tree/v1.0.2">Go Hijri v1.0.2 calendar conversion</a></li>
           <li><a href="https://docs.nrel.gov/docs/fy08osti/34302.pdf">NREL Solar Position Algorithm report</a></li>
         </ul>
-        <p class="closing">This specification is versioned with the open-source bot. If implementation and documentation ever disagree, the pinned source code is authoritative and the documentation should be corrected.</p>
+        <p class="closing">This guide is versioned with the open-source bot so its explanation can be reviewed and corrected as the calculations evolve.</p>
       </section>
     </article>
   </main>
 
   <footer>
-    <span>Global Prayer Times · Open calculation specification</span>
+    <span>Global Prayer Times · Public calculation guide</span>
     <a href="#top">Back to top ↑</a>
   </footer>
 </body>

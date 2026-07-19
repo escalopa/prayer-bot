@@ -5,12 +5,14 @@ on:
     paths:
       - 'docs/**'
       - 'output/pdf/**'
+      - '.gitbook.yaml'
       - '.github/workflows/pages.yaml'
   push:
     branches: [main]
     paths:
       - 'docs/**'
       - 'output/pdf/**'
+      - '.gitbook.yaml'
       - '.github/workflows/pages.yaml'
   workflow_dispatch:
 

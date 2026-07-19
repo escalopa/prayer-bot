@@ -2,7 +2,7 @@
 
 A serverless Telegram bot that provides Muslim prayer times and sends notifications when prayers are approaching.
 
-The global bot's solar equations, supported calculation methods, high-latitude rules, and Gregorian--Hijri conversion are documented on the public [calculation methodology site](https://escalopa.github.io/prayer-bot/). The versioned [LaTeX source](docs/calculation-methods.tex) is maintained in this repository.
+The global bot's prayer calculations, high-latitude rules, Qibla bearing, Gregorian--Hijri conversion, Islamic occasions, and rolling calendar are documented on the public [calculation methodology site](https://escalopa.github.io/prayer-bot/). The versioned [LaTeX source](docs/calculation-methods.tex) is maintained in this repository.
 
 The separate worldwide bot under [`global/`](global/) has its own
 [engineering and architecture guide](global/docs/README.md). Use that guide for

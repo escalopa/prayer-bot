@@ -39,6 +39,14 @@
     </section>
 
     <div id="dashboard" class="hidden">
+      <aside id="connection-banner" class="connection-banner hidden" role="status" aria-live="polite">
+        <span class="connection-icon" aria-hidden="true">☁</span>
+        <div>
+          <strong id="connection-title"></strong>
+          <p id="connection-message"></p>
+        </div>
+      </aside>
+
       <section class="schedule-section">
         <div class="segmented" role="tablist" aria-label="Prayer schedule date">
           <button id="today-tab" class="segment active" type="button" role="tab" aria-selected="true">Today</button>
@@ -110,6 +118,37 @@
               <button id="disconnect-calendar" class="text-button calendar-disconnect hidden" type="button">Disconnect calendar</button>
             </div>
             <p id="calendar-status" class="tool-note hidden" role="status"></p>
+          </article>
+
+          <article id="home-screen-card" class="tool-card quick-access-card hidden">
+            <div class="tool-heading">
+              <span class="tool-icon" aria-hidden="true">📲</span>
+              <div>
+                <h3 id="home-screen-title">Quick access</h3>
+                <p id="home-screen-help">Add prayer times to your Telegram home screen.</p>
+              </div>
+            </div>
+            <div class="quick-access-illustration" aria-hidden="true">
+              <span>☾</span>
+            </div>
+            <button id="add-home-screen" class="secondary-button" type="button">Add to home screen</button>
+            <p id="home-screen-status" class="tool-note hidden" role="status"></p>
+          </article>
+
+          <article class="tool-card share-card">
+            <div class="tool-heading">
+              <span class="tool-icon" aria-hidden="true">✨</span>
+              <div>
+                <h3 id="share-card-title">Share prayer card</h3>
+                <p id="share-card-help">Create a beautiful image with the selected day’s prayer times.</p>
+              </div>
+            </div>
+            <div class="share-card-preview" aria-hidden="true">
+              <span class="share-preview-moon">☾</span>
+              <strong id="share-preview-date"></strong>
+              <span id="share-preview-time"></span>
+            </div>
+            <button id="share-prayer-card" class="primary-button compact" type="button">Create &amp; share</button>
           </article>
         </div>
       </section>

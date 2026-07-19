@@ -686,6 +686,15 @@ func labels(locale i18n.Locale) map[string]string {
 		"calendar_disconnect": copy.CalendarDisconnect, "calendar_opening": copy.CalendarOpening,
 		"calendar_copied": copy.CalendarCopied, "calendar_disconnected": copy.CalendarDisconnected,
 		"calendar_private": copy.CalendarPrivate,
+		"offline_updating": copy.OfflineUpdating, "offline_updating_help": copy.OfflineUpdatingHelp,
+		"offline_title": copy.OfflineTitle, "offline_help": copy.OfflineHelp,
+		"home_title": copy.HomeTitle, "home_help": copy.HomeHelp,
+		"home_add": copy.HomeAdd, "home_added": copy.HomeAdded,
+		"share_title": copy.ShareTitle, "share_help": copy.ShareHelp,
+		"share_action": copy.ShareAction, "share_preparing": copy.SharePreparing,
+		"share_downloaded": copy.ShareDownloaded, "share_failed": copy.ShareFailed,
+		"share_card_heading": copy.ShareCardHeading, "share_card_footer": copy.ShareCardFooter,
+		"share_message": copy.ShareMessage,
 	}
 }
 
@@ -699,6 +708,12 @@ type miniAppCopy struct {
 	CalendarConnect, CalendarCopy, CalendarDisconnect     string
 	CalendarOpening, CalendarCopied, CalendarDisconnected string
 	CalendarPrivate                                       string
+	OfflineUpdating, OfflineUpdatingHelp                  string
+	OfflineTitle, OfflineHelp                             string
+	HomeTitle, HomeHelp, HomeAdd, HomeAdded               string
+	ShareTitle, ShareHelp, ShareAction, SharePreparing    string
+	ShareDownloaded, ShareFailed                          string
+	ShareCardHeading, ShareCardFooter, ShareMessage       string
 }
 
 var miniCopy = map[string]miniAppCopy{
@@ -717,6 +732,15 @@ var miniCopy = map[string]miniAppCopy{
 		CalendarOpening: "Opening Google Calendar…", CalendarCopied: "Private calendar link copied",
 		CalendarDisconnected: "Calendar feed disconnected",
 		CalendarPrivate:      "Keep the link private. Google controls when subscribed calendars refresh.",
+		OfflineUpdating:      "Updating prayer times…", OfflineUpdatingHelp: "Showing the saved schedule while the latest data loads.",
+		OfflineTitle: "Offline schedule", OfflineHelp: "Showing the schedule saved at {time}. Changes will be available after reconnecting.",
+		HomeTitle: "Quick access", HomeHelp: "Add prayer times to your Telegram home screen.",
+		HomeAdd: "Add to home screen", HomeAdded: "Added to home screen",
+		ShareTitle: "Share prayer card", ShareHelp: "Create a beautiful image with the selected day’s prayer times.",
+		ShareAction: "Create & share", SharePreparing: "Creating card…",
+		ShareDownloaded: "Card saved. Share it from your gallery.", ShareFailed: "The prayer card could not be created.",
+		ShareCardHeading: "Daily prayer times", ShareCardFooter: "Global Prayer Times",
+		ShareMessage: "Prayer times",
 	},
 	"ar": {
 		Save: "حفظ التغييرات", Saved: "تم الحفظ", Loading: "جارٍ تحميل مواقيت الصلاة…",
@@ -733,6 +757,15 @@ var miniCopy = map[string]miniAppCopy{
 		CalendarOpening: "جارٍ فتح تقويم Google…", CalendarCopied: "تم نسخ رابط التقويم الخاص",
 		CalendarDisconnected: "تم قطع اتصال التقويم",
 		CalendarPrivate:      "احتفظ بالرابط سريًا. يحدد Google وقت تحديث التقويمات المشتركة.",
+		OfflineUpdating:      "جارٍ تحديث المواقيت…", OfflineUpdatingHelp: "نعرض الجدول المحفوظ أثناء تحميل أحدث البيانات.",
+		OfflineTitle: "الجدول دون اتصال", OfflineHelp: "نعرض الجدول المحفوظ الساعة {time}. ستتوفر التغييرات بعد عودة الاتصال.",
+		HomeTitle: "وصول سريع", HomeHelp: "أضف مواقيت الصلاة إلى شاشة تيليجرام الرئيسية.",
+		HomeAdd: "إضافة إلى الشاشة الرئيسية", HomeAdded: "تمت الإضافة إلى الشاشة الرئيسية",
+		ShareTitle: "مشاركة بطاقة الصلاة", ShareHelp: "أنشئ صورة جميلة بمواقيت اليوم المحدد.",
+		ShareAction: "إنشاء ومشاركة", SharePreparing: "جارٍ إنشاء البطاقة…",
+		ShareDownloaded: "تم حفظ البطاقة. شاركها من معرض الصور.", ShareFailed: "تعذر إنشاء بطاقة الصلاة.",
+		ShareCardHeading: "مواقيت الصلاة اليومية", ShareCardFooter: "مواقيت الصلاة العالمية",
+		ShareMessage: "مواقيت الصلاة",
 	},
 	"es": {
 		Save: "Guardar cambios", Saved: "Guardado", Loading: "Cargando horarios de oración…",
@@ -749,6 +782,15 @@ var miniCopy = map[string]miniAppCopy{
 		CalendarOpening: "Abriendo Google Calendar…", CalendarCopied: "Enlace privado copiado",
 		CalendarDisconnected: "Calendario desconectado",
 		CalendarPrivate:      "Mantén el enlace privado. Google decide cuándo actualizar los calendarios suscritos.",
+		OfflineUpdating:      "Actualizando horarios…", OfflineUpdatingHelp: "Mostramos el horario guardado mientras se cargan los datos nuevos.",
+		OfflineTitle: "Horario sin conexión", OfflineHelp: "Mostrando el horario guardado a las {time}. Los cambios estarán disponibles al reconectar.",
+		HomeTitle: "Acceso rápido", HomeHelp: "Añade los horarios a la pantalla de inicio de Telegram.",
+		HomeAdd: "Añadir a inicio", HomeAdded: "Añadido a inicio",
+		ShareTitle: "Compartir tarjeta", ShareHelp: "Crea una imagen con los horarios del día seleccionado.",
+		ShareAction: "Crear y compartir", SharePreparing: "Creando tarjeta…",
+		ShareDownloaded: "Tarjeta guardada. Compártela desde tu galería.", ShareFailed: "No se pudo crear la tarjeta.",
+		ShareCardHeading: "Horarios diarios de oración", ShareCardFooter: "Horarios de oración globales",
+		ShareMessage: "Horarios de oración",
 	},
 	"fr": {
 		Save: "Enregistrer", Saved: "Enregistré", Loading: "Chargement des horaires de prière…",
@@ -765,6 +807,15 @@ var miniCopy = map[string]miniAppCopy{
 		CalendarOpening: "Ouverture de Google Agenda…", CalendarCopied: "Lien privé copié",
 		CalendarDisconnected: "Calendrier déconnecté",
 		CalendarPrivate:      "Gardez ce lien privé. Google décide quand actualiser les calendriers abonnés.",
+		OfflineUpdating:      "Actualisation des horaires…", OfflineUpdatingHelp: "L’horaire enregistré reste affiché pendant le chargement.",
+		OfflineTitle: "Horaire hors ligne", OfflineHelp: "Horaire enregistré à {time}. Les modifications seront disponibles après reconnexion.",
+		HomeTitle: "Accès rapide", HomeHelp: "Ajoutez les horaires à l’écran d’accueil Telegram.",
+		HomeAdd: "Ajouter à l’accueil", HomeAdded: "Ajouté à l’accueil",
+		ShareTitle: "Partager une carte", ShareHelp: "Créez une image avec les horaires du jour sélectionné.",
+		ShareAction: "Créer et partager", SharePreparing: "Création de la carte…",
+		ShareDownloaded: "Carte enregistrée. Partagez-la depuis votre galerie.", ShareFailed: "Impossible de créer la carte.",
+		ShareCardHeading: "Horaires de prière du jour", ShareCardFooter: "Horaires de prière mondiaux",
+		ShareMessage: "Horaires de prière",
 	},
 	"ru": {
 		Save: "Сохранить", Saved: "Сохранено", Loading: "Загружаем время намаза…",
@@ -781,6 +832,15 @@ var miniCopy = map[string]miniAppCopy{
 		CalendarOpening: "Открываем Google Календарь…", CalendarCopied: "Закрытая ссылка скопирована",
 		CalendarDisconnected: "Календарь отключён",
 		CalendarPrivate:      "Не передавайте ссылку другим. Частоту обновления подписки определяет Google.",
+		OfflineUpdating:      "Обновляем время намаза…", OfflineUpdatingHelp: "Пока новые данные загружаются, показываем сохранённое расписание.",
+		OfflineTitle: "Расписание офлайн", OfflineHelp: "Показано расписание, сохранённое в {time}. Изменения станут доступны после подключения.",
+		HomeTitle: "Быстрый доступ", HomeHelp: "Добавьте время намаза на главный экран Telegram.",
+		HomeAdd: "Добавить на главный экран", HomeAdded: "Добавлено на главный экран",
+		ShareTitle: "Поделиться карточкой", ShareHelp: "Создайте красивую карточку с расписанием выбранного дня.",
+		ShareAction: "Создать и поделиться", SharePreparing: "Создаём карточку…",
+		ShareDownloaded: "Карточка сохранена. Поделитесь ею из галереи.", ShareFailed: "Не удалось создать карточку.",
+		ShareCardHeading: "Время намаза на день", ShareCardFooter: "Global Prayer Times",
+		ShareMessage: "Время намаза",
 	},
 	"tr": {
 		Save: "Değişiklikleri kaydet", Saved: "Kaydedildi", Loading: "Namaz vakitleri yükleniyor…",
@@ -797,6 +857,15 @@ var miniCopy = map[string]miniAppCopy{
 		CalendarOpening: "Google Takvim açılıyor…", CalendarCopied: "Özel takvim bağlantısı kopyalandı",
 		CalendarDisconnected: "Takvim bağlantısı kesildi",
 		CalendarPrivate:      "Bağlantıyı gizli tutun. Abone takvimlerin yenilenme zamanını Google belirler.",
+		OfflineUpdating:      "Namaz vakitleri güncelleniyor…", OfflineUpdatingHelp: "Yeni veriler yüklenirken kayıtlı takvim gösteriliyor.",
+		OfflineTitle: "Çevrimdışı takvim", OfflineHelp: "{time} saatinde kaydedilen takvim gösteriliyor. Değişiklikler bağlantı gelince açılır.",
+		HomeTitle: "Hızlı erişim", HomeHelp: "Namaz vakitlerini Telegram ana ekranına ekleyin.",
+		HomeAdd: "Ana ekrana ekle", HomeAdded: "Ana ekrana eklendi",
+		ShareTitle: "Namaz kartını paylaş", ShareHelp: "Seçilen günün vakitleriyle güzel bir görsel oluşturun.",
+		ShareAction: "Oluştur ve paylaş", SharePreparing: "Kart oluşturuluyor…",
+		ShareDownloaded: "Kart kaydedildi. Galerinizden paylaşın.", ShareFailed: "Namaz kartı oluşturulamadı.",
+		ShareCardHeading: "Günlük namaz vakitleri", ShareCardFooter: "Global Namaz Vakitleri",
+		ShareMessage: "Namaz vakitleri",
 	},
 	"uz": {
 		Save: "O‘zgarishlarni saqlash", Saved: "Saqlandi", Loading: "Namoz vaqtlari yuklanmoqda…",
@@ -813,6 +882,15 @@ var miniCopy = map[string]miniAppCopy{
 		CalendarOpening: "Google Taqvim ochilmoqda…", CalendarCopied: "Maxfiy taqvim havolasi nusxalandi",
 		CalendarDisconnected: "Taqvim uzildi",
 		CalendarPrivate:      "Havolani maxfiy saqlang. Obuna taqvimini qachon yangilashni Google belgilaydi.",
+		OfflineUpdating:      "Namoz vaqtlari yangilanmoqda…", OfflineUpdatingHelp: "Yangi ma’lumot yuklanayotganda saqlangan jadval ko‘rsatiladi.",
+		OfflineTitle: "Oflayn jadval", OfflineHelp: "{time} da saqlangan jadval ko‘rsatilmoqda. O‘zgarishlar ulanish qaytgach ishlaydi.",
+		HomeTitle: "Tezkor kirish", HomeHelp: "Namoz vaqtlarini Telegram bosh ekraniga qo‘shing.",
+		HomeAdd: "Bosh ekranga qo‘shish", HomeAdded: "Bosh ekranga qo‘shildi",
+		ShareTitle: "Namoz kartasini ulashish", ShareHelp: "Tanlangan kun vaqtlari bilan chiroyli rasm yarating.",
+		ShareAction: "Yaratish va ulashish", SharePreparing: "Karta yaratilmoqda…",
+		ShareDownloaded: "Karta saqlandi. Uni galereyadan ulashing.", ShareFailed: "Namoz kartasini yaratib bo‘lmadi.",
+		ShareCardHeading: "Kunlik namoz vaqtlari", ShareCardFooter: "Global Namoz Vaqtlari",
+		ShareMessage: "Namoz vaqtlari",
 	},
 	"tt": {
 		Save: "Үзгәрешләрне саклау", Saved: "Сакланды", Loading: "Намаз вакытлары йөкләнә…",
@@ -829,5 +907,14 @@ var miniCopy = map[string]miniAppCopy{
 		CalendarOpening: "Google Календарь ачыла…", CalendarCopied: "Яшерен календарь сылтамасы күчерелде",
 		CalendarDisconnected: "Календарь өзелде",
 		CalendarPrivate:      "Сылтаманы яшерен саклагыз. Яңарту вакытын Google билгели.",
+		OfflineUpdating:      "Намаз вакытлары яңартыла…", OfflineUpdatingHelp: "Яңа мәгълүмат йөкләнгәндә сакланган җәдвәл күрсәтелә.",
+		OfflineTitle: "Офлайн җәдвәл", OfflineHelp: "{time} сәгатьтә сакланган җәдвәл күрсәтелә. Үзгәрешләр элемтә кайткач эшләячәк.",
+		HomeTitle: "Тиз керү", HomeHelp: "Намаз вакытларын Telegram төп экранына өстәгез.",
+		HomeAdd: "Төп экранга өстәү", HomeAdded: "Төп экранга өстәлде",
+		ShareTitle: "Намаз карточкасын бүлешү", ShareHelp: "Сайланган көн вакытлары белән матур рәсем ясагыз.",
+		ShareAction: "Ясау һәм бүлешү", SharePreparing: "Карточка ясала…",
+		ShareDownloaded: "Карточка сакланды. Галереядән бүлешегез.", ShareFailed: "Намаз карточкасын ясап булмады.",
+		ShareCardHeading: "Көнлек намаз вакытлары", ShareCardFooter: "Глобаль намаз вакытлары",
+		ShareMessage: "Намаз вакытлары",
 	},
 }

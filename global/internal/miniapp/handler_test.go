@@ -47,8 +47,42 @@ func TestStaticMiniAppIsEmbeddedWithSecurityHeaders(t *testing.T) {
 		!strings.Contains(string(script), "/api/miniapp/calendar-subscription") {
 		t.Fatal("Mini App is missing Qibla compass or rolling calendar subscription support")
 	}
+	if !strings.Contains(html, "add-home-screen") || !strings.Contains(html, "share-prayer-card") ||
+		!strings.Contains(string(script), "DeviceStorage") ||
+		!strings.Contains(string(script), "addToHomeScreen") ||
+		!strings.Contains(string(script), "navigator.share") ||
+		!strings.Contains(string(script), "canvas.toDataURL") {
+		t.Fatal("Mini App is missing offline, home-screen, or prayer-card sharing support")
+	}
+	serviceWorker, err := embeddedStatic.ReadFile("static/sw.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(script), "serviceWorker.register") ||
+		!strings.Contains(string(serviceWorker), "global-prayer-miniapp-shell") ||
+		!strings.Contains(string(script), "delete snapshot.calendar.path") {
+		t.Fatal("Mini App is missing its safe offline application shell")
+	}
 	if !strings.Contains(response.Header().Get("Content-Security-Policy"), "telegram.org") {
 		t.Fatal("Mini App response is missing its CSP")
+	}
+}
+
+func TestOfflineAndSharingLabelsExistForEveryLocale(t *testing.T) {
+	keys := []string{
+		"offline_updating", "offline_updating_help", "offline_title", "offline_help",
+		"home_title", "home_help", "home_add", "home_added",
+		"share_title", "share_help", "share_action", "share_preparing",
+		"share_downloaded", "share_failed", "share_card_heading",
+		"share_card_footer", "share_message",
+	}
+	for _, locale := range i18n.Supported() {
+		localized := labels(locale)
+		for _, key := range keys {
+			if localized[key] == "" {
+				t.Errorf("locale %q has no %q label", locale.Code, key)
+			}
+		}
 	}
 }
 

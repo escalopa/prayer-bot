@@ -1,8 +1,14 @@
 package miniapp
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
+	"image"
+	"image/png"
+	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -14,6 +20,8 @@ import (
 	"github.com/escalopa/prayer-bot/global/internal/location"
 	"github.com/escalopa/prayer-bot/global/internal/occasions"
 	"github.com/escalopa/prayer-bot/global/internal/prayertime"
+	botapi "github.com/go-telegram/bot"
+	"github.com/go-telegram/bot/models"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -52,8 +60,13 @@ func TestStaticMiniAppIsEmbeddedWithSecurityHeaders(t *testing.T) {
 		!strings.Contains(string(script), "DeviceStorage") ||
 		!strings.Contains(string(script), "addToHomeScreen") ||
 		!strings.Contains(string(script), "navigator.share") ||
-		!strings.Contains(string(script), "canvas.toDataURL") {
+		!strings.Contains(string(script), "canvas.toDataURL") ||
+		!strings.Contains(string(script), "/api/miniapp/prayer-card") ||
+		!strings.Contains(string(script), "new FormData()") {
 		t.Fatal("Mini App is missing offline, home-screen, or prayer-card sharing support")
+	}
+	if strings.Contains(string(script), "link.download") {
+		t.Fatal("Mini App still claims an unreliable WebView anchor download saved the prayer card")
 	}
 	if !strings.Contains(html, "occasion-list") ||
 		!strings.Contains(html, "occasion-observed-reminders") ||
@@ -79,7 +92,7 @@ func TestOfflineAndSharingLabelsExistForEveryLocale(t *testing.T) {
 		"offline_updating", "offline_updating_help", "offline_title", "offline_help",
 		"home_title", "home_help", "home_add", "home_added",
 		"share_title", "share_help", "share_action", "share_preparing",
-		"share_downloaded", "share_failed", "share_card_heading",
+		"share_sent", "share_failed", "share_card_heading",
 		"share_card_footer", "share_message",
 	}
 	for _, locale := range i18n.Supported() {
@@ -104,6 +117,77 @@ func TestMiniAppAPIRejectsUnsignedRequests(t *testing.T) {
 	if response.Code != http.StatusUnauthorized || !strings.Contains(response.Body.String(), "unauthorized") {
 		t.Fatalf("unexpected response: %d %s", response.Code, response.Body.String())
 	}
+}
+
+func TestPrayerCardFallbackSendsValidatedPNGToTelegramChat(t *testing.T) {
+	now := time.Date(2026, time.July, 19, 12, 0, 0, 0, time.UTC)
+	sender := &fakePhotoSender{}
+	handler := NewHandler("test-token", nil, nil, nil, nil, nil, sender)
+	handler.now = func() time.Time { return now }
+	mux := http.NewServeMux()
+	handler.Register(mux)
+
+	body, contentType := prayerCardUpload(t, 1080, 1350)
+	request := httptest.NewRequest(http.MethodPost, "/api/miniapp/prayer-card", body)
+	request.Header.Set("Content-Type", contentType)
+	request.Header.Set("X-Telegram-Init-Data", signedInitData(
+		t, "test-token", now, initDataUser{ID: 42, FirstName: "Amina", LanguageCode: "en"},
+	))
+	response := httptest.NewRecorder()
+	mux.ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", response.Code, response.Body.String())
+	}
+	if sender.chatID != 42 || sender.filename != "prayer-times.png" || len(sender.content) == 0 {
+		t.Fatalf("unexpected Telegram photo upload: %+v", sender)
+	}
+	if !strings.Contains(response.Body.String(), `"status":"sent"`) {
+		t.Fatalf("unexpected response: %s", response.Body.String())
+	}
+}
+
+func TestPrayerCardFallbackRejectsUnexpectedImageDimensions(t *testing.T) {
+	now := time.Date(2026, time.July, 19, 12, 0, 0, 0, time.UTC)
+	sender := &fakePhotoSender{}
+	handler := NewHandler("test-token", nil, nil, nil, nil, nil, sender)
+	handler.now = func() time.Time { return now }
+	mux := http.NewServeMux()
+	handler.Register(mux)
+
+	body, contentType := prayerCardUpload(t, 1, 1)
+	request := httptest.NewRequest(http.MethodPost, "/api/miniapp/prayer-card", body)
+	request.Header.Set("Content-Type", contentType)
+	request.Header.Set("X-Telegram-Init-Data", signedInitData(
+		t, "test-token", now, initDataUser{ID: 42, FirstName: "Amina", LanguageCode: "en"},
+	))
+	response := httptest.NewRecorder()
+	mux.ServeHTTP(response, request)
+
+	if response.Code != http.StatusBadRequest || len(sender.content) != 0 {
+		t.Fatalf("unexpected invalid-card result: status=%d sender=%+v", response.Code, sender)
+	}
+}
+
+func prayerCardUpload(t *testing.T, width, height int) (*bytes.Buffer, string) {
+	t.Helper()
+	var card bytes.Buffer
+	if err := png.Encode(&card, image.NewRGBA(image.Rect(0, 0, width, height))); err != nil {
+		t.Fatal(err)
+	}
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	part, err := writer.CreateFormFile("card", "card.png")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := part.Write(card.Bytes()); err != nil {
+		t.Fatal(err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	return &body, writer.FormDataContentType()
 }
 
 func TestFormatScheduleIncludesLocalizedGregorianAndHijriDates(t *testing.T) {
@@ -463,6 +547,31 @@ type fakeStorage struct {
 	profiles      map[int64]domain.PrayerProfile
 	rules         map[int64][]domain.ReminderRule
 	subscriptions map[int64]domain.CalendarSubscription
+}
+
+type fakePhotoSender struct {
+	chatID   int64
+	filename string
+	content  []byte
+}
+
+func (s *fakePhotoSender) SendPhoto(_ context.Context, params *botapi.SendPhotoParams) (*models.Message, error) {
+	chatID, ok := params.ChatID.(int64)
+	if !ok {
+		return nil, fmt.Errorf("unexpected chat ID type %T", params.ChatID)
+	}
+	upload, ok := params.Photo.(*models.InputFileUpload)
+	if !ok {
+		return nil, fmt.Errorf("unexpected photo type %T", params.Photo)
+	}
+	content, err := io.ReadAll(upload.Data)
+	if err != nil {
+		return nil, err
+	}
+	s.chatID = chatID
+	s.filename = upload.Filename
+	s.content = content
+	return &models.Message{}, nil
 }
 
 func newFakeStorage() *fakeStorage {

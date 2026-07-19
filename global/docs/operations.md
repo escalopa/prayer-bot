@@ -25,6 +25,7 @@ payload.
 | Duplicate reminder messages in the same minute | A sender 5xx after Telegram accepted the first message, followed by a successful Cloud Tasks retry of the same delivery key | [Reminder delivery](reminder-delivery.md) |
 | `prepared statement ... already exists` (`42P05`) | pgx named statement caching used through a transaction pooler | [Runtime and deployment](runtime-and-deployment.md#database-connections) |
 | `prepared statement ... does not exist` (`26000`) | The pooler moved a cached statement to a different PostgreSQL connection | [Runtime and deployment](runtime-and-deployment.md#database-connections) |
+| `invalid input syntax for type json` (`22P02`) during profile or outbox writes | A JSONB value was passed as Go `[]byte` while pgx used `QueryExecModeExec` | [Runtime and deployment](runtime-and-deployment.md#database-connections) |
 | Reminder is late but eventually arrives | Cloud Run cold start, queue backoff, or transient sender 5xx | [Reminder delivery](reminder-delivery.md#retry-configuration) |
 | Old notification remains | Immediate Telegram deletion failed and its durable deletion task is retrying or expired past Telegram's limit | [Reminder delivery](reminder-delivery.md#cleanup-categories) |
 | Existing schedules work but location update fails | Google Time Zone or Geocoding failure | [Maps failure mode](#maps-failure-mode) |

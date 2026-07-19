@@ -88,9 +88,11 @@ Telegram session still fails closed with the normal reopen-from-Telegram state;
 the cache never bypasses server authentication.
 
 The selected day's schedule can be rendered into a localized portrait PNG and
-sent to the platform share sheet without an API request. When file sharing is
-unavailable, the browser saves the PNG instead. No card contents leave the
-device through the bot backend.
+sent to the platform share sheet without an API request. Some Telegram Android
+WebViews ignore browser download links, so an unavailable or rejected file
+share falls back to an authenticated multipart upload. The webhook validates a
+PNG of the expected 1080×1350 dimensions and immediately sends it to the user's
+private bot chat. The bot does not retain the image.
 
 ## Prayer schedule display
 

@@ -1,17 +1,22 @@
 package miniapp
 
 import (
+	"bytes"
 	"context"
 	"embed"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"image/png"
 	"io"
 	"io/fs"
 	"log/slog"
 	"math"
 	"net/http"
 	"time"
+
+	botapi "github.com/go-telegram/bot"
+	"github.com/go-telegram/bot/models"
 
 	"github.com/escalopa/prayer-bot/global/internal/domain"
 	"github.com/escalopa/prayer-bot/global/internal/hijri"
@@ -24,6 +29,7 @@ import (
 )
 
 const initDataMaxAge = 24 * time.Hour
+const maxPrayerCardBytes = 5 << 20
 
 //go:embed static/*
 var embeddedStatic embed.FS
@@ -50,24 +56,41 @@ type ReminderPlanner interface {
 	RebuildChat(context.Context, int64, time.Time) error
 }
 
-type Handler struct {
-	botToken   string
-	store      Storage
-	resolver   location.Resolver
-	calculator prayertime.Calculator
-	planner    ReminderPlanner
-	logger     *slog.Logger
-	now        func() time.Time
+type PhotoSender interface {
+	SendPhoto(context.Context, *botapi.SendPhotoParams) (*models.Message, error)
 }
 
-func NewHandler(botToken string, storage Storage, resolver location.Resolver, calculator prayertime.Calculator, planner ReminderPlanner, logger *slog.Logger) *Handler {
+type Handler struct {
+	botToken    string
+	store       Storage
+	resolver    location.Resolver
+	calculator  prayertime.Calculator
+	planner     ReminderPlanner
+	photoSender PhotoSender
+	logger      *slog.Logger
+	now         func() time.Time
+}
+
+func NewHandler(
+	botToken string,
+	storage Storage,
+	resolver location.Resolver,
+	calculator prayertime.Calculator,
+	planner ReminderPlanner,
+	logger *slog.Logger,
+	photoSenders ...PhotoSender,
+) *Handler {
 	if logger == nil {
 		logger = slog.New(slog.NewTextHandler(io.Discard, nil))
 	}
-	return &Handler{
+	handler := &Handler{
 		botToken: botToken, store: storage, resolver: resolver,
 		calculator: calculator, planner: planner, logger: logger, now: time.Now,
 	}
+	if len(photoSenders) > 0 {
+		handler.photoSender = photoSenders[0]
+	}
+	return handler
 }
 
 func (h *Handler) Register(mux *http.ServeMux) {
@@ -85,6 +108,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("PUT /api/miniapp/preferences", h.api(h.updatePreferences))
 	mux.HandleFunc("PUT /api/miniapp/settings", h.api(h.updateSettings))
 	mux.HandleFunc("PUT /api/miniapp/reminders", h.api(h.updateReminders))
+	mux.HandleFunc("POST /api/miniapp/prayer-card", h.api(h.sendPrayerCard))
 	mux.HandleFunc("POST /api/miniapp/calendar-subscription", h.api(h.createCalendarSubscription))
 	mux.HandleFunc("DELETE /api/miniapp/calendar-subscription", h.api(h.disableCalendarSubscription))
 	mux.HandleFunc("GET /api/miniapp/calendar.ics", h.calendarDownload)
@@ -182,6 +206,39 @@ func (h *Handler) updateLocation(w http.ResponseWriter, r *http.Request, identit
 	}
 	data.LocationName = resolved.City
 	return writeJSON(w, data)
+}
+
+func (h *Handler) sendPrayerCard(w http.ResponseWriter, r *http.Request, identity Identity) error {
+	if h.photoSender == nil {
+		return fmt.Errorf("prayer card sender is unavailable")
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, maxPrayerCardBytes+(1<<20))
+	if err := r.ParseMultipartForm(maxPrayerCardBytes); err != nil {
+		return badRequest("invalid_prayer_card")
+	}
+	file, _, err := r.FormFile("card")
+	if err != nil {
+		return badRequest("invalid_prayer_card")
+	}
+	defer file.Close() //nolint:errcheck
+	content, err := io.ReadAll(io.LimitReader(file, maxPrayerCardBytes+1))
+	if err != nil || len(content) == 0 || len(content) > maxPrayerCardBytes {
+		return badRequest("invalid_prayer_card")
+	}
+	config, err := png.DecodeConfig(bytes.NewReader(content))
+	if err != nil || config.Width != 1080 || config.Height != 1350 {
+		return badRequest("invalid_prayer_card")
+	}
+	if _, err := h.photoSender.SendPhoto(r.Context(), &botapi.SendPhotoParams{
+		ChatID: identity.UserID,
+		Photo: &models.InputFileUpload{
+			Filename: "prayer-times.png",
+			Data:     bytes.NewReader(content),
+		},
+	}); err != nil {
+		return fmt.Errorf("send prayer card to Telegram chat: %w", err)
+	}
+	return writeJSON(w, map[string]string{"status": "sent"})
 }
 
 type settingsRequest struct {
@@ -775,7 +832,7 @@ func labels(locale i18n.Locale) map[string]string {
 		"home_add": copy.HomeAdd, "home_added": copy.HomeAdded,
 		"share_title": copy.ShareTitle, "share_help": copy.ShareHelp,
 		"share_action": copy.ShareAction, "share_preparing": copy.SharePreparing,
-		"share_downloaded": copy.ShareDownloaded, "share_failed": copy.ShareFailed,
+		"share_sent": copy.ShareSent, "share_failed": copy.ShareFailed,
 		"share_card_heading": copy.ShareCardHeading, "share_card_footer": copy.ShareCardFooter,
 		"share_message": copy.ShareMessage,
 	}
@@ -795,7 +852,7 @@ type miniAppCopy struct {
 	OfflineTitle, OfflineHelp                             string
 	HomeTitle, HomeHelp, HomeAdd, HomeAdded               string
 	ShareTitle, ShareHelp, ShareAction, SharePreparing    string
-	ShareDownloaded, ShareFailed                          string
+	ShareSent, ShareFailed                                string
 	ShareCardHeading, ShareCardFooter, ShareMessage       string
 }
 
@@ -821,7 +878,7 @@ var miniCopy = map[string]miniAppCopy{
 		HomeAdd: "Add to home screen", HomeAdded: "Added to home screen",
 		ShareTitle: "Share prayer card", ShareHelp: "Create a beautiful image with the selected day’s prayer times.",
 		ShareAction: "Create & share", SharePreparing: "Creating card…",
-		ShareDownloaded: "Card saved. Share it from your gallery.", ShareFailed: "The prayer card could not be created.",
+		ShareSent: "Card sent to this bot chat. Open the chat to save or forward it.", ShareFailed: "The prayer card could not be created.",
 		ShareCardHeading: "Daily prayer times", ShareCardFooter: "Global Prayer Times",
 		ShareMessage: "Prayer times",
 	},
@@ -846,7 +903,7 @@ var miniCopy = map[string]miniAppCopy{
 		HomeAdd: "إضافة إلى الشاشة الرئيسية", HomeAdded: "تمت الإضافة إلى الشاشة الرئيسية",
 		ShareTitle: "مشاركة بطاقة الصلاة", ShareHelp: "أنشئ صورة جميلة بمواقيت اليوم المحدد.",
 		ShareAction: "إنشاء ومشاركة", SharePreparing: "جارٍ إنشاء البطاقة…",
-		ShareDownloaded: "تم حفظ البطاقة. شاركها من معرض الصور.", ShareFailed: "تعذر إنشاء بطاقة الصلاة.",
+		ShareSent: "تم إرسال البطاقة إلى محادثة البوت. افتح المحادثة لحفظها أو إعادة توجيهها.", ShareFailed: "تعذر إنشاء بطاقة الصلاة.",
 		ShareCardHeading: "مواقيت الصلاة اليومية", ShareCardFooter: "مواقيت الصلاة العالمية",
 		ShareMessage: "مواقيت الصلاة",
 	},
@@ -871,7 +928,7 @@ var miniCopy = map[string]miniAppCopy{
 		HomeAdd: "Añadir a inicio", HomeAdded: "Añadido a inicio",
 		ShareTitle: "Compartir tarjeta", ShareHelp: "Crea una imagen con los horarios del día seleccionado.",
 		ShareAction: "Crear y compartir", SharePreparing: "Creando tarjeta…",
-		ShareDownloaded: "Tarjeta guardada. Compártela desde tu galería.", ShareFailed: "No se pudo crear la tarjeta.",
+		ShareSent: "La tarjeta se envió al chat del bot. Abre el chat para guardarla o reenviarla.", ShareFailed: "No se pudo crear la tarjeta.",
 		ShareCardHeading: "Horarios diarios de oración", ShareCardFooter: "Horarios de oración globales",
 		ShareMessage: "Horarios de oración",
 	},
@@ -896,7 +953,7 @@ var miniCopy = map[string]miniAppCopy{
 		HomeAdd: "Ajouter à l’accueil", HomeAdded: "Ajouté à l’accueil",
 		ShareTitle: "Partager une carte", ShareHelp: "Créez une image avec les horaires du jour sélectionné.",
 		ShareAction: "Créer et partager", SharePreparing: "Création de la carte…",
-		ShareDownloaded: "Carte enregistrée. Partagez-la depuis votre galerie.", ShareFailed: "Impossible de créer la carte.",
+		ShareSent: "La carte a été envoyée dans le chat du bot. Ouvrez le chat pour l’enregistrer ou la transférer.", ShareFailed: "Impossible de créer la carte.",
 		ShareCardHeading: "Horaires de prière du jour", ShareCardFooter: "Horaires de prière mondiaux",
 		ShareMessage: "Horaires de prière",
 	},
@@ -921,7 +978,7 @@ var miniCopy = map[string]miniAppCopy{
 		HomeAdd: "Добавить на главный экран", HomeAdded: "Добавлено на главный экран",
 		ShareTitle: "Поделиться карточкой", ShareHelp: "Создайте красивую карточку с расписанием выбранного дня.",
 		ShareAction: "Создать и поделиться", SharePreparing: "Создаём карточку…",
-		ShareDownloaded: "Карточка сохранена. Поделитесь ею из галереи.", ShareFailed: "Не удалось создать карточку.",
+		ShareSent: "Карточка отправлена в чат с ботом. Откройте чат, чтобы сохранить или переслать её.", ShareFailed: "Не удалось создать карточку.",
 		ShareCardHeading: "Время намаза на день", ShareCardFooter: "Global Prayer Times",
 		ShareMessage: "Время намаза",
 	},
@@ -946,7 +1003,7 @@ var miniCopy = map[string]miniAppCopy{
 		HomeAdd: "Ana ekrana ekle", HomeAdded: "Ana ekrana eklendi",
 		ShareTitle: "Namaz kartını paylaş", ShareHelp: "Seçilen günün vakitleriyle güzel bir görsel oluşturun.",
 		ShareAction: "Oluştur ve paylaş", SharePreparing: "Kart oluşturuluyor…",
-		ShareDownloaded: "Kart kaydedildi. Galerinizden paylaşın.", ShareFailed: "Namaz kartı oluşturulamadı.",
+		ShareSent: "Kart bot sohbetine gönderildi. Kaydetmek veya iletmek için sohbeti açın.", ShareFailed: "Namaz kartı oluşturulamadı.",
 		ShareCardHeading: "Günlük namaz vakitleri", ShareCardFooter: "Global Namaz Vakitleri",
 		ShareMessage: "Namaz vakitleri",
 	},
@@ -971,7 +1028,7 @@ var miniCopy = map[string]miniAppCopy{
 		HomeAdd: "Bosh ekranga qo‘shish", HomeAdded: "Bosh ekranga qo‘shildi",
 		ShareTitle: "Namoz kartasini ulashish", ShareHelp: "Tanlangan kun vaqtlari bilan chiroyli rasm yarating.",
 		ShareAction: "Yaratish va ulashish", SharePreparing: "Karta yaratilmoqda…",
-		ShareDownloaded: "Karta saqlandi. Uni galereyadan ulashing.", ShareFailed: "Namoz kartasini yaratib bo‘lmadi.",
+		ShareSent: "Karta bot chatiga yuborildi. Saqlash yoki ulashish uchun chatni oching.", ShareFailed: "Namoz kartasini yaratib bo‘lmadi.",
 		ShareCardHeading: "Kunlik namoz vaqtlari", ShareCardFooter: "Global Namoz Vaqtlari",
 		ShareMessage: "Namoz vaqtlari",
 	},
@@ -996,7 +1053,7 @@ var miniCopy = map[string]miniAppCopy{
 		HomeAdd: "Төп экранга өстәү", HomeAdded: "Төп экранга өстәлде",
 		ShareTitle: "Намаз карточкасын бүлешү", ShareHelp: "Сайланган көн вакытлары белән матур рәсем ясагыз.",
 		ShareAction: "Ясау һәм бүлешү", SharePreparing: "Карточка ясала…",
-		ShareDownloaded: "Карточка сакланды. Галереядән бүлешегез.", ShareFailed: "Намаз карточкасын ясап булмады.",
+		ShareSent: "Карточка бот чатына җибәрелде. Саклау яки җибәрү өчен чатны ачыгыз.", ShareFailed: "Намаз карточкасын ясап булмады.",
 		ShareCardHeading: "Көнлек намаз вакытлары", ShareCardFooter: "Глобаль намаз вакытлары",
 		ShareMessage: "Намаз вакытлары",
 	},

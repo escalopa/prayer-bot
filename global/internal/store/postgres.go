@@ -104,6 +104,17 @@ func qualifySQL(query, schema string) string {
 	return strings.ReplaceAll(query, "global_bot.", qualifiedSchema+".")
 }
 
+// marshalJSONText deliberately returns string rather than []byte. In pgx
+// QueryExecModeExec, []byte is encoded as bytea before PostgreSQL resolves the
+// target JSONB column, producing SQLSTATE 22P02 through transaction poolers.
+func marshalJSONText(value any) (string, error) {
+	encoded, err := json.Marshal(value)
+	if err != nil {
+		return "", err
+	}
+	return string(encoded), nil
+}
+
 func (s *Store) Close() { s.pool.Close() }
 
 func (s *Store) AcquireUpdate(ctx context.Context, updateID int64) (bool, error) {
@@ -335,7 +346,7 @@ func (s *Store) UpsertProfile(ctx context.Context, profile domain.PrayerProfile)
 	if err := profile.Validate(); err != nil {
 		return domain.PrayerProfile{}, err
 	}
-	adjustments, err := json.Marshal(profile.Adjustments)
+	adjustments, err := marshalJSONText(profile.Adjustments)
 	if err != nil {
 		return domain.PrayerProfile{}, err
 	}
@@ -578,7 +589,7 @@ func (s *Store) ClaimDue(ctx context.Context, now time.Time, limit int) (int, er
 
 	for _, schedule := range schedules {
 		deliveryKey := fmt.Sprintf("schedule:%d:%d:v%d", schedule.ID, schedule.NextRunAt.Unix(), schedule.ProfileVersion)
-		payload, err := json.Marshal(domain.DeliveryTask{
+		payload, err := marshalJSONText(domain.DeliveryTask{
 			DeliveryKey: deliveryKey, ScheduleID: schedule.ID, RuleID: schedule.RuleID,
 			ChatID: schedule.ChatID, ProfileVersion: schedule.ProfileVersion, ScheduledFor: schedule.NextRunAt,
 		})
@@ -720,7 +731,7 @@ func enqueueMessageDeletion(
 	reason string,
 ) error {
 	key := fmt.Sprintf("delete:%d:%d:%s", chatID, messageID, reason)
-	payload, err := json.Marshal(domain.MessageDeletionTask{
+	payload, err := marshalJSONText(domain.MessageDeletionTask{
 		DeletionKey: key,
 		ChatID:      chatID,
 		MessageID:   messageID,

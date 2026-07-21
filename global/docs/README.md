@@ -19,6 +19,7 @@ guide belong to `global/` and the `global_bot_testing` or
 | Change reminders, retries, idempotency, or message deletion | [Reminder delivery](reminder-delivery.md) |
 | Change Cloud Run, Cloud Tasks, Scheduler, secrets, or environments | [Runtime and deployment](runtime-and-deployment.md) |
 | Diagnose an incident or perform an operational action | [Operations](operations.md) |
+| Write tests, simulate time, or run integration tests | [Testing](testing.md) |
 
 ## Five-minute mental model
 

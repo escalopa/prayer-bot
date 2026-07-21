@@ -21,16 +21,40 @@ type MessageSender interface {
 	DeleteMessages(context.Context, *botapi.DeleteMessagesParams) (bool, error)
 }
 
+// SenderStore is the subset of *store.Store the Sender depends on. Declaring it
+// as an interface keeps the delivery orchestration unit-testable with fakes,
+// the same way DispatchStore and PlanningStore already isolate their stores.
+type SenderStore interface {
+	Schedule(context.Context, int64) (domain.ReminderSchedule, error)
+	AcquireDelivery(context.Context, domain.DeliveryTask) (bool, error)
+	FailDelivery(context.Context, string, error) error
+	MarkDeliveryStale(context.Context, string) error
+	Profile(context.Context, int64) (domain.PrayerProfile, error)
+	Rule(context.Context, int64) (domain.ReminderRule, error)
+	Chat(context.Context, int64) (domain.Chat, error)
+	CompleteDelivery(context.Context, domain.DeliveryTask, int64, domain.ReminderSchedule, string, time.Time) (int64, error)
+	ClearNotificationMessage(context.Context, int64, int64) error
+}
+
+// nextPlanner is satisfied by *Planner. It lets the Sender be tested without a
+// real prayer calculator or planning store.
+type nextPlanner interface {
+	Next(context.Context, domain.PrayerProfile, domain.ReminderRule, time.Time) (domain.ReminderSchedule, error)
+}
+
 const notificationLifetime = 36 * time.Hour
 
 type Sender struct {
-	store   *store.Store
-	planner *Planner
+	store   SenderStore
+	planner nextPlanner
 	bot     MessageSender
+	// now is injected so the scheduled cleanup expiry is deterministic in
+	// tests. Production wiring leaves it as time.Now.
+	now func() time.Time
 }
 
-func NewSender(storage *store.Store, planner *Planner, bot MessageSender) *Sender {
-	return &Sender{store: storage, planner: planner, bot: bot}
+func NewSender(storage SenderStore, planner nextPlanner, bot MessageSender) *Sender {
+	return &Sender{store: storage, planner: planner, bot: bot, now: time.Now}
 }
 
 func (s *Sender) Process(ctx context.Context, task domain.DeliveryTask) error {
@@ -80,9 +104,19 @@ func (s *Sender) Process(ctx context.Context, task domain.DeliveryTask) error {
 	if err != nil {
 		return fail(fmt.Errorf("Telegram reminder send failed"))
 	}
+	// After a successful send, any failure must compensate by deleting the
+	// just-sent message before returning a retryable error. The message slot
+	// never recorded this message ID, so the Cloud Tasks retry cannot find and
+	// replace it; without compensation the retry's send would leave a duplicate.
+	failAfterSend := func(cause error) error {
+		_, _ = s.bot.DeleteMessages(ctx, &botapi.DeleteMessagesParams{
+			ChatID: task.ChatID, MessageIDs: []int{message.ID},
+		})
+		return fail(cause)
+	}
 	next, err := s.planner.Next(ctx, profile, rule, task.ScheduledFor.Add(time.Second))
 	if err != nil {
-		return fail(fmt.Errorf("plan next reminder: %w", err))
+		return failAfterSend(fmt.Errorf("plan next reminder: %w", err))
 	}
 	previousMessageID, err := s.store.CompleteDelivery(
 		ctx,
@@ -90,10 +124,10 @@ func (s *Sender) Process(ctx context.Context, task domain.DeliveryTask) error {
 		int64(message.ID),
 		next,
 		notificationCategory(rule.Kind),
-		time.Now().Add(notificationLifetime),
+		s.now().Add(notificationLifetime),
 	)
 	if err != nil {
-		return fail(fmt.Errorf("complete delivery: %w", err))
+		return failAfterSend(fmt.Errorf("complete delivery: %w", err))
 	}
 	if previousMessageID != 0 && previousMessageID != int64(message.ID) {
 		// Best effort for immediate chat cleanup. The transaction also created

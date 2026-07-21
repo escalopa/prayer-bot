@@ -27,6 +27,7 @@ Two independent prayer-time Telegram bots share one Git repository but **not** o
 | [`global/docs/reminder-delivery.md`](global/docs/reminder-delivery.md) | **Source of truth** for planning, dispatch, retries, idempotency, cleanup categories |
 | [`global/docs/runtime-and-deployment.md`](global/docs/runtime-and-deployment.md) | Env isolation, runtime topology, secrets, **DB connection rules**, deploy workflow |
 | [`global/docs/operations.md`](global/docs/operations.md) | Health/logs, incident triage table, secret rotation, profile sync, recovery |
+| [`global/docs/testing.md`](global/docs/testing.md) | Test strategy: time injection, unit vs. integration, running `TEST_DATABASE_URL` integration tests |
 
 ## Global bot layout
 

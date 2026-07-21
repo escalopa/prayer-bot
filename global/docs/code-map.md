@@ -44,6 +44,7 @@ with the container command, so the three Cloud Run services use the same build.
 | --- | --- |
 | `migrations/` | Versioned schema changes for both global environments |
 | `infra/gcp/` | Cloud Run, Cloud Tasks, Scheduler, service accounts, IAM, Secret Manager, Artifact Registry, and Maps key |
+| `internal/store/integration_test.go` | Env-gated (`TEST_DATABASE_URL`) real-SQL tests; see [Testing](testing.md) |
 | `.github/workflows/global-ci.yaml` | Global Go tests, image build, and Terraform validation |
 | `.github/workflows/global-deploy.yaml` | Manual testing/production build, migration, Terraform apply, and Telegram profile synchronization |
 

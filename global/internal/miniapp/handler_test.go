@@ -240,6 +240,113 @@ func TestBootstrapUsesSignedTelegramIdentityAndReturnsLocationGate(t *testing.T)
 	}
 }
 
+func TestBootstrapIncludesNisabWithCountryDefaultCurrency(t *testing.T) {
+	now := time.Date(2026, time.July, 17, 12, 0, 0, 0, time.UTC)
+	storage := newFakeStorage()
+	storage.chats[42] = domain.Chat{TelegramChatID: 42, Type: "private", LanguageCode: "en"}
+	storage.profiles[42] = domain.PrayerProfile{
+		ChatID: 42, Latitude: 30.044, Longitude: 31.236, Timezone: "Africa/Cairo",
+		CountryCode: "EG", Method: domain.MethodEgyptian, Madhab: domain.MadhabShafii,
+		HighLatitudeRule: domain.HighLatitudeAngleBased,
+	}
+	storage.metalPrices = &domain.MetalPrices{
+		GoldUSDPerOunce: 4053.7, SilverUSDPerOunce: 58.28,
+		Rates:     map[string]float64{"USD": 1, "EGP": 51.3, "TRY": 47.3},
+		FetchedAt: now,
+	}
+	handler := NewHandler("test-token", storage, nil, prayertime.New(), nil, nil)
+	handler.now = func() time.Time { return now }
+	mux := http.NewServeMux()
+	handler.Register(mux)
+
+	request := httptest.NewRequest(http.MethodPost, "/api/miniapp/bootstrap", nil)
+	request.Header.Set("X-Telegram-Init-Data", signedInitData(t, "test-token", now, initDataUser{
+		ID: 42, FirstName: "Amina", LanguageCode: "ar",
+	}))
+	response := httptest.NewRecorder()
+	mux.ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", response.Code, response.Body.String())
+	}
+	var data bootstrapResponse
+	if err := json.Unmarshal(response.Body.Bytes(), &data); err != nil {
+		t.Fatal(err)
+	}
+	if data.Nisab == nil {
+		t.Fatal("expected niSab data in bootstrap response")
+	}
+	if data.Nisab.DefaultCurrency != "EGP" {
+		t.Fatalf("default currency = %q, want EGP", data.Nisab.DefaultCurrency)
+	}
+	if data.Nisab.GoldGrams != domain.NisabGoldGrams || data.Nisab.SilverGrams != domain.NisabSilverGrams {
+		t.Fatalf("unexpected niSab grams: %+v", data.Nisab)
+	}
+	if got := data.Nisab.Currencies; len(got) != 3 || got[0] != "EGP" || got[1] != "TRY" || got[2] != "USD" {
+		t.Fatalf("currencies not sorted as expected: %v", got)
+	}
+	if data.Nisab.Rates["EGP"] != 51.3 {
+		t.Fatalf("missing EGP rate: %+v", data.Nisab.Rates)
+	}
+}
+
+func TestBootstrapNisabFallsBackToUSDWithoutProfile(t *testing.T) {
+	now := time.Date(2026, time.July, 17, 12, 0, 0, 0, time.UTC)
+	storage := newFakeStorage()
+	storage.metalPrices = &domain.MetalPrices{
+		GoldUSDPerOunce: 4053.7, SilverUSDPerOunce: 58.28,
+		Rates:     map[string]float64{"USD": 1, "EGP": 51.3},
+		FetchedAt: now,
+	}
+	handler := NewHandler("test-token", storage, nil, nil, nil, nil)
+	handler.now = func() time.Time { return now }
+	mux := http.NewServeMux()
+	handler.Register(mux)
+
+	request := httptest.NewRequest(http.MethodPost, "/api/miniapp/bootstrap", nil)
+	request.Header.Set("X-Telegram-Init-Data", signedInitData(t, "test-token", now, initDataUser{
+		ID: 7, FirstName: "Yusuf", LanguageCode: "en",
+	}))
+	response := httptest.NewRecorder()
+	mux.ServeHTTP(response, request)
+
+	var data bootstrapResponse
+	if err := json.Unmarshal(response.Body.Bytes(), &data); err != nil {
+		t.Fatal(err)
+	}
+	if !data.NeedsLocation {
+		t.Fatal("expected needs-location gate without a profile")
+	}
+	if data.Nisab == nil || data.Nisab.DefaultCurrency != "USD" {
+		t.Fatalf("expected niSab with USD default, got %+v", data.Nisab)
+	}
+}
+
+func TestLocationUpdatePersistsCountryCode(t *testing.T) {
+	now := time.Date(2026, time.July, 17, 12, 0, 0, 0, time.UTC)
+	storage := newFakeStorage()
+	storage.chats[42] = domain.Chat{TelegramChatID: 42, Type: "private", LanguageCode: "en"}
+	resolver := &fakeResolver{resolved: location.Resolved{
+		Timezone: "Africa/Cairo", PlaceID: "cairo", City: "Cairo", CountryCode: "EG",
+	}}
+	handler := NewHandler("test-token", storage, resolver, prayertime.New(), &fakePlanner{}, nil)
+	handler.now = func() time.Time { return now }
+	mux := http.NewServeMux()
+	handler.Register(mux)
+
+	request := httptest.NewRequest(http.MethodPut, "/api/miniapp/location", strings.NewReader(`{"latitude":30.04442,"longitude":31.23571}`))
+	request.Header.Set("X-Telegram-Init-Data", signedInitData(t, "test-token", now, initDataUser{ID: 42, FirstName: "Amina", LanguageCode: "en"}))
+	response := httptest.NewRecorder()
+	mux.ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", response.Code, response.Body.String())
+	}
+	if got := storage.profiles[42].CountryCode; got != "EG" {
+		t.Fatalf("stored country code = %q, want EG", got)
+	}
+}
+
 func TestLocationUpdatePreservesCalculationSettingsAndRoundsCoordinates(t *testing.T) {
 	now := time.Date(2026, time.July, 17, 12, 0, 0, 0, time.UTC)
 	storage := newFakeStorage()
@@ -547,6 +654,7 @@ type fakeStorage struct {
 	profiles      map[int64]domain.PrayerProfile
 	rules         map[int64][]domain.ReminderRule
 	subscriptions map[int64]domain.CalendarSubscription
+	metalPrices   *domain.MetalPrices
 }
 
 type fakePhotoSender struct {
@@ -616,6 +724,13 @@ func (s *fakeStorage) Profile(_ context.Context, chatID int64) (domain.PrayerPro
 func (s *fakeStorage) UpsertProfile(_ context.Context, profile domain.PrayerProfile) (domain.PrayerProfile, error) {
 	s.profiles[profile.ChatID] = profile
 	return profile, nil
+}
+
+func (s *fakeStorage) MetalPrices(_ context.Context) (domain.MetalPrices, error) {
+	if s.metalPrices == nil {
+		return domain.MetalPrices{}, pgx.ErrNoRows
+	}
+	return *s.metalPrices, nil
 }
 
 func (s *fakeStorage) EnabledRules(_ context.Context, chatID int64) ([]domain.ReminderRule, error) {

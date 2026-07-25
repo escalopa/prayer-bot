@@ -13,6 +13,7 @@ import (
 	"log/slog"
 	"math"
 	"net/http"
+	"sort"
 	"time"
 
 	botapi "github.com/go-telegram/bot"
@@ -40,6 +41,7 @@ type Storage interface {
 	SetLanguage(context.Context, int64, string) error
 	Profile(context.Context, int64) (domain.PrayerProfile, error)
 	UpsertProfile(context.Context, domain.PrayerProfile) (domain.PrayerProfile, error)
+	MetalPrices(context.Context) (domain.MetalPrices, error)
 	EnabledRules(context.Context, int64) ([]domain.ReminderRule, error)
 	EnableDefaultRules(context.Context, int64) error
 	DisableRules(context.Context, int64) error
@@ -180,7 +182,7 @@ func (h *Handler) updateLocation(w http.ResponseWriter, r *http.Request, identit
 	latitude, longitude := domain.RoundedCoordinates(*request.Latitude, *request.Longitude)
 	profile := domain.PrayerProfile{
 		ChatID: identity.UserID, Latitude: latitude, Longitude: longitude,
-		Timezone: resolved.Timezone, PlaceID: resolved.PlaceID,
+		Timezone: resolved.Timezone, PlaceID: resolved.PlaceID, CountryCode: resolved.CountryCode,
 		Method: location.RecommendedMethod(resolved.CountryCode), Madhab: domain.MadhabShafii,
 		HighLatitudeRule: domain.HighLatitudeAngleBased,
 	}
@@ -468,8 +470,23 @@ type bootstrapResponse struct {
 	Calendar      calendarSubscriptionResponse `json:"calendar"`
 	Occasions     []occasionResponse           `json:"occasions,omitempty"`
 	Reminders     reminderResponse             `json:"reminders"`
+	Nisab         *nisabResponse               `json:"nisab,omitempty"`
 	Options       optionsResponse              `json:"options"`
 	Labels        map[string]string            `json:"labels"`
+}
+
+// nisabResponse carries everything the Mini App Zakat calculator needs to show
+// the niSab threshold and compute zakat in the user's currency, entirely client
+// side. Prices are USD per troy ounce; Rates convert USD to each currency.
+type nisabResponse struct {
+	GoldUSDPerOunce   float64            `json:"gold_usd_per_ounce"`
+	SilverUSDPerOunce float64            `json:"silver_usd_per_ounce"`
+	GoldGrams         float64            `json:"gold_grams"`
+	SilverGrams       float64            `json:"silver_grams"`
+	Rates             map[string]float64 `json:"rates"`
+	Currencies        []string           `json:"currencies"`
+	DefaultCurrency   string             `json:"default_currency"`
+	FetchedAt         string             `json:"fetched_at"`
 }
 
 type userResponse struct {
@@ -563,13 +580,24 @@ func (h *Handler) build(ctx context.Context, identity Identity) (bootstrapRespon
 	if err != nil {
 		return bootstrapResponse{}, err
 	}
+	prices, pricesErr := h.store.MetalPrices(ctx)
+	havePrices := pricesErr == nil
+	if pricesErr != nil && !store.IsNotFound(pricesErr) {
+		return bootstrapResponse{}, fmt.Errorf("load metal prices: %w", pricesErr)
+	}
 	profile, err := h.store.Profile(ctx, identity.UserID)
 	if store.IsNotFound(err) {
 		response.NeedsLocation = true
+		if havePrices {
+			response.Nisab = buildNisab(prices, domain.PrayerProfile{})
+		}
 		return response, nil
 	}
 	if err != nil {
 		return bootstrapResponse{}, fmt.Errorf("load profile: %w", err)
+	}
+	if havePrices {
+		response.Nisab = buildNisab(prices, profile)
 	}
 	subscription, err := h.store.CalendarSubscription(ctx, identity.UserID)
 	if err == nil {
@@ -682,6 +710,41 @@ func formatSchedule(schedule domain.DaySchedule, profile domain.PrayerProfile, l
 		}
 	}
 	return result
+}
+
+func buildNisab(prices domain.MetalPrices, profile domain.PrayerProfile) *nisabResponse {
+	currencies := make([]string, 0, len(prices.Rates))
+	for code := range prices.Rates {
+		currencies = append(currencies, code)
+	}
+	sort.Strings(currencies)
+	return &nisabResponse{
+		GoldUSDPerOunce:   prices.GoldUSDPerOunce,
+		SilverUSDPerOunce: prices.SilverUSDPerOunce,
+		GoldGrams:         domain.NisabGoldGrams,
+		SilverGrams:       domain.NisabSilverGrams,
+		Rates:             prices.Rates,
+		Currencies:        currencies,
+		DefaultCurrency:   defaultCurrency(prices.Rates, profile),
+		FetchedAt:         prices.FetchedAt.UTC().Format(time.RFC3339),
+	}
+}
+
+// defaultCurrency picks the calculator's initial currency from the profile's
+// country (or timezone as a fallback for profiles saved before the country was
+// persisted), always yielding a currency present in the rate table.
+func defaultCurrency(rates map[string]float64, profile domain.PrayerProfile) string {
+	currency := location.CurrencyForCountry(profile.CountryCode)
+	if currency == "" {
+		currency = location.CurrencyForTimezone(profile.Timezone)
+	}
+	if currency == "" {
+		return "USD"
+	}
+	if _, ok := rates[currency]; !ok {
+		return "USD"
+	}
+	return currency
 }
 
 func options(locale i18n.Locale) optionsResponse {

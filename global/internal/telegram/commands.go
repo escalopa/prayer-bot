@@ -32,7 +32,7 @@ func (h *Handler) handleLocation(ctx context.Context, message *models.Message, l
 	latitude, longitude = domain.RoundedCoordinates(latitude, longitude)
 	profile := domain.PrayerProfile{
 		ChatID: message.Chat.ID, Latitude: latitude, Longitude: longitude,
-		Timezone: resolved.Timezone, PlaceID: resolved.PlaceID,
+		Timezone: resolved.Timezone, PlaceID: resolved.PlaceID, CountryCode: resolved.CountryCode,
 		Method: location.RecommendedMethod(resolved.CountryCode), Madhab: domain.MadhabShafii,
 		HighLatitudeRule: domain.HighLatitudeAngleBased,
 	}

@@ -38,6 +38,13 @@ Scheduler job, or separate runtime. Google fetches the URL on its own schedule;
 each request calculates the current rolling 30-day window from the user's saved
 profile.
 
+The Zakat niSab pricing integration adds no new service, Scheduler job, or
+secret. The existing daily `/maintenance` job on the dispatch service fetches
+gold/silver spot prices and a USD currency rate table from two free, key-less
+HTTP APIs and caches them in one PostgreSQL row. Both calls use default Cloud
+Run egress and run at most once a day regardless of user volume. The refresh is
+best-effort and never blocks retention cleanup.
+
 ## Secrets
 
 Runtime services read environment-specific Secret Manager values:

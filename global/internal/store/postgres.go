@@ -323,11 +323,11 @@ func (s *Store) Profile(ctx context.Context, chatID int64) (domain.PrayerProfile
 	var adjustments []byte
 	err := s.pool.QueryRow(ctx, `
 		SELECT chat_id, latitude::float8, longitude::float8, timezone_id,
-		       google_place_id, user_location_label, method, madhab,
+		       google_place_id, user_location_label, country_code, method, madhab,
 		       high_latitude_rule, adjustments, hijri_adjustment, version, updated_at
 		FROM global_bot.prayer_profiles WHERE chat_id = $1`, chatID).Scan(
 		&profile.ChatID, &profile.Latitude, &profile.Longitude, &profile.Timezone,
-		&profile.PlaceID, &profile.LocationLabel, &method, &madhab,
+		&profile.PlaceID, &profile.LocationLabel, &profile.CountryCode, &method, &madhab,
 		&highLatitude, &adjustments, &profile.HijriAdjustment, &profile.Version, &profile.UpdatedAt,
 	)
 	if err != nil {
@@ -353,17 +353,18 @@ func (s *Store) UpsertProfile(ctx context.Context, profile domain.PrayerProfile)
 	err = s.pool.QueryRow(ctx, `
 		INSERT INTO global_bot.prayer_profiles
 			(chat_id, latitude, longitude, timezone_id, google_place_id, user_location_label,
-			 method, madhab, high_latitude_rule, adjustments, hijri_adjustment)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+			 country_code, method, madhab, high_latitude_rule, adjustments, hijri_adjustment)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 		ON CONFLICT (chat_id) DO UPDATE SET
 			latitude = excluded.latitude, longitude = excluded.longitude,
 			timezone_id = excluded.timezone_id, google_place_id = excluded.google_place_id,
-			user_location_label = excluded.user_location_label, method = excluded.method,
-			madhab = excluded.madhab, high_latitude_rule = excluded.high_latitude_rule,
+			user_location_label = excluded.user_location_label, country_code = excluded.country_code,
+			method = excluded.method, madhab = excluded.madhab,
+			high_latitude_rule = excluded.high_latitude_rule,
 			adjustments = excluded.adjustments, hijri_adjustment = excluded.hijri_adjustment,
 			version = global_bot.prayer_profiles.version + 1, updated_at = now()
 		RETURNING version, updated_at`, profile.ChatID, profile.Latitude, profile.Longitude,
-		profile.Timezone, profile.PlaceID, profile.LocationLabel, profile.Method,
+		profile.Timezone, profile.PlaceID, profile.LocationLabel, profile.CountryCode, profile.Method,
 		profile.Madhab, profile.HighLatitudeRule, adjustments, profile.HijriAdjustment).Scan(&profile.Version, &profile.UpdatedAt)
 	if err != nil {
 		return domain.PrayerProfile{}, err
@@ -648,6 +649,44 @@ func (s *Store) Cleanup(ctx context.Context, now time.Time, limit int) (int64, e
 		return updates.RowsAffected(), err
 	}
 	return updates.RowsAffected() + deliveries.RowsAffected(), nil
+}
+
+// MetalPrices returns the single cached precious-metal price row. It returns
+// pgx.ErrNoRows (see IsNotFound) until the maintenance job has fetched prices at
+// least once.
+func (s *Store) MetalPrices(ctx context.Context) (domain.MetalPrices, error) {
+	var prices domain.MetalPrices
+	var rates []byte
+	err := s.pool.QueryRow(ctx, `
+		SELECT gold_usd_per_ounce::float8, silver_usd_per_ounce::float8, rates, fetched_at
+		FROM global_bot.metal_prices WHERE id = 1`).Scan(
+		&prices.GoldUSDPerOunce, &prices.SilverUSDPerOunce, &rates, &prices.FetchedAt)
+	if err != nil {
+		return domain.MetalPrices{}, err
+	}
+	if err := json.Unmarshal(rates, &prices.Rates); err != nil {
+		return domain.MetalPrices{}, fmt.Errorf("decode currency rates: %w", err)
+	}
+	return prices, nil
+}
+
+// UpsertMetalPrices replaces the cached price row. fetched_at is stamped by the
+// database so a successful call always reflects when the data was persisted.
+func (s *Store) UpsertMetalPrices(ctx context.Context, prices domain.MetalPrices) error {
+	rates, err := marshalJSONText(prices.Rates)
+	if err != nil {
+		return err
+	}
+	_, err = s.pool.Exec(ctx, `
+		INSERT INTO global_bot.metal_prices
+			(id, gold_usd_per_ounce, silver_usd_per_ounce, rates, fetched_at)
+		VALUES (1, $1, $2, $3, now())
+		ON CONFLICT (id) DO UPDATE SET
+			gold_usd_per_ounce = excluded.gold_usd_per_ounce,
+			silver_usd_per_ounce = excluded.silver_usd_per_ounce,
+			rates = excluded.rates, fetched_at = now()`,
+		prices.GoldUSDPerOunce, prices.SilverUSDPerOunce, rates)
+	return err
 }
 
 func (s *Store) AcquireDelivery(ctx context.Context, task domain.DeliveryTask) (bool, error) {

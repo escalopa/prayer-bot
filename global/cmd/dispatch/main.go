@@ -9,6 +9,7 @@ import (
 
 	"github.com/escalopa/prayer-bot/global/internal/config"
 	"github.com/escalopa/prayer-bot/global/internal/httpx"
+	"github.com/escalopa/prayer-bot/global/internal/metals"
 	"github.com/escalopa/prayer-bot/global/internal/reminders"
 	"github.com/escalopa/prayer-bot/global/internal/store"
 )
@@ -34,6 +35,7 @@ func main() {
 	}
 	defer enqueuer.Close()
 	dispatcher := reminders.NewDispatcher(storage, enqueuer, cfg.DispatchBatchSize)
+	metalsClient := metals.NewClient(cfg.HTTPTimeout)
 
 	mux := http.NewServeMux()
 	httpx.HealthMux(mux)
@@ -48,6 +50,16 @@ func main() {
 		w.WriteHeader(http.StatusNoContent)
 	})
 	mux.HandleFunc("POST /maintenance", func(w http.ResponseWriter, r *http.Request) {
+		// The niSab price refresh is best-effort: a failure logs a warning and
+		// keeps the previously cached prices, and must not fail the request or
+		// block retention cleanup.
+		if prices, err := metalsClient.Fetch(r.Context()); err != nil {
+			logger.Warn("metal price refresh failed; keeping cached prices", "error", err)
+		} else if err := storage.UpsertMetalPrices(r.Context(), prices); err != nil {
+			logger.Warn("metal price persist failed; keeping cached prices", "error", err)
+		} else {
+			logger.Info("metal prices refreshed")
+		}
 		count, err := storage.Cleanup(r.Context(), time.Now(), 1000)
 		if err != nil {
 			logger.Error("retention cleanup failed", "error", err)

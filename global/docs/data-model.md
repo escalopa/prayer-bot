@@ -106,6 +106,11 @@ profile version increases whenever a change can affect calculated times.
 Queued tasks carry this version and become stale instead of sending after a
 profile change.
 
+`country_code` (ISO 3166-1 alpha-2) is written from the country already resolved
+on every location change. It is used only to default the Zakat calculator's
+currency and never affects calculated prayer times, so it rides on the existing
+location-driven version bump rather than causing its own.
+
 ### `reminder_rules`
 
 Represents desired behavior, not a queued job. The unique key prevents duplicate
@@ -156,6 +161,15 @@ keeps the same identity when its calculated time changes. Disabling the row
 immediately rejects future feed fetches; reconnecting issues a new feed token
 but keeps the UID namespace stable.
 
+### `metal_prices`
+
+A single shared row (`CHECK (id = 1)`) caching the daily gold and silver spot
+price (USD per troy ounce) and a USD-based currency rate table (`rates` JSONB).
+It is global infrastructure, not chat-owned: it has no `chat_id`, is not part of
+the `chats` cascade, and is untouched by `/delete_me`. The maintenance job
+overwrites it once a day; the Mini App reads it to localize the Zakat niSab. It
+contains only public market data — no user identifiers.
+
 ## Retention
 
 | Data | Retention behavior |
@@ -165,6 +179,7 @@ but keeps the UID namespace stable.
 | Telegram notification messages | Scheduled for deletion after 36 hours |
 | Profiles and reminder configuration | Kept until `/delete_me` or chat deletion |
 | Calendar subscription | Kept until `/delete_me`; its feed token can be disabled or replaced |
+| Cached metal prices | Single row overwritten daily; kept indefinitely |
 | Feedback content | Never stored in PostgreSQL |
 
 Retention runs in bounded batches from the authenticated maintenance Scheduler

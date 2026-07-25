@@ -152,6 +152,34 @@ Google decides when it refreshes subscribed calendars. The URL is a bearer
 credential and must remain private. It and the event UIDs expose neither the
 Telegram user ID nor bot token.
 
+## Daily maintenance and niSab pricing
+
+Cloud Scheduler invokes the dispatch service's `/maintenance` endpoint once a
+day. Besides retention cleanup, it refreshes the cached precious-metal prices
+used by the Zakat calculator:
+
+1. Fetch gold (XAU) and silver (XAG) spot prices, USD per troy ounce, from a
+   free, key-less metals API.
+2. Fetch a USD-based currency rate table from a free, key-less FX API, because
+   the metals API covers only a few major currencies while the bot's audience
+   needs many more.
+3. Validate the data (positive prices, USD-based rates) and upsert the single
+   `metal_prices` row.
+
+The refresh is best-effort: any upstream or persistence failure logs a warning
+and keeps the previously cached row, and never blocks retention cleanup or fails
+the maintenance request. Once-a-day granularity is sufficient because the niSab
+threshold does not need intraday precision, and the single shared row is read by
+every user, so user volume never affects upstream call counts. These are the
+only server-side external calls outside the location-change path.
+
+The Mini App bootstrap includes a `nisab` block (spot prices, the fixed 85 g
+gold / 595 g silver thresholds, the currency rate table, the sorted list of
+selectable currencies, and a default currency derived from the profile's country
+— or timezone as a fallback). The Zakat calculation itself runs entirely in the
+browser. The block is omitted until the maintenance job has populated prices at
+least once.
+
 ## Feedback
 
 Feedback is accepted only after an explicit localized prompt. Private text,

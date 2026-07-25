@@ -82,6 +82,7 @@ type PrayerProfile struct {
 	Timezone         string
 	PlaceID          string
 	LocationLabel    string // Only a user-supplied label may be persisted here.
+	CountryCode      string // ISO 3166-1 alpha-2, resolved from the location; used only to default currency.
 	Method           Method
 	Madhab           Madhab
 	HighLatitudeRule HighLatitudeRule
@@ -118,6 +119,28 @@ func (p PrayerProfile) Validate() error {
 // Telegram coordinates should only live long enough to resolve the timezone.
 func RoundedCoordinates(latitude, longitude float64) (float64, float64) {
 	return math.Round(latitude*1000) / 1000, math.Round(longitude*1000) / 1000
+}
+
+// Zakat niSab thresholds in grams of pure metal. These are fixed in Islamic law
+// (85 g gold or 595 g silver); the monetary value is derived from live prices.
+const (
+	NisabGoldGrams   = 85.0
+	NisabSilverGrams = 595.0
+)
+
+// MetalPrices is the daily-cached precious-metal spot price used to localize the
+// Zakat niSab. Prices are USD per troy ounce; Rates convert USD to other
+// currencies (base USD, so Rates["USD"] == 1).
+type MetalPrices struct {
+	GoldUSDPerOunce   float64
+	SilverUSDPerOunce float64
+	Rates             map[string]float64
+	FetchedAt         time.Time
+}
+
+// Valid reports whether the prices are usable for a niSab calculation.
+func (p MetalPrices) Valid() bool {
+	return p.GoldUSDPerOunce > 0 && p.SilverUSDPerOunce > 0 && p.Rates["USD"] == 1
 }
 
 type Prayer string

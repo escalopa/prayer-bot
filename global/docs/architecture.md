@@ -79,6 +79,19 @@ The current calculation engine is `github.com/hablullah/go-prayer`, hidden behin
 
 Daily schedule headers use the calculated Umm al-Qura calendar from `github.com/hablullah/go-hijri`. The independently stored -2 to +2 day correction accounts for local moon-sighting differences. It is applied to displayed Hijri dates and occasion matching, but does not affect prayer-time calculations.
 
+## Zakat niSab pricing
+
+The Mini App includes a Zakat calculator whose niSab threshold is fixed in
+Islamic law as grams of gold or silver, but whose monetary value depends on live
+metal prices. A single shared `metal_prices` row caches the daily gold/silver
+spot price and a USD currency rate table. The dispatch service's existing daily
+maintenance job refreshes it from two free, key-less HTTP APIs (a metals price
+feed and a broader USD FX feed), so no new secret, service, or Scheduler job is
+introduced. This and the location-change path are the only server-side external
+calls; everything else remains calculated locally. The cache is public market
+data with no user identifiers, and the calculation runs in the browser from the
+bootstrap snapshot.
+
 ## Delivery behavior
 
 The dispatcher selects only due rows from the partial due-time index using `FOR UPDATE SKIP LOCKED`. It writes a durable outbox record in the same transaction and uses a deterministic Cloud Task name. The sender leases a delivery key before calling Telegram and records the next occurrence after a successful send. Prayer reminders, configurable pre-prayer notices, and opt-in weekly fasting/Al-Kahf reminders share this delivery path; all recurrence calculations use the profile's IANA timezone.

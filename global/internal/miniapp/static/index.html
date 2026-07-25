@@ -165,6 +165,36 @@
         </div>
       </section>
 
+      <section id="zakat-panel" class="panel zakat-panel hidden">
+        <div class="panel-heading zakat-heading">
+          <div>
+            <h2 id="zakat-title">Zakat calculator</h2>
+            <p id="zakat-help" class="panel-help">Calculate zakat on your wealth.</p>
+          </div>
+          <span class="section-icon" aria-hidden="true">💰</span>
+        </div>
+        <div class="zakat-form">
+          <label><span id="zakat-currency-label">Currency</span>
+            <select id="zakat-currency"></select></label>
+          <label><span id="zakat-holdings-label">Your zakatable wealth</span>
+            <input id="zakat-holdings" type="number" min="0" step="any" inputmode="decimal" placeholder="0"></label>
+        </div>
+        <div class="zakat-summary">
+          <div class="zakat-row">
+            <span id="zakat-nisab-label">Niṣāb (minimum)</span>
+            <strong id="zakat-nisab-value" class="zakat-amount"></strong>
+          </div>
+          <p id="zakat-nisab-note" class="tool-note"></p>
+          <div class="zakat-row zakat-due-row">
+            <span id="zakat-due-label">Zakat due (2.5%)</span>
+            <strong id="zakat-due-value" class="zakat-amount zakat-due-amount"></strong>
+          </div>
+          <p id="zakat-status" class="tool-note zakat-status"></p>
+        </div>
+        <p id="zakat-disclaimer" class="occasion-disclaimer"></p>
+        <p id="zakat-updated" class="tool-note zakat-updated"></p>
+      </section>
+
       <section class="panel">
         <div class="panel-heading">
           <h2 id="reminders-title">Reminders</h2>

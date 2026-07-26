@@ -144,6 +144,77 @@ func TestZakatCalculatorMarkupAndLabelsExist(t *testing.T) {
 	}
 }
 
+func TestPlacesLookupMarkupAndLabels(t *testing.T) {
+	html, err := embeddedStatic.ReadFile("static/index.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, marker := range []string{"view-places", "places-map", "places-tiles", "places-grid", "data-view=\"places\""} {
+		if !strings.Contains(string(html), marker) {
+			t.Errorf("index.html is missing places marker %q", marker)
+		}
+	}
+	script, err := embeddedStatic.ReadFile("static/app.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, hook := range []string{"runPlacesLookup", "tile.openstreetmap.org", "/api/miniapp/lookup", "bindPlacesMap"} {
+		if !strings.Contains(string(script), hook) {
+			t.Errorf("app.js is missing places lookup logic %q", hook)
+		}
+	}
+	for _, locale := range i18n.Supported() {
+		localized := labels(locale)
+		for _, key := range []string{"nav_places", "places_title", "places_help"} {
+			if localized[key] == "" {
+				t.Errorf("locale %q has no %q label", locale.Code, key)
+			}
+		}
+	}
+}
+
+func TestLookupReturnsScheduleWithoutChangingProfile(t *testing.T) {
+	now := time.Date(2026, time.July, 26, 12, 0, 0, 0, time.UTC)
+	storage := newFakeStorage()
+	storage.chats[42] = domain.Chat{TelegramChatID: 42, Type: "private", LanguageCode: "en"}
+	storage.profiles[42] = domain.PrayerProfile{
+		ChatID: 42, Latitude: 55.75, Longitude: 37.62, Timezone: "Europe/Moscow",
+		CountryCode: "RU", Method: domain.MethodMWL, Madhab: domain.MadhabHanafi,
+		HighLatitudeRule: domain.HighLatitudeAngleBased, Version: 3,
+	}
+	resolver := &fakeResolver{resolved: location.Resolved{Timezone: "Africa/Cairo", City: "Cairo", CountryCode: "EG"}}
+	planner := &fakePlanner{}
+	handler := NewHandler("test-token", storage, resolver, prayertime.New(), planner, nil)
+	handler.now = func() time.Time { return now }
+	mux := http.NewServeMux()
+	handler.Register(mux)
+
+	request := httptest.NewRequest(http.MethodPost, "/api/miniapp/lookup", strings.NewReader(`{"latitude":30.0444,"longitude":31.2357,"day":"today"}`))
+	request.Header.Set("X-Telegram-Init-Data", signedInitData(t, "test-token", now, initDataUser{ID: 42, FirstName: "Amina", LanguageCode: "en"}))
+	response := httptest.NewRecorder()
+	mux.ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", response.Code, response.Body.String())
+	}
+	var data lookupResponse
+	if err := json.Unmarshal(response.Body.Bytes(), &data); err != nil {
+		t.Fatal(err)
+	}
+	if data.LocationName != "Cairo" {
+		t.Fatalf("location name = %q, want Cairo", data.LocationName)
+	}
+	if data.Schedule.Timezone != "Africa/Cairo" || len(data.Schedule.Prayers) == 0 {
+		t.Fatalf("unexpected schedule: %+v", data.Schedule)
+	}
+	if saved := storage.profiles[42]; saved.Timezone != "Europe/Moscow" || saved.Version != 3 {
+		t.Fatalf("saved profile must be untouched by a lookup, got %+v", saved)
+	}
+	if planner.rebuilds != 0 {
+		t.Fatalf("lookup must not rebuild reminders, rebuilds = %d", planner.rebuilds)
+	}
+}
+
 func TestMiniAppAPIRejectsUnsignedRequests(t *testing.T) {
 	handler := NewHandler("token", nil, nil, nil, nil, nil)
 	mux := http.NewServeMux()

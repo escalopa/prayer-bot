@@ -13,6 +13,9 @@
   let homeScreenStatus = "unknown";
   let zakatCurrency = "";
   let activeView = "prayer";
+  let placesDay = "today";
+  let placesLookupTimer = null;
+  const places = { z: 5, lat: 21.4225, lng: 39.8262, initialized: false, lastKey: "" };
   const troyOunceGrams = 31.1035;
   const offlineCacheVersion = 2;
   const offlineCacheMaxAge = 48 * 60 * 60 * 1000;
@@ -236,8 +239,14 @@
     setText("tab-prayer", labels.nav_prayer);
     setText("tab-dates", labels.nav_dates);
     setText("tab-zakat", labels.nav_zakat);
+    setText("tab-places", labels.nav_places);
     setText("tab-tools", labels.tools);
     setText("tab-settings", labels.settings);
+    setText("places-title", labels.places_title);
+    setText("places-help", labels.places_help);
+    setText("places-today-tab", labels.today);
+    setText("places-tomorrow-tab", labels.tomorrow);
+    setText("places-note", labels.calculated_locally);
   }
 
   function fillSelect(id, options, selected) {
@@ -1053,7 +1062,7 @@
   }
 
   function selectView(view) {
-    const known = ["prayer", "dates", "zakat", "tools", "settings"];
+    const known = ["prayer", "dates", "zakat", "places", "tools", "settings"];
     if (!known.includes(view)) view = "prayer";
     activeView = view;
     known.forEach((name) => {
@@ -1066,6 +1075,154 @@
       tab.setAttribute("aria-current", active ? "page" : "false");
     });
     window.scrollTo({ top: 0, behavior: "auto" });
+    if (view === "places") ensurePlacesMap();
+  }
+
+  // --- "Prayer times anywhere" map lookup (dependency-free OSM slippy map) ---
+
+  function lngToTileX(lng, z) { return (lng + 180) / 360 * Math.pow(2, z); }
+  function latToTileY(lat, z) {
+    const r = lat * Math.PI / 180;
+    return (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * Math.pow(2, z);
+  }
+  function tileXToLng(x, z) { return x / Math.pow(2, z) * 360 - 180; }
+  function tileYToLat(y, z) {
+    const n = Math.PI - 2 * Math.PI * y / Math.pow(2, z);
+    return 180 / Math.PI * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
+  }
+  function clampLat(lat) { return Math.max(-85.05, Math.min(85.05, lat)); }
+  function wrapLng(lng) { return ((lng + 180) % 360 + 360) % 360 - 180; }
+
+  function renderPlacesTiles() {
+    const map = byId("places-map");
+    const layer = byId("places-tiles");
+    const w = map.clientWidth, h = map.clientHeight;
+    if (!w || !h) return;
+    layer.style.transform = "";
+    layer.replaceChildren();
+    const z = places.z;
+    const world = Math.pow(2, z);
+    const originX = lngToTileX(places.lng, z) * 256 - w / 2;
+    const originY = latToTileY(places.lat, z) * 256 - h / 2;
+    const firstCol = Math.floor(originX / 256), lastCol = Math.floor((originX + w) / 256);
+    const firstRow = Math.floor(originY / 256), lastRow = Math.floor((originY + h) / 256);
+    for (let ty = firstRow; ty <= lastRow; ty += 1) {
+      if (ty < 0 || ty >= world) continue;
+      for (let tx = firstCol; tx <= lastCol; tx += 1) {
+        const wx = ((tx % world) + world) % world;
+        const img = document.createElement("img");
+        img.src = `https://tile.openstreetmap.org/${z}/${wx}/${ty}.png`;
+        img.alt = "";
+        img.style.left = `${tx * 256 - originX}px`;
+        img.style.top = `${ty * 256 - originY}px`;
+        layer.append(img);
+      }
+    }
+  }
+
+  function finishPan(dx, dy) {
+    const z = places.z;
+    places.lng = wrapLng(tileXToLng((lngToTileX(places.lng, z) * 256 - dx) / 256, z));
+    places.lat = clampLat(tileYToLat((latToTileY(places.lat, z) * 256 - dy) / 256, z));
+    renderPlacesTiles();
+    schedulePlacesLookup();
+  }
+
+  function setPlacesZoom(delta) {
+    places.z = Math.max(2, Math.min(18, places.z + delta));
+    renderPlacesTiles();
+    schedulePlacesLookup();
+  }
+
+  function ensurePlacesMap() {
+    places.initialized = true;
+    renderPlacesTiles();
+    if (!places.lastKey) schedulePlacesLookup();
+  }
+
+  function schedulePlacesLookup() {
+    clearTimeout(placesLookupTimer);
+    setText("places-location", "…");
+    placesLookupTimer = setTimeout(runPlacesLookup, 450);
+  }
+
+  async function runPlacesLookup() {
+    const lat = Number(places.lat.toFixed(4));
+    const lng = Number(places.lng.toFixed(4));
+    const key = `${lat},${lng},${placesDay}`;
+    if (key === places.lastKey) return;
+    places.lastKey = key;
+    try {
+      const data = await request("/api/miniapp/lookup", "POST", { latitude: lat, longitude: lng, day: placesDay });
+      setText("places-location", data.location_name || "");
+      renderPlacesSchedule(data.schedule);
+    } catch (_) {
+      places.lastKey = "";
+      setText("places-location", state ? state.labels.temporary_failure : "");
+    }
+  }
+
+  function renderPlacesSchedule(schedule) {
+    if (!schedule) return;
+    setText("places-gregorian", schedule.gregorian);
+    setText("places-hijri", `☾ ${schedule.hijri}`);
+    setText("places-timezone", schedule.timezone);
+    const grid = byId("places-grid");
+    grid.replaceChildren();
+    schedule.prayers.forEach((prayer) => {
+      const item = document.createElement("div");
+      item.className = "prayer";
+      const emoji = document.createElement("span");
+      emoji.className = "prayer-emoji";
+      emoji.textContent = prayer.emoji;
+      const name = document.createElement("span");
+      name.className = "prayer-name";
+      name.textContent = prayer.name;
+      const time = document.createElement("strong");
+      time.className = "prayer-time";
+      time.textContent = prayer.time;
+      item.append(emoji, name, time);
+      grid.append(item);
+    });
+  }
+
+  function selectPlacesDay(day) {
+    placesDay = day;
+    ["today", "tomorrow"].forEach((name) => {
+      const tab = byId(`places-${name}-tab`);
+      const active = name === day;
+      tab.classList.toggle("active", active);
+      tab.setAttribute("aria-selected", String(active));
+    });
+    places.lastKey = "";
+    runPlacesLookup();
+  }
+
+  function bindPlacesMap() {
+    const map = byId("places-map");
+    if (!map) return;
+    let dragging = false, startX = 0, startY = 0, dx = 0, dy = 0;
+    map.addEventListener("pointerdown", (event) => {
+      dragging = true; startX = event.clientX; startY = event.clientY; dx = 0; dy = 0;
+      try { map.setPointerCapture(event.pointerId); } catch (_) { /* capture is best-effort */ }
+    });
+    map.addEventListener("pointermove", (event) => {
+      if (!dragging) return;
+      dx = event.clientX - startX; dy = event.clientY - startY;
+      byId("places-tiles").style.transform = `translate(${dx}px, ${dy}px)`;
+    });
+    const end = (event) => {
+      if (!dragging) return;
+      dragging = false;
+      try { map.releasePointerCapture(event.pointerId); } catch (_) { /* best-effort */ }
+      if (dx || dy) finishPan(dx, dy); else renderPlacesTiles();
+    };
+    map.addEventListener("pointerup", end);
+    map.addEventListener("pointercancel", () => { dragging = false; renderPlacesTiles(); });
+    byId("places-zoom-in").addEventListener("click", () => setPlacesZoom(1));
+    byId("places-zoom-out").addEventListener("click", () => setPlacesZoom(-1));
+    byId("places-today-tab").addEventListener("click", () => selectPlacesDay("today"));
+    byId("places-tomorrow-tab").addEventListener("click", () => selectPlacesDay("tomorrow"));
   }
 
   function selectDay(day) {
@@ -1084,6 +1241,7 @@
   document.querySelectorAll(".tab").forEach((tab) => {
     tab.addEventListener("click", () => selectView(tab.dataset.view));
   });
+  bindPlacesMap();
   byId("location-primary").addEventListener("click", (event) => updateLocation(event.currentTarget));
   byId("location-secondary").addEventListener("click", (event) => updateLocation(event.currentTarget));
   byId("start-compass").addEventListener("click", startCompass);

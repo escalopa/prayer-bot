@@ -106,6 +106,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 		http.Redirect(w, r, "/app/", http.StatusPermanentRedirect)
 	})
 	mux.HandleFunc("POST /api/miniapp/bootstrap", h.api(h.bootstrap))
+	mux.HandleFunc("POST /api/miniapp/lookup", h.api(h.lookup))
 	mux.HandleFunc("PUT /api/miniapp/location", h.api(h.updateLocation))
 	mux.HandleFunc("PUT /api/miniapp/preferences", h.api(h.updatePreferences))
 	mux.HandleFunc("PUT /api/miniapp/settings", h.api(h.updateSettings))
@@ -208,6 +209,79 @@ func (h *Handler) updateLocation(w http.ResponseWriter, r *http.Request, identit
 	}
 	data.LocationName = resolved.City
 	return writeJSON(w, data)
+}
+
+type lookupRequest struct {
+	Latitude  *float64 `json:"latitude"`
+	Longitude *float64 `json:"longitude"`
+	Day       string   `json:"day"`
+}
+
+type lookupResponse struct {
+	LocationName string           `json:"location_name"`
+	Schedule     scheduleResponse `json:"schedule"`
+}
+
+// lookup returns prayer times for an arbitrary place and day without changing
+// the caller's saved location. The computed profile is transient (never
+// persisted), reuses the caller's calculation preferences when available, and
+// falls back to sensible defaults for the looked-up country.
+func (h *Handler) lookup(w http.ResponseWriter, r *http.Request, identity Identity) error {
+	var request lookupRequest
+	if err := decodeJSON(w, r, &request); err != nil {
+		return badRequest("invalid_request")
+	}
+	if request.Latitude == nil || request.Longitude == nil ||
+		*request.Latitude < -90 || *request.Latitude > 90 ||
+		*request.Longitude < -180 || *request.Longitude > 180 {
+		return badRequest("invalid_location")
+	}
+	resolved, err := h.resolver.Resolve(r.Context(), *request.Latitude, *request.Longitude)
+	if err != nil {
+		return fmt.Errorf("resolve lookup location: %w", err)
+	}
+	latitude, longitude := domain.RoundedCoordinates(*request.Latitude, *request.Longitude)
+	profile := domain.PrayerProfile{
+		Latitude: latitude, Longitude: longitude, Timezone: resolved.Timezone,
+		Method:           location.RecommendedMethod(resolved.CountryCode),
+		Madhab:           domain.MadhabShafii,
+		HighLatitudeRule: domain.HighLatitudeAngleBased,
+	}
+	current, err := h.store.Profile(r.Context(), identity.UserID)
+	if err == nil {
+		profile.Method = current.Method
+		profile.Madhab = current.Madhab
+		profile.HighLatitudeRule = current.HighLatitudeRule
+		profile.Adjustments = current.Adjustments
+		profile.HijriAdjustment = current.HijriAdjustment
+	} else if !store.IsNotFound(err) {
+		return fmt.Errorf("load profile: %w", err)
+	}
+	locale := i18n.Resolve(identity.LanguageCode)
+	if chat, err := h.store.Chat(r.Context(), identity.UserID); err == nil {
+		locale = i18n.Resolve(chat.LanguageCode)
+	} else if !store.IsNotFound(err) {
+		return fmt.Errorf("load chat: %w", err)
+	}
+	now := h.now()
+	schedule, err := h.calculator.Day(r.Context(), now, profile)
+	if err != nil {
+		return fmt.Errorf("calculate lookup schedule: %w", err)
+	}
+	if request.Day == "tomorrow" {
+		schedule, err = h.calculator.Day(r.Context(), now.In(schedule.Date.Location()).AddDate(0, 0, 1), profile)
+		if err != nil {
+			return fmt.Errorf("calculate lookup schedule: %w", err)
+		}
+	}
+	name := resolved.City
+	if name == "" {
+		name = resolved.Timezone
+	}
+	return writeJSON(w, lookupResponse{
+		LocationName: name,
+		Schedule:     formatSchedule(schedule, profile, locale),
+	})
 }
 
 func (h *Handler) sendPrayerCard(w http.ResponseWriter, r *http.Request, identity Identity) error {
@@ -904,6 +978,7 @@ func labels(locale i18n.Locale) map[string]string {
 		"zakat_due": copy.ZakatDue, "zakat_below": copy.ZakatBelow,
 		"zakat_disclaimer": copy.ZakatDisclaimer, "zakat_updated": copy.ZakatUpdated,
 		"nav_prayer": copy.NavPrayer, "nav_dates": copy.NavDates, "nav_zakat": copy.NavZakat,
+		"nav_places": copy.NavPlaces, "places_title": copy.PlacesTitle, "places_help": copy.PlacesHelp,
 	}
 }
 
@@ -926,7 +1001,8 @@ type miniAppCopy struct {
 	ZakatTitle, ZakatHelp, ZakatCurrency, ZakatHoldings   string
 	ZakatNisab, ZakatNisabNote, ZakatDue, ZakatBelow      string
 	ZakatDisclaimer, ZakatUpdated                         string
-	NavPrayer, NavDates, NavZakat                         string
+	NavPrayer, NavDates, NavZakat, NavPlaces              string
+	PlacesTitle, PlacesHelp                               string
 }
 
 var miniCopy = map[string]miniAppCopy{
@@ -960,7 +1036,9 @@ var miniCopy = map[string]miniAppCopy{
 		ZakatDue: "Zakat due (2.5%)", ZakatBelow: "Your wealth is below the nisab, so no zakat is due.",
 		ZakatDisclaimer: "Estimate based on live gold and silver prices. Consult a scholar for your situation.",
 		ZakatUpdated:    "Prices as of {date}",
-		NavPrayer:       "Prayer", NavDates: "Dates", NavZakat: "Zakat",
+		NavPrayer:       "Prayer", NavDates: "Dates", NavZakat: "Zakat", NavPlaces: "Places",
+		PlacesTitle: "Prayer times anywhere",
+		PlacesHelp:  "Drag the map to any place to see its prayer times.",
 	},
 	"ar": {
 		Save: "حفظ التغييرات", Saved: "تم الحفظ", Loading: "جارٍ تحميل مواقيت الصلاة…",
@@ -992,7 +1070,9 @@ var miniCopy = map[string]miniAppCopy{
 		ZakatDue: "الزكاة المستحقة (2.5%)", ZakatBelow: "مالك دون النصاب، فلا زكاة عليك.",
 		ZakatDisclaimer: "تقدير بناءً على أسعار الذهب والفضة الحالية. استشر أهل العلم لحالتك.",
 		ZakatUpdated:    "الأسعار بتاريخ {date}",
-		NavPrayer:       "الصلاة", NavDates: "المناسبات", NavZakat: "الزكاة",
+		NavPrayer:       "الصلاة", NavDates: "المناسبات", NavZakat: "الزكاة", NavPlaces: "أماكن",
+		PlacesTitle: "مواقيت الصلاة في أي مكان",
+		PlacesHelp:  "حرّك الخريطة إلى أي مكان لعرض مواقيت الصلاة فيه.",
 	},
 	"es": {
 		Save: "Guardar cambios", Saved: "Guardado", Loading: "Cargando horarios de oración…",
@@ -1024,7 +1104,9 @@ var miniCopy = map[string]miniAppCopy{
 		ZakatDue: "Zakat a pagar (2,5%)", ZakatBelow: "Tu patrimonio está por debajo del nisab, así que no debes zakat.",
 		ZakatDisclaimer: "Estimación basada en precios actuales del oro y la plata. Consulta a un experto para tu caso.",
 		ZakatUpdated:    "Precios al {date}",
-		NavPrayer:       "Oración", NavDates: "Fechas", NavZakat: "Zakat",
+		NavPrayer:       "Oración", NavDates: "Fechas", NavZakat: "Zakat", NavPlaces: "Lugares",
+		PlacesTitle: "Horarios en cualquier lugar",
+		PlacesHelp:  "Arrastra el mapa a cualquier lugar para ver sus horarios de oración.",
 	},
 	"fr": {
 		Save: "Enregistrer", Saved: "Enregistré", Loading: "Chargement des horaires de prière…",
@@ -1056,7 +1138,9 @@ var miniCopy = map[string]miniAppCopy{
 		ZakatDue: "Zakat à verser (2,5%)", ZakatBelow: "Votre patrimoine est inférieur au nisab, aucune zakat n’est due.",
 		ZakatDisclaimer: "Estimation basée sur les cours actuels de l’or et de l’argent. Consultez un savant pour votre cas.",
 		ZakatUpdated:    "Cours au {date}",
-		NavPrayer:       "Prière", NavDates: "Dates", NavZakat: "Zakat",
+		NavPrayer:       "Prière", NavDates: "Dates", NavZakat: "Zakat", NavPlaces: "Lieux",
+		PlacesTitle: "Horaires n’importe où",
+		PlacesHelp:  "Faites glisser la carte vers n’importe quel lieu pour voir ses horaires de prière.",
 	},
 	"ru": {
 		Save: "Сохранить", Saved: "Сохранено", Loading: "Загружаем время намаза…",
@@ -1088,7 +1172,9 @@ var miniCopy = map[string]miniAppCopy{
 		ZakatDue: "Закят к выплате (2,5%)", ZakatBelow: "Ваше имущество ниже нисаба, поэтому закят не обязателен.",
 		ZakatDisclaimer: "Оценка на основе текущих цен на золото и серебро. Обратитесь к знающему для вашего случая.",
 		ZakatUpdated:    "Цены на {date}",
-		NavPrayer:       "Намаз", NavDates: "Даты", NavZakat: "Закят",
+		NavPrayer:       "Намаз", NavDates: "Даты", NavZakat: "Закят", NavPlaces: "Места",
+		PlacesTitle: "Время намаза где угодно",
+		PlacesHelp:  "Перетащите карту на любое место, чтобы увидеть время намаза.",
 	},
 	"tr": {
 		Save: "Değişiklikleri kaydet", Saved: "Kaydedildi", Loading: "Namaz vakitleri yükleniyor…",
@@ -1120,7 +1206,9 @@ var miniCopy = map[string]miniAppCopy{
 		ZakatDue: "Ödenecek zekât (%2,5)", ZakatBelow: "Malınız nisabın altında, bu yüzden zekât gerekmez.",
 		ZakatDisclaimer: "Güncel altın ve gümüş fiyatlarına dayalı tahmin. Durumunuz için bir âlime danışın.",
 		ZakatUpdated:    "{date} tarihli fiyatlar",
-		NavPrayer:       "Namaz", NavDates: "Günler", NavZakat: "Zekât",
+		NavPrayer:       "Namaz", NavDates: "Günler", NavZakat: "Zekât", NavPlaces: "Yerler",
+		PlacesTitle: "Her yerde namaz vakitleri",
+		PlacesHelp:  "Namaz vakitlerini görmek için haritayı istediğiniz yere sürükleyin.",
 	},
 	"uz": {
 		Save: "O‘zgarishlarni saqlash", Saved: "Saqlandi", Loading: "Namoz vaqtlari yuklanmoqda…",
@@ -1152,7 +1240,9 @@ var miniCopy = map[string]miniAppCopy{
 		ZakatDue: "To‘lanadigan zakot (2,5%)", ZakatBelow: "Mol-mulkingiz nisobdan kam, shuning uchun zakot vojib emas.",
 		ZakatDisclaimer: "Joriy oltin va kumush narxlariga asoslangan taxmin. Holatingiz uchun olimga murojaat qiling.",
 		ZakatUpdated:    "{date} holatidagi narxlar",
-		NavPrayer:       "Namoz", NavDates: "Sanalar", NavZakat: "Zakot",
+		NavPrayer:       "Namoz", NavDates: "Sanalar", NavZakat: "Zakot", NavPlaces: "Joylar",
+		PlacesTitle: "Istalgan joyda namoz vaqtlari",
+		PlacesHelp:  "Namoz vaqtlarini ko‘rish uchun xaritani istalgan joyga suring.",
 	},
 	"tt": {
 		Save: "Үзгәрешләрне саклау", Saved: "Сакланды", Loading: "Намаз вакытлары йөкләнә…",
@@ -1184,6 +1274,8 @@ var miniCopy = map[string]miniAppCopy{
 		ZakatDue: "Түләнәсе зәкят (2,5%)", ZakatBelow: "Мал-мөлкәтегез нисабтан ким, шуңа зәкят фарыз түгел.",
 		ZakatDisclaimer: "Хәзерге алтын һәм көмеш бәяләренә нигезләнгән бәя. Хәлегез өчен галимгә мөрәҗәгать итегез.",
 		ZakatUpdated:    "{date} көненә бәяләр",
-		NavPrayer:       "Намаз", NavDates: "Даталар", NavZakat: "Зәкят",
+		NavPrayer:       "Намаз", NavDates: "Даталар", NavZakat: "Зәкят", NavPlaces: "Урыннар",
+		PlacesTitle: "Теләсә кайда намаз вакытлары",
+		PlacesHelp:  "Намаз вакытларын күрер өчен картаны теләсә кайсы урынга күчерегез.",
 	},
 }

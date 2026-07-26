@@ -35,7 +35,8 @@ Full Telegram update bodies are never persisted.
 
 ## Location onboarding or change
 
-Location writes are the only normal user flow that calls Google APIs.
+Location writes and the "prayer times anywhere" lookup are the normal user
+flows that call Google APIs (timezone and reverse geocoding).
 
 1. Telegram supplies latitude and longitude from a location message or the Mini
    App location manager.
@@ -93,6 +94,25 @@ WebViews ignore browser download links, so an unavailable or rejected file
 share falls back to an authenticated multipart upload. The webhook validates a
 PNG of the expected 1080×1350 dimensions and immediately sends it to the user's
 private bot chat. The bot does not retain the image.
+
+## Prayer times anywhere (ad-hoc lookup)
+
+The Mini App "Places" section lets a user check prayer times for **any** place
+and day without changing their saved location. An OpenStreetMap slippy map (raw
+raster tiles loaded as images — allowed by the existing `img-src https:` policy,
+so no CSP change and no Maps key on the client) provides a draggable pin.
+
+1. On drag/zoom end (debounced), the app posts the pin's coordinates and the
+   selected day to `POST /api/miniapp/lookup`.
+2. The server resolves the timezone and place name via Google (same resolver as
+   a location change).
+3. It builds a **transient** profile — never persisted — reusing the caller's
+   saved calculation preferences when present, or country defaults otherwise.
+4. It calculates the requested local day and returns a localized schedule plus
+   the place name.
+
+No profile is written, no version is bumped, and no reminders are rebuilt. The
+saved location and reminders are untouched.
 
 ## Prayer schedule display
 

@@ -115,6 +115,43 @@
           </section>
         </div>
 
+        <div class="view hidden" id="view-places">
+          <section class="panel places-panel">
+            <div class="panel-heading places-heading">
+              <div>
+                <h2 id="places-title">Prayer times anywhere</h2>
+                <p id="places-help" class="panel-help">Drag the map to any place to see its prayer times.</p>
+              </div>
+              <span class="section-icon" aria-hidden="true">🗺️</span>
+            </div>
+            <div id="places-map" class="places-map">
+              <div id="places-tiles" class="places-tiles"></div>
+              <div class="places-pin" aria-hidden="true">📍</div>
+              <div class="places-zoom">
+                <button id="places-zoom-in" type="button" aria-label="Zoom in">+</button>
+                <button id="places-zoom-out" type="button" aria-label="Zoom out">−</button>
+              </div>
+              <span class="places-attribution">© OpenStreetMap</span>
+            </div>
+            <p id="places-location" class="places-location"></p>
+            <div class="segmented" role="tablist" aria-label="Lookup day">
+              <button id="places-today-tab" class="segment active" type="button" role="tab" aria-selected="true">Today</button>
+              <button id="places-tomorrow-tab" class="segment" type="button" role="tab" aria-selected="false">Tomorrow</button>
+            </div>
+            <article class="schedule-card places-schedule">
+              <div class="schedule-heading">
+                <div>
+                  <p id="places-gregorian" class="date-primary"></p>
+                  <p id="places-hijri" class="date-secondary"></p>
+                </div>
+                <span id="places-timezone" class="timezone-pill"></span>
+              </div>
+              <div id="places-grid" class="prayer-grid"></div>
+              <p id="places-note" class="card-note"></p>
+            </article>
+          </section>
+        </div>
+
         <div class="view hidden" id="view-tools">
           <section class="panel tools-panel">
             <div class="panel-heading">
@@ -280,6 +317,9 @@
         </button>
         <button id="tab-zakat-btn" class="tab" type="button" data-view="zakat">
           <span class="tab-icon" aria-hidden="true">💰</span><span id="tab-zakat" class="tab-label">Zakat</span>
+        </button>
+        <button class="tab" type="button" data-view="places">
+          <span class="tab-icon" aria-hidden="true">🗺️</span><span id="tab-places" class="tab-label">Places</span>
         </button>
         <button class="tab" type="button" data-view="tools">
           <span class="tab-icon" aria-hidden="true">🧭</span><span id="tab-tools" class="tab-label">Tools</span>

@@ -115,18 +115,24 @@ func TestZakatCalculatorMarkupAndLabelsExist(t *testing.T) {
 			t.Errorf("index.html is missing Zakat calculator element %q", id)
 		}
 	}
+	for _, marker := range []string{"tab-bar", "view-prayer", "view-zakat", "data-view=\"prayer\""} {
+		if !strings.Contains(string(html), marker) {
+			t.Errorf("index.html is missing section navigation marker %q", marker)
+		}
+	}
 	script, err := embeddedStatic.ReadFile("static/app.js")
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, hook := range []string{"renderZakat", "state.nisab", "Intl.DisplayNames", "* 0.025"} {
+	for _, hook := range []string{"renderZakat", "state.nisab", "Intl.DisplayNames", "* 0.025", "function selectView"} {
 		if !strings.Contains(string(script), hook) {
-			t.Errorf("app.js is missing Zakat calculator logic %q", hook)
+			t.Errorf("app.js is missing Zakat calculator or navigation logic %q", hook)
 		}
 	}
 	keys := []string{
 		"zakat_title", "zakat_help", "zakat_currency", "zakat_holdings", "zakat_nisab",
 		"zakat_nisab_note", "zakat_due", "zakat_below", "zakat_disclaimer", "zakat_updated",
+		"nav_prayer", "nav_dates", "nav_zakat",
 	}
 	for _, locale := range i18n.Supported() {
 		localized := labels(locale)

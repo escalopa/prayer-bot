@@ -1,6 +1,6 @@
 "use strict";
 
-const cacheName = "global-prayer-miniapp-shell-v3";
+const cacheName = "global-prayer-miniapp-shell-v4";
 const shellAssets = [
   "./",
   "./app.css",

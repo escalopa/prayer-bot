@@ -383,6 +383,18 @@ select:focus, input[type="number"]:focus { border-color: var(--accent); box-shad
 .adjustment-grid label { color: var(--app-muted); font-size: 11px; }
 .adjustment-grid input { margin-top: 5px; text-align: center; }
 
+.zakat-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.zakat-form { display: grid; gap: 13px; margin-top: 4px; }
+.zakat-form label { display: grid; gap: 7px; color: var(--app-muted); font-size: 12px; font-weight: 650; }
+.zakat-summary { margin-top: 15px; padding: 15px 16px; border: 1px solid var(--line); border-radius: 16px; background: color-mix(in srgb, var(--surface-alt) 55%, transparent); }
+.zakat-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.zakat-row span { color: var(--app-muted); font-size: 13px; font-weight: 650; }
+.zakat-amount { font-size: 17px; font-weight: 800; }
+.zakat-due-row { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.zakat-due-amount { color: var(--accent); font-size: 20px; }
+.zakat-status { margin: 8px 0 0; }
+.zakat-updated { margin: 10px 0 0; font-size: 10px; }
+
 .primary-button { width: 100%; min-height: 50px; padding: 0 18px; border: 0; border-radius: 16px; color: var(--accent-text); background: var(--accent); font-weight: 800; cursor: pointer; box-shadow: 0 10px 24px color-mix(in srgb, var(--accent) 24%, transparent); }
 .primary-button:disabled { opacity: .55; cursor: wait; }
 .primary-button.compact { min-height: 44px; border-radius: 14px; box-shadow: none; font-size: 13px; }
@@ -405,6 +417,7 @@ select:focus, input[type="number"]:focus { border-color: var(--accent); box-shad
 @media (min-width: 560px) {
   .app-shell { padding-inline: 24px; }
   .form-grid { grid-template-columns: 1fr 1fr; }
+  .zakat-form { grid-template-columns: 1fr 1fr; }
   .tool-grid { grid-template-columns: 1fr 1fr; }
 }
 

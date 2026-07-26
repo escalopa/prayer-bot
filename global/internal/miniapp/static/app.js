@@ -11,6 +11,8 @@
   let calendarFeedURL = "";
   let offlineMode = false;
   let homeScreenStatus = "unknown";
+  let zakatCurrency = "";
+  const troyOunceGrams = 31.1035;
   const offlineCacheVersion = 2;
   const offlineCacheMaxAge = 48 * 60 * 60 * 1000;
 
@@ -223,6 +225,13 @@
     setText("share-card-title", labels.share_title);
     setText("share-card-help", labels.share_help);
     setText("share-prayer-card", labels.share_action);
+    setText("zakat-title", labels.zakat_title);
+    setText("zakat-help", labels.zakat_help);
+    setText("zakat-currency-label", labels.zakat_currency);
+    setText("zakat-holdings-label", labels.zakat_holdings);
+    setText("zakat-nisab-label", labels.zakat_nisab);
+    setText("zakat-due-label", labels.zakat_due);
+    setText("zakat-disclaimer", labels.zakat_disclaimer);
   }
 
   function fillSelect(id, options, selected) {
@@ -437,6 +446,82 @@
     byId("pre-prayer-minutes").disabled = !byId("prayer-reminders").checked;
   }
 
+  function zakatCurrencyKey() {
+    const userID = telegramUserID();
+    return userID ? `global-prayer-zakat-currency-${userID}` : "";
+  }
+
+  function currencyName(code) {
+    try {
+      const name = new Intl.DisplayNames([state.locale], { type: "currency" }).of(code);
+      return name && name !== code ? `${code} · ${name}` : code;
+    } catch (_) {
+      return code;
+    }
+  }
+
+  function formatMoney(amount, currency) {
+    try {
+      return new Intl.NumberFormat(state.locale, {
+        style: "currency", currency, maximumFractionDigits: 2,
+      }).format(amount);
+    } catch (_) {
+      return `${new Intl.NumberFormat(state.locale, { maximumFractionDigits: 2 }).format(amount)} ${currency}`;
+    }
+  }
+
+  function nisabValue(nisab, grams, usdPerOunce, currency) {
+    const rate = Number(nisab.rates[currency]) || 1;
+    return (grams / troyOunceGrams) * usdPerOunce * rate;
+  }
+
+  function renderZakat() {
+    const panel = byId("zakat-panel");
+    const nisab = state.nisab;
+    if (!nisab || !Array.isArray(nisab.currencies) || nisab.currencies.length === 0) {
+      panel.classList.add("hidden");
+      return;
+    }
+    panel.classList.remove("hidden");
+    if (!zakatCurrency || !nisab.rates[zakatCurrency]) zakatCurrency = nisab.default_currency;
+    const select = byId("zakat-currency");
+    select.replaceChildren();
+    nisab.currencies.forEach((code) => {
+      const option = document.createElement("option");
+      option.value = code;
+      option.textContent = currencyName(code);
+      option.selected = code === zakatCurrency;
+      select.append(option);
+    });
+    if (nisab.fetched_at) {
+      const date = new Intl.DateTimeFormat(state.locale, { dateStyle: "medium" }).format(new Date(nisab.fetched_at));
+      setText("zakat-updated", formatLabel(state.labels.zakat_updated, { date }));
+    } else {
+      setText("zakat-updated", "");
+    }
+    renderZakatResult();
+  }
+
+  function renderZakatResult() {
+    const nisab = state && state.nisab;
+    if (!nisab) return;
+    const currency = zakatCurrency;
+    const gold = nisabValue(nisab, nisab.gold_grams, nisab.gold_usd_per_ounce, currency);
+    const silver = nisabValue(nisab, nisab.silver_grams, nisab.silver_usd_per_ounce, currency);
+    // The lower (usually silver) threshold is the applicable niSab in the
+    // majority view, so more wealth qualifies for zakat.
+    const threshold = Math.min(gold, silver);
+    setText("zakat-nisab-value", formatMoney(threshold, currency));
+    setText("zakat-nisab-note", formatLabel(state.labels.zakat_nisab_note, {
+      gold: formatMoney(gold, currency), silver: formatMoney(silver, currency),
+    }));
+    const holdings = Number(byId("zakat-holdings").value);
+    const wealth = Number.isFinite(holdings) && holdings > 0 ? holdings : 0;
+    const due = wealth >= threshold ? wealth * 0.025 : 0;
+    setText("zakat-due-value", formatMoney(due, currency));
+    setText("zakat-status", wealth > 0 && wealth < threshold ? state.labels.zakat_below : "");
+  }
+
   function applyState(next) {
     state = next;
     loading.classList.add("hidden");
@@ -454,6 +539,7 @@
     renderSchedule();
     renderTools();
     renderOccasions();
+    renderZakat();
     renderReminders();
     renderSettings();
     setDirty(false);
@@ -930,6 +1016,7 @@
       return;
     }
     standalone.classList.add("hidden");
+    if (!zakatCurrency) zakatCurrency = await readStoredValue(zakatCurrencyKey());
     const cached = await cachedState();
     if (cached) {
       applyState(cached.state);
@@ -983,6 +1070,12 @@
     .forEach((id) => byId(id).addEventListener("change", () => setDirty(true)));
   byId("prayer-reminders").addEventListener("change", syncPreReminderAvailability);
   byId("adjustment-grid").addEventListener("input", () => setDirty(true));
+  byId("zakat-currency").addEventListener("change", () => {
+    zakatCurrency = byId("zakat-currency").value;
+    void writeStoredValue(zakatCurrencyKey(), zakatCurrency);
+    renderZakatResult();
+  });
+  byId("zakat-holdings").addEventListener("input", renderZakatResult);
   window.addEventListener("pageshow", (event) => {
     if (event.persisted) bootstrapApp();
   });

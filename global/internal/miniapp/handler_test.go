@@ -105,6 +105,39 @@ func TestOfflineAndSharingLabelsExistForEveryLocale(t *testing.T) {
 	}
 }
 
+func TestZakatCalculatorMarkupAndLabelsExist(t *testing.T) {
+	html, err := embeddedStatic.ReadFile("static/index.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range []string{"zakat-panel", "zakat-currency", "zakat-holdings", "zakat-nisab-value", "zakat-due-value"} {
+		if !strings.Contains(string(html), id) {
+			t.Errorf("index.html is missing Zakat calculator element %q", id)
+		}
+	}
+	script, err := embeddedStatic.ReadFile("static/app.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, hook := range []string{"renderZakat", "state.nisab", "Intl.DisplayNames", "* 0.025"} {
+		if !strings.Contains(string(script), hook) {
+			t.Errorf("app.js is missing Zakat calculator logic %q", hook)
+		}
+	}
+	keys := []string{
+		"zakat_title", "zakat_help", "zakat_currency", "zakat_holdings", "zakat_nisab",
+		"zakat_nisab_note", "zakat_due", "zakat_below", "zakat_disclaimer", "zakat_updated",
+	}
+	for _, locale := range i18n.Supported() {
+		localized := labels(locale)
+		for _, key := range keys {
+			if localized[key] == "" {
+				t.Errorf("locale %q has no %q label", locale.Code, key)
+			}
+		}
+	}
+}
+
 func TestMiniAppAPIRejectsUnsignedRequests(t *testing.T) {
 	handler := NewHandler("token", nil, nil, nil, nil, nil)
 	mux := http.NewServeMux()

@@ -898,6 +898,11 @@ func labels(locale i18n.Locale) map[string]string {
 		"share_sent": copy.ShareSent, "share_failed": copy.ShareFailed,
 		"share_card_heading": copy.ShareCardHeading, "share_card_footer": copy.ShareCardFooter,
 		"share_message": copy.ShareMessage,
+		"zakat_title":   copy.ZakatTitle, "zakat_help": copy.ZakatHelp,
+		"zakat_currency": copy.ZakatCurrency, "zakat_holdings": copy.ZakatHoldings,
+		"zakat_nisab": copy.ZakatNisab, "zakat_nisab_note": copy.ZakatNisabNote,
+		"zakat_due": copy.ZakatDue, "zakat_below": copy.ZakatBelow,
+		"zakat_disclaimer": copy.ZakatDisclaimer, "zakat_updated": copy.ZakatUpdated,
 	}
 }
 
@@ -917,6 +922,9 @@ type miniAppCopy struct {
 	ShareTitle, ShareHelp, ShareAction, SharePreparing    string
 	ShareSent, ShareFailed                                string
 	ShareCardHeading, ShareCardFooter, ShareMessage       string
+	ZakatTitle, ZakatHelp, ZakatCurrency, ZakatHoldings   string
+	ZakatNisab, ZakatNisabNote, ZakatDue, ZakatBelow      string
+	ZakatDisclaimer, ZakatUpdated                         string
 }
 
 var miniCopy = map[string]miniAppCopy{
@@ -944,6 +952,12 @@ var miniCopy = map[string]miniAppCopy{
 		ShareSent: "Card sent to this bot chat. Open the chat to save or forward it.", ShareFailed: "The prayer card could not be created.",
 		ShareCardHeading: "Daily prayer times", ShareCardFooter: "Global Prayer Times",
 		ShareMessage: "Prayer times",
+		ZakatTitle:   "Zakat calculator", ZakatHelp: "Estimate zakat on your savings at 2.5% above the nisab.",
+		ZakatCurrency: "Currency", ZakatHoldings: "Your zakatable wealth",
+		ZakatNisab: "Nisab (minimum)", ZakatNisabNote: "Gold nisab {gold} · Silver nisab {silver}",
+		ZakatDue: "Zakat due (2.5%)", ZakatBelow: "Your wealth is below the nisab, so no zakat is due.",
+		ZakatDisclaimer: "Estimate based on live gold and silver prices. Consult a scholar for your situation.",
+		ZakatUpdated:    "Prices as of {date}",
 	},
 	"ar": {
 		Save: "حفظ التغييرات", Saved: "تم الحفظ", Loading: "جارٍ تحميل مواقيت الصلاة…",
@@ -969,6 +983,12 @@ var miniCopy = map[string]miniAppCopy{
 		ShareSent: "تم إرسال البطاقة إلى محادثة البوت. افتح المحادثة لحفظها أو إعادة توجيهها.", ShareFailed: "تعذر إنشاء بطاقة الصلاة.",
 		ShareCardHeading: "مواقيت الصلاة اليومية", ShareCardFooter: "مواقيت الصلاة العالمية",
 		ShareMessage: "مواقيت الصلاة",
+		ZakatTitle:   "حاسبة الزكاة", ZakatHelp: "احسب زكاة مالك بنسبة 2.5% إذا بلغ النصاب.",
+		ZakatCurrency: "العملة", ZakatHoldings: "أموالك الخاضعة للزكاة",
+		ZakatNisab: "النصاب (الحد الأدنى)", ZakatNisabNote: "نصاب الذهب {gold} · نصاب الفضة {silver}",
+		ZakatDue: "الزكاة المستحقة (2.5%)", ZakatBelow: "مالك دون النصاب، فلا زكاة عليك.",
+		ZakatDisclaimer: "تقدير بناءً على أسعار الذهب والفضة الحالية. استشر أهل العلم لحالتك.",
+		ZakatUpdated:    "الأسعار بتاريخ {date}",
 	},
 	"es": {
 		Save: "Guardar cambios", Saved: "Guardado", Loading: "Cargando horarios de oración…",
@@ -994,6 +1014,12 @@ var miniCopy = map[string]miniAppCopy{
 		ShareSent: "La tarjeta se envió al chat del bot. Abre el chat para guardarla o reenviarla.", ShareFailed: "No se pudo crear la tarjeta.",
 		ShareCardHeading: "Horarios diarios de oración", ShareCardFooter: "Horarios de oración globales",
 		ShareMessage: "Horarios de oración",
+		ZakatTitle:   "Calculadora de zakat", ZakatHelp: "Calcula el zakat de tus ahorros al 2,5% por encima del nisab.",
+		ZakatCurrency: "Moneda", ZakatHoldings: "Tu patrimonio sujeto al zakat",
+		ZakatNisab: "Nisab (mínimo)", ZakatNisabNote: "Nisab de oro {gold} · Nisab de plata {silver}",
+		ZakatDue: "Zakat a pagar (2,5%)", ZakatBelow: "Tu patrimonio está por debajo del nisab, así que no debes zakat.",
+		ZakatDisclaimer: "Estimación basada en precios actuales del oro y la plata. Consulta a un experto para tu caso.",
+		ZakatUpdated:    "Precios al {date}",
 	},
 	"fr": {
 		Save: "Enregistrer", Saved: "Enregistré", Loading: "Chargement des horaires de prière…",
@@ -1019,6 +1045,12 @@ var miniCopy = map[string]miniAppCopy{
 		ShareSent: "La carte a été envoyée dans le chat du bot. Ouvrez le chat pour l’enregistrer ou la transférer.", ShareFailed: "Impossible de créer la carte.",
 		ShareCardHeading: "Horaires de prière du jour", ShareCardFooter: "Horaires de prière mondiaux",
 		ShareMessage: "Horaires de prière",
+		ZakatTitle:   "Calculateur de zakat", ZakatHelp: "Estimez la zakat sur votre épargne à 2,5% au-dessus du nisab.",
+		ZakatCurrency: "Devise", ZakatHoldings: "Votre patrimoine soumis à la zakat",
+		ZakatNisab: "Nisab (minimum)", ZakatNisabNote: "Nisab or {gold} · Nisab argent {silver}",
+		ZakatDue: "Zakat à verser (2,5%)", ZakatBelow: "Votre patrimoine est inférieur au nisab, aucune zakat n’est due.",
+		ZakatDisclaimer: "Estimation basée sur les cours actuels de l’or et de l’argent. Consultez un savant pour votre cas.",
+		ZakatUpdated:    "Cours au {date}",
 	},
 	"ru": {
 		Save: "Сохранить", Saved: "Сохранено", Loading: "Загружаем время намаза…",
@@ -1044,6 +1076,12 @@ var miniCopy = map[string]miniAppCopy{
 		ShareSent: "Карточка отправлена в чат с ботом. Откройте чат, чтобы сохранить или переслать её.", ShareFailed: "Не удалось создать карточку.",
 		ShareCardHeading: "Время намаза на день", ShareCardFooter: "Global Prayer Times",
 		ShareMessage: "Время намаза",
+		ZakatTitle:   "Калькулятор закята", ZakatHelp: "Рассчитайте закят с накоплений — 2,5% при достижении нисаба.",
+		ZakatCurrency: "Валюта", ZakatHoldings: "Ваше имущество, облагаемое закятом",
+		ZakatNisab: "Нисаб (минимум)", ZakatNisabNote: "Нисаб золота {gold} · Нисаб серебра {silver}",
+		ZakatDue: "Закят к выплате (2,5%)", ZakatBelow: "Ваше имущество ниже нисаба, поэтому закят не обязателен.",
+		ZakatDisclaimer: "Оценка на основе текущих цен на золото и серебро. Обратитесь к знающему для вашего случая.",
+		ZakatUpdated:    "Цены на {date}",
 	},
 	"tr": {
 		Save: "Değişiklikleri kaydet", Saved: "Kaydedildi", Loading: "Namaz vakitleri yükleniyor…",
@@ -1069,6 +1107,12 @@ var miniCopy = map[string]miniAppCopy{
 		ShareSent: "Kart bot sohbetine gönderildi. Kaydetmek veya iletmek için sohbeti açın.", ShareFailed: "Namaz kartı oluşturulamadı.",
 		ShareCardHeading: "Günlük namaz vakitleri", ShareCardFooter: "Global Namaz Vakitleri",
 		ShareMessage: "Namaz vakitleri",
+		ZakatTitle:   "Zekât hesaplayıcı", ZakatHelp: "Nisabı aşan birikiminiz için %2,5 zekâtı hesaplayın.",
+		ZakatCurrency: "Para birimi", ZakatHoldings: "Zekâta tabi malınız",
+		ZakatNisab: "Nisap (asgari)", ZakatNisabNote: "Altın nisabı {gold} · Gümüş nisabı {silver}",
+		ZakatDue: "Ödenecek zekât (%2,5)", ZakatBelow: "Malınız nisabın altında, bu yüzden zekât gerekmez.",
+		ZakatDisclaimer: "Güncel altın ve gümüş fiyatlarına dayalı tahmin. Durumunuz için bir âlime danışın.",
+		ZakatUpdated:    "{date} tarihli fiyatlar",
 	},
 	"uz": {
 		Save: "O‘zgarishlarni saqlash", Saved: "Saqlandi", Loading: "Namoz vaqtlari yuklanmoqda…",
@@ -1094,6 +1138,12 @@ var miniCopy = map[string]miniAppCopy{
 		ShareSent: "Karta bot chatiga yuborildi. Saqlash yoki ulashish uchun chatni oching.", ShareFailed: "Namoz kartasini yaratib bo‘lmadi.",
 		ShareCardHeading: "Kunlik namoz vaqtlari", ShareCardFooter: "Global Namoz Vaqtlari",
 		ShareMessage: "Namoz vaqtlari",
+		ZakatTitle:   "Zakot kalkulyatori", ZakatHelp: "Nisobdan oshgan jamg‘armangizdan 2,5% zakotni hisoblang.",
+		ZakatCurrency: "Valyuta", ZakatHoldings: "Zakotga tortiladigan mol-mulkingiz",
+		ZakatNisab: "Nisob (eng kam miqdor)", ZakatNisabNote: "Oltin nisobi {gold} · Kumush nisobi {silver}",
+		ZakatDue: "To‘lanadigan zakot (2,5%)", ZakatBelow: "Mol-mulkingiz nisobdan kam, shuning uchun zakot vojib emas.",
+		ZakatDisclaimer: "Joriy oltin va kumush narxlariga asoslangan taxmin. Holatingiz uchun olimga murojaat qiling.",
+		ZakatUpdated:    "{date} holatidagi narxlar",
 	},
 	"tt": {
 		Save: "Үзгәрешләрне саклау", Saved: "Сакланды", Loading: "Намаз вакытлары йөкләнә…",
@@ -1119,5 +1169,11 @@ var miniCopy = map[string]miniAppCopy{
 		ShareSent: "Карточка бот чатына җибәрелде. Саклау яки җибәрү өчен чатны ачыгыз.", ShareFailed: "Намаз карточкасын ясап булмады.",
 		ShareCardHeading: "Көнлек намаз вакытлары", ShareCardFooter: "Глобаль намаз вакытлары",
 		ShareMessage: "Намаз вакытлары",
+		ZakatTitle:   "Зәкят исәпләгече", ZakatHelp: "Нисабтан артык җыемыгыздан 2,5% зәкятне исәпләгез.",
+		ZakatCurrency: "Валюта", ZakatHoldings: "Зәкятка керә торган мал-мөлкәтегез",
+		ZakatNisab: "Нисаб (минимум)", ZakatNisabNote: "Алтын нисабы {gold} · Көмеш нисабы {silver}",
+		ZakatDue: "Түләнәсе зәкят (2,5%)", ZakatBelow: "Мал-мөлкәтегез нисабтан ким, шуңа зәкят фарыз түгел.",
+		ZakatDisclaimer: "Хәзерге алтын һәм көмеш бәяләренә нигезләнгән бәя. Хәлегез өчен галимгә мөрәҗәгать итегез.",
+		ZakatUpdated:    "{date} көненә бәяләр",
 	},
 }

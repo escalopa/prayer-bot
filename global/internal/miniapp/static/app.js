@@ -12,6 +12,7 @@
   let offlineMode = false;
   let homeScreenStatus = "unknown";
   let zakatCurrency = "";
+  let activeView = "prayer";
   const troyOunceGrams = 31.1035;
   const offlineCacheVersion = 2;
   const offlineCacheMaxAge = 48 * 60 * 60 * 1000;
@@ -232,6 +233,11 @@
     setText("zakat-nisab-label", labels.zakat_nisab);
     setText("zakat-due-label", labels.zakat_due);
     setText("zakat-disclaimer", labels.zakat_disclaimer);
+    setText("tab-prayer", labels.nav_prayer);
+    setText("tab-dates", labels.nav_dates);
+    setText("tab-zakat", labels.nav_zakat);
+    setText("tab-tools", labels.tools);
+    setText("tab-settings", labels.settings);
   }
 
   function fillSelect(id, options, selected) {
@@ -477,11 +483,15 @@
 
   function renderZakat() {
     const panel = byId("zakat-panel");
+    const tab = byId("tab-zakat-btn");
     const nisab = state.nisab;
     if (!nisab || !Array.isArray(nisab.currencies) || nisab.currencies.length === 0) {
       panel.classList.add("hidden");
+      if (tab) tab.classList.add("hidden");
+      if (activeView === "zakat") selectView("prayer");
       return;
     }
+    if (tab) tab.classList.remove("hidden");
     panel.classList.remove("hidden");
     if (!zakatCurrency || !nisab.rates[zakatCurrency]) zakatCurrency = nisab.default_currency;
     const select = byId("zakat-currency");
@@ -542,6 +552,7 @@
     renderZakat();
     renderReminders();
     renderSettings();
+    selectView(activeView);
     setDirty(false);
   }
 
@@ -1041,6 +1052,22 @@
     }
   }
 
+  function selectView(view) {
+    const known = ["prayer", "dates", "zakat", "tools", "settings"];
+    if (!known.includes(view)) view = "prayer";
+    activeView = view;
+    known.forEach((name) => {
+      const panel = byId(`view-${name}`);
+      if (panel) panel.classList.toggle("hidden", name !== view);
+    });
+    document.querySelectorAll(".tab").forEach((tab) => {
+      const active = tab.dataset.view === view;
+      tab.classList.toggle("active", active);
+      tab.setAttribute("aria-current", active ? "page" : "false");
+    });
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }
+
   function selectDay(day) {
     activeDay = day;
     ["today", "tomorrow"].forEach((name) => {
@@ -1054,6 +1081,9 @@
 
   byId("today-tab").addEventListener("click", () => selectDay("today"));
   byId("tomorrow-tab").addEventListener("click", () => selectDay("tomorrow"));
+  document.querySelectorAll(".tab").forEach((tab) => {
+    tab.addEventListener("click", () => selectView(tab.dataset.view));
+  });
   byId("location-primary").addEventListener("click", (event) => updateLocation(event.currentTarget));
   byId("location-secondary").addEventListener("click", (event) => updateLocation(event.currentTarget));
   byId("start-compass").addEventListener("click", startCompass);

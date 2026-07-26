@@ -47,217 +47,247 @@
         </div>
       </aside>
 
-      <section class="schedule-section">
-        <div class="segmented" role="tablist" aria-label="Prayer schedule date">
-          <button id="today-tab" class="segment active" type="button" role="tab" aria-selected="true">Today</button>
-          <button id="tomorrow-tab" class="segment" type="button" role="tab" aria-selected="false">Tomorrow</button>
-        </div>
-
-        <article class="schedule-card">
-          <div class="schedule-heading">
-            <div>
-              <p id="gregorian-date" class="date-primary"></p>
-              <p id="hijri-date" class="date-secondary"></p>
+      <div class="views">
+        <div class="view" id="view-prayer">
+          <section class="schedule-section">
+            <div class="segmented" role="tablist" aria-label="Prayer schedule date">
+              <button id="today-tab" class="segment active" type="button" role="tab" aria-selected="true">Today</button>
+              <button id="tomorrow-tab" class="segment" type="button" role="tab" aria-selected="false">Tomorrow</button>
             </div>
-            <span id="timezone" class="timezone-pill"></span>
-          </div>
-          <div id="prayer-grid" class="prayer-grid"></div>
-          <p id="calculation-note" class="card-note"></p>
-        </article>
-      </section>
 
-      <section class="panel occasions-panel">
-        <div class="panel-heading occasions-heading">
-          <div>
-            <h2 id="occasions-title">Upcoming Islamic dates</h2>
-            <p id="occasions-help" class="panel-help">Calculated from your corrected Hijri calendar.</p>
-          </div>
-          <span class="section-icon" aria-hidden="true">🌙</span>
-        </div>
-        <div id="occasion-list" class="occasion-list"></div>
-        <p id="occasions-disclaimer" class="occasion-disclaimer"></p>
-      </section>
-
-      <section class="panel tools-panel">
-        <div class="panel-heading">
-          <h2 id="tools-title">Tools</h2>
+            <article class="schedule-card">
+              <div class="schedule-heading">
+                <div>
+                  <p id="gregorian-date" class="date-primary"></p>
+                  <p id="hijri-date" class="date-secondary"></p>
+                </div>
+                <span id="timezone" class="timezone-pill"></span>
+              </div>
+              <div id="prayer-grid" class="prayer-grid"></div>
+              <p id="calculation-note" class="card-note"></p>
+            </article>
+          </section>
         </div>
 
-        <div class="tool-grid">
-          <article class="tool-card qibla-card">
-            <div class="tool-heading">
-              <span class="tool-icon" aria-hidden="true">🕋</span>
+        <div class="view hidden" id="view-dates">
+          <section class="panel occasions-panel">
+            <div class="panel-heading occasions-heading">
               <div>
-                <h3 id="qibla-title">Qibla direction</h3>
-                <p id="qibla-help">The arrow points from north toward the Kaaba.</p>
+                <h2 id="occasions-title">Upcoming Islamic dates</h2>
+                <p id="occasions-help" class="panel-help">Calculated from your corrected Hijri calendar.</p>
               </div>
+              <span class="section-icon" aria-hidden="true">🌙</span>
             </div>
+            <div id="occasion-list" class="occasion-list"></div>
+            <p id="occasions-disclaimer" class="occasion-disclaimer"></p>
+          </section>
+        </div>
 
-            <div id="qibla-compass" class="qibla-compass" role="img" aria-labelledby="qibla-bearing">
-              <span class="cardinal cardinal-north">N</span>
-              <span class="cardinal cardinal-east">E</span>
-              <span class="cardinal cardinal-south">S</span>
-              <span class="cardinal cardinal-west">W</span>
-              <div id="qibla-needle" class="qibla-needle" aria-hidden="true">
-                <span class="needle-arrow">▲</span>
-                <span class="needle-kaaba">🕋</span>
-              </div>
-              <span class="compass-center" aria-hidden="true"></span>
-            </div>
-
-            <p id="qibla-bearing" class="tool-value"></p>
-            <p id="qibla-distance" class="tool-note"></p>
-            <button id="start-compass" class="secondary-button" type="button">Use live compass</button>
-            <p id="compass-status" class="tool-note hidden" role="status"></p>
-          </article>
-
-          <article class="tool-card calendar-card">
-            <div class="tool-heading">
-              <span class="tool-icon" aria-hidden="true">📅</span>
+        <div class="view hidden" id="view-zakat">
+          <section id="zakat-panel" class="panel zakat-panel hidden">
+            <div class="panel-heading zakat-heading">
               <div>
-                <h3 id="calendar-title">Prayer calendar</h3>
-                <p id="calendar-help">Connect an automatically updated rolling 30-day calendar.</p>
+                <h2 id="zakat-title">Zakat calculator</h2>
+                <p id="zakat-help" class="panel-help">Calculate zakat on your wealth.</p>
               </div>
+              <span class="section-icon" aria-hidden="true">💰</span>
             </div>
-            <div class="calendar-illustration" aria-hidden="true">
-              <span>☾</span>
-              <strong id="calendar-day">30</strong>
+            <div class="zakat-form">
+              <label><span id="zakat-currency-label">Currency</span>
+                <select id="zakat-currency"></select></label>
+              <label><span id="zakat-holdings-label">Your zakatable wealth</span>
+                <input id="zakat-holdings" type="number" min="0" step="any" inputmode="decimal" placeholder="0"></label>
             </div>
-            <p id="calendar-private" class="tool-note calendar-private">Keep the private calendar link secret.</p>
-            <div class="calendar-actions">
-              <button id="connect-calendar" class="primary-button compact" type="button">Connect Google Calendar</button>
-              <button id="copy-calendar-link" class="secondary-button" type="button">Copy private link</button>
-              <button id="disconnect-calendar" class="text-button calendar-disconnect hidden" type="button">Disconnect calendar</button>
-            </div>
-            <p id="calendar-status" class="tool-note hidden" role="status"></p>
-          </article>
-
-          <article id="home-screen-card" class="tool-card quick-access-card hidden">
-            <div class="tool-heading">
-              <span class="tool-icon" aria-hidden="true">📲</span>
-              <div>
-                <h3 id="home-screen-title">Quick access</h3>
-                <p id="home-screen-help">Add prayer times to your Telegram home screen.</p>
+            <div class="zakat-summary">
+              <div class="zakat-row">
+                <span id="zakat-nisab-label">Niṣāb (minimum)</span>
+                <strong id="zakat-nisab-value" class="zakat-amount"></strong>
               </div>
-            </div>
-            <div class="quick-access-illustration" aria-hidden="true">
-              <span>☾</span>
-            </div>
-            <button id="add-home-screen" class="secondary-button" type="button">Add to home screen</button>
-            <p id="home-screen-status" class="tool-note hidden" role="status"></p>
-          </article>
-
-          <article class="tool-card share-card">
-            <div class="tool-heading">
-              <span class="tool-icon" aria-hidden="true">✨</span>
-              <div>
-                <h3 id="share-card-title">Share prayer card</h3>
-                <p id="share-card-help">Create a beautiful image with the selected day’s prayer times.</p>
+              <p id="zakat-nisab-note" class="tool-note"></p>
+              <div class="zakat-row zakat-due-row">
+                <span id="zakat-due-label">Zakat due (2.5%)</span>
+                <strong id="zakat-due-value" class="zakat-amount zakat-due-amount"></strong>
               </div>
+              <p id="zakat-status" class="tool-note zakat-status"></p>
             </div>
-            <div class="share-card-preview" aria-hidden="true">
-              <span class="share-preview-moon">☾</span>
-              <strong id="share-preview-date"></strong>
-              <span id="share-preview-time"></span>
+            <p id="zakat-disclaimer" class="occasion-disclaimer"></p>
+            <p id="zakat-updated" class="tool-note zakat-updated"></p>
+          </section>
+        </div>
+
+        <div class="view hidden" id="view-tools">
+          <section class="panel tools-panel">
+            <div class="panel-heading">
+              <h2 id="tools-title">Tools</h2>
             </div>
-            <button id="share-prayer-card" class="primary-button compact" type="button">Create &amp; share</button>
-          </article>
-        </div>
-      </section>
 
-      <section id="zakat-panel" class="panel zakat-panel hidden">
-        <div class="panel-heading zakat-heading">
-          <div>
-            <h2 id="zakat-title">Zakat calculator</h2>
-            <p id="zakat-help" class="panel-help">Calculate zakat on your wealth.</p>
-          </div>
-          <span class="section-icon" aria-hidden="true">💰</span>
-        </div>
-        <div class="zakat-form">
-          <label><span id="zakat-currency-label">Currency</span>
-            <select id="zakat-currency"></select></label>
-          <label><span id="zakat-holdings-label">Your zakatable wealth</span>
-            <input id="zakat-holdings" type="number" min="0" step="any" inputmode="decimal" placeholder="0"></label>
-        </div>
-        <div class="zakat-summary">
-          <div class="zakat-row">
-            <span id="zakat-nisab-label">Niṣāb (minimum)</span>
-            <strong id="zakat-nisab-value" class="zakat-amount"></strong>
-          </div>
-          <p id="zakat-nisab-note" class="tool-note"></p>
-          <div class="zakat-row zakat-due-row">
-            <span id="zakat-due-label">Zakat due (2.5%)</span>
-            <strong id="zakat-due-value" class="zakat-amount zakat-due-amount"></strong>
-          </div>
-          <p id="zakat-status" class="tool-note zakat-status"></p>
-        </div>
-        <p id="zakat-disclaimer" class="occasion-disclaimer"></p>
-        <p id="zakat-updated" class="tool-note zakat-updated"></p>
-      </section>
+            <div class="tool-grid">
+              <article class="tool-card qibla-card">
+                <div class="tool-heading">
+                  <span class="tool-icon" aria-hidden="true">🕋</span>
+                  <div>
+                    <h3 id="qibla-title">Qibla direction</h3>
+                    <p id="qibla-help">The arrow points from north toward the Kaaba.</p>
+                  </div>
+                </div>
 
-      <section class="panel">
-        <div class="panel-heading">
-          <h2 id="reminders-title">Reminders</h2>
-        </div>
-        <label class="toggle-row">
-          <span><strong id="prayer-reminders-label">Prayer times</strong></span>
-          <input id="prayer-reminders" type="checkbox">
-          <span class="toggle" aria-hidden="true"></span>
-        </label>
-        <label id="pre-reminder-row" class="reminder-option">
-          <span id="pre-prayer-reminder-label">Pre-prayer reminder</span>
-          <select id="pre-prayer-minutes"></select>
-        </label>
-        <label class="toggle-row">
-          <span><strong id="fasting-reminders-label">Monday &amp; Thursday fasting</strong><small id="fasting-schedule"></small></span>
-          <input id="fasting-reminders" type="checkbox">
-          <span class="toggle" aria-hidden="true"></span>
-        </label>
-        <label class="toggle-row">
-          <span><strong id="kahf-reminders-label">Friday Al-Kahf</strong><small id="kahf-schedule"></small></span>
-          <input id="kahf-reminders" type="checkbox">
-          <span class="toggle" aria-hidden="true"></span>
-        </label>
-        <label class="toggle-row">
-          <span><strong id="occasion-major-reminders-label">Major Islamic occasions</strong><small id="occasion-major-schedule"></small></span>
-          <input id="occasion-major-reminders" type="checkbox">
-          <span class="toggle" aria-hidden="true"></span>
-        </label>
-        <label class="toggle-row">
-          <span><strong id="occasion-fasting-reminders-label">Special fasting days</strong><small id="occasion-fasting-schedule"></small></span>
-          <input id="occasion-fasting-reminders" type="checkbox">
-          <span class="toggle" aria-hidden="true"></span>
-        </label>
-        <label class="toggle-row">
-          <span><strong id="occasion-observed-reminders-label">Commonly observed dates</strong><small id="occasion-observed-schedule"></small></span>
-          <input id="occasion-observed-reminders" type="checkbox">
-          <span class="toggle" aria-hidden="true"></span>
-        </label>
-      </section>
+                <div id="qibla-compass" class="qibla-compass" role="img" aria-labelledby="qibla-bearing">
+                  <span class="cardinal cardinal-north">N</span>
+                  <span class="cardinal cardinal-east">E</span>
+                  <span class="cardinal cardinal-south">S</span>
+                  <span class="cardinal cardinal-west">W</span>
+                  <div id="qibla-needle" class="qibla-needle" aria-hidden="true">
+                    <span class="needle-arrow">▲</span>
+                    <span class="needle-kaaba">🕋</span>
+                  </div>
+                  <span class="compass-center" aria-hidden="true"></span>
+                </div>
 
-      <section class="panel settings-panel">
-        <div class="panel-heading">
-          <h2 id="settings-title">Settings</h2>
-          <button id="location-secondary" class="text-button" type="button">Update location</button>
-        </div>
+                <p id="qibla-bearing" class="tool-value"></p>
+                <p id="qibla-distance" class="tool-note"></p>
+                <button id="start-compass" class="secondary-button" type="button">Use live compass</button>
+                <p id="compass-status" class="tool-note hidden" role="status"></p>
+              </article>
 
-        <div class="form-grid">
-          <label><span id="language-label">Language</span><select id="language"></select></label>
-          <label><span id="method-label">Calculation method</span><select id="method"></select></label>
-          <label><span id="madhab-label">Madhab</span><select id="madhab"></select></label>
-          <label><span id="highlat-label">High latitude rule</span><select id="highlat"></select></label>
-          <label><span id="hijri-label">Hijri date correction</span><select id="hijri-adjustment"></select></label>
+              <article class="tool-card calendar-card">
+                <div class="tool-heading">
+                  <span class="tool-icon" aria-hidden="true">📅</span>
+                  <div>
+                    <h3 id="calendar-title">Prayer calendar</h3>
+                    <p id="calendar-help">Connect an automatically updated rolling 30-day calendar.</p>
+                  </div>
+                </div>
+                <div class="calendar-illustration" aria-hidden="true">
+                  <span>☾</span>
+                  <strong id="calendar-day">30</strong>
+                </div>
+                <p id="calendar-private" class="tool-note calendar-private">Keep the private calendar link secret.</p>
+                <div class="calendar-actions">
+                  <button id="connect-calendar" class="primary-button compact" type="button">Connect Google Calendar</button>
+                  <button id="copy-calendar-link" class="secondary-button" type="button">Copy private link</button>
+                  <button id="disconnect-calendar" class="text-button calendar-disconnect hidden" type="button">Disconnect calendar</button>
+                </div>
+                <p id="calendar-status" class="tool-note hidden" role="status"></p>
+              </article>
+
+              <article id="home-screen-card" class="tool-card quick-access-card hidden">
+                <div class="tool-heading">
+                  <span class="tool-icon" aria-hidden="true">📲</span>
+                  <div>
+                    <h3 id="home-screen-title">Quick access</h3>
+                    <p id="home-screen-help">Add prayer times to your Telegram home screen.</p>
+                  </div>
+                </div>
+                <div class="quick-access-illustration" aria-hidden="true">
+                  <span>☾</span>
+                </div>
+                <button id="add-home-screen" class="secondary-button" type="button">Add to home screen</button>
+                <p id="home-screen-status" class="tool-note hidden" role="status"></p>
+              </article>
+
+              <article class="tool-card share-card">
+                <div class="tool-heading">
+                  <span class="tool-icon" aria-hidden="true">✨</span>
+                  <div>
+                    <h3 id="share-card-title">Share prayer card</h3>
+                    <p id="share-card-help">Create a beautiful image with the selected day’s prayer times.</p>
+                  </div>
+                </div>
+                <div class="share-card-preview" aria-hidden="true">
+                  <span class="share-preview-moon">☾</span>
+                  <strong id="share-preview-date"></strong>
+                  <span id="share-preview-time"></span>
+                </div>
+                <button id="share-prayer-card" class="primary-button compact" type="button">Create &amp; share</button>
+              </article>
+            </div>
+          </section>
         </div>
 
-        <details class="adjustments">
-          <summary id="adjustments-label">Prayer adjustments</summary>
-          <div id="adjustment-grid" class="adjustment-grid"></div>
-        </details>
-      </section>
+        <div class="view hidden" id="view-settings">
+          <section class="panel">
+            <div class="panel-heading">
+              <h2 id="reminders-title">Reminders</h2>
+            </div>
+            <label class="toggle-row">
+              <span><strong id="prayer-reminders-label">Prayer times</strong></span>
+              <input id="prayer-reminders" type="checkbox">
+              <span class="toggle" aria-hidden="true"></span>
+            </label>
+            <label id="pre-reminder-row" class="reminder-option">
+              <span id="pre-prayer-reminder-label">Pre-prayer reminder</span>
+              <select id="pre-prayer-minutes"></select>
+            </label>
+            <label class="toggle-row">
+              <span><strong id="fasting-reminders-label">Monday &amp; Thursday fasting</strong><small id="fasting-schedule"></small></span>
+              <input id="fasting-reminders" type="checkbox">
+              <span class="toggle" aria-hidden="true"></span>
+            </label>
+            <label class="toggle-row">
+              <span><strong id="kahf-reminders-label">Friday Al-Kahf</strong><small id="kahf-schedule"></small></span>
+              <input id="kahf-reminders" type="checkbox">
+              <span class="toggle" aria-hidden="true"></span>
+            </label>
+            <label class="toggle-row">
+              <span><strong id="occasion-major-reminders-label">Major Islamic occasions</strong><small id="occasion-major-schedule"></small></span>
+              <input id="occasion-major-reminders" type="checkbox">
+              <span class="toggle" aria-hidden="true"></span>
+            </label>
+            <label class="toggle-row">
+              <span><strong id="occasion-fasting-reminders-label">Special fasting days</strong><small id="occasion-fasting-schedule"></small></span>
+              <input id="occasion-fasting-reminders" type="checkbox">
+              <span class="toggle" aria-hidden="true"></span>
+            </label>
+            <label class="toggle-row">
+              <span><strong id="occasion-observed-reminders-label">Commonly observed dates</strong><small id="occasion-observed-schedule"></small></span>
+              <input id="occasion-observed-reminders" type="checkbox">
+              <span class="toggle" aria-hidden="true"></span>
+            </label>
+          </section>
+
+          <section class="panel settings-panel">
+            <div class="panel-heading">
+              <h2 id="settings-title">Settings</h2>
+              <button id="location-secondary" class="text-button" type="button">Update location</button>
+            </div>
+
+            <div class="form-grid">
+              <label><span id="language-label">Language</span><select id="language"></select></label>
+              <label><span id="method-label">Calculation method</span><select id="method"></select></label>
+              <label><span id="madhab-label">Madhab</span><select id="madhab"></select></label>
+              <label><span id="highlat-label">High latitude rule</span><select id="highlat"></select></label>
+              <label><span id="hijri-label">Hijri date correction</span><select id="hijri-adjustment"></select></label>
+            </div>
+
+            <details class="adjustments">
+              <summary id="adjustments-label">Prayer adjustments</summary>
+              <div id="adjustment-grid" class="adjustment-grid"></div>
+            </details>
+          </section>
+        </div>
+      </div>
 
       <div id="save-bar" class="save-bar hidden">
         <button id="save-preferences" class="primary-button" type="button">Save changes</button>
       </div>
+
+      <nav id="tab-bar" class="tab-bar" aria-label="Sections">
+        <button class="tab active" type="button" data-view="prayer">
+          <span class="tab-icon" aria-hidden="true">🕌</span><span id="tab-prayer" class="tab-label">Prayer</span>
+        </button>
+        <button class="tab" type="button" data-view="dates">
+          <span class="tab-icon" aria-hidden="true">🌙</span><span id="tab-dates" class="tab-label">Dates</span>
+        </button>
+        <button id="tab-zakat-btn" class="tab" type="button" data-view="zakat">
+          <span class="tab-icon" aria-hidden="true">💰</span><span id="tab-zakat" class="tab-label">Zakat</span>
+        </button>
+        <button class="tab" type="button" data-view="tools">
+          <span class="tab-icon" aria-hidden="true">🧭</span><span id="tab-tools" class="tab-label">Tools</span>
+        </button>
+        <button class="tab" type="button" data-view="settings">
+          <span class="tab-icon" aria-hidden="true">⚙️</span><span id="tab-settings" class="tab-label">Settings</span>
+        </button>
+      </nav>
     </div>
   </main>
 

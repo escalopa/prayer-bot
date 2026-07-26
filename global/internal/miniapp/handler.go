@@ -903,6 +903,7 @@ func labels(locale i18n.Locale) map[string]string {
 		"zakat_nisab": copy.ZakatNisab, "zakat_nisab_note": copy.ZakatNisabNote,
 		"zakat_due": copy.ZakatDue, "zakat_below": copy.ZakatBelow,
 		"zakat_disclaimer": copy.ZakatDisclaimer, "zakat_updated": copy.ZakatUpdated,
+		"nav_prayer": copy.NavPrayer, "nav_dates": copy.NavDates, "nav_zakat": copy.NavZakat,
 	}
 }
 
@@ -925,6 +926,7 @@ type miniAppCopy struct {
 	ZakatTitle, ZakatHelp, ZakatCurrency, ZakatHoldings   string
 	ZakatNisab, ZakatNisabNote, ZakatDue, ZakatBelow      string
 	ZakatDisclaimer, ZakatUpdated                         string
+	NavPrayer, NavDates, NavZakat                         string
 }
 
 var miniCopy = map[string]miniAppCopy{
@@ -954,10 +956,11 @@ var miniCopy = map[string]miniAppCopy{
 		ShareMessage: "Prayer times",
 		ZakatTitle:   "Zakat calculator", ZakatHelp: "Estimate zakat on your savings at 2.5% above the nisab.",
 		ZakatCurrency: "Currency", ZakatHoldings: "Your zakatable wealth",
-		ZakatNisab: "Nisab (minimum)", ZakatNisabNote: "Gold nisab {gold} · Silver nisab {silver}",
+		ZakatNisab: "Nisab (minimum)", ZakatNisabNote: "Gold nisab {gold}\nSilver nisab {silver}",
 		ZakatDue: "Zakat due (2.5%)", ZakatBelow: "Your wealth is below the nisab, so no zakat is due.",
 		ZakatDisclaimer: "Estimate based on live gold and silver prices. Consult a scholar for your situation.",
 		ZakatUpdated:    "Prices as of {date}",
+		NavPrayer:       "Prayer", NavDates: "Dates", NavZakat: "Zakat",
 	},
 	"ar": {
 		Save: "حفظ التغييرات", Saved: "تم الحفظ", Loading: "جارٍ تحميل مواقيت الصلاة…",
@@ -985,10 +988,11 @@ var miniCopy = map[string]miniAppCopy{
 		ShareMessage: "مواقيت الصلاة",
 		ZakatTitle:   "حاسبة الزكاة", ZakatHelp: "احسب زكاة مالك بنسبة 2.5% إذا بلغ النصاب.",
 		ZakatCurrency: "العملة", ZakatHoldings: "أموالك الخاضعة للزكاة",
-		ZakatNisab: "النصاب (الحد الأدنى)", ZakatNisabNote: "نصاب الذهب {gold} · نصاب الفضة {silver}",
+		ZakatNisab: "النصاب (الحد الأدنى)", ZakatNisabNote: "نصاب الذهب {gold}\nنصاب الفضة {silver}",
 		ZakatDue: "الزكاة المستحقة (2.5%)", ZakatBelow: "مالك دون النصاب، فلا زكاة عليك.",
 		ZakatDisclaimer: "تقدير بناءً على أسعار الذهب والفضة الحالية. استشر أهل العلم لحالتك.",
 		ZakatUpdated:    "الأسعار بتاريخ {date}",
+		NavPrayer:       "الصلاة", NavDates: "المناسبات", NavZakat: "الزكاة",
 	},
 	"es": {
 		Save: "Guardar cambios", Saved: "Guardado", Loading: "Cargando horarios de oración…",
@@ -1016,10 +1020,11 @@ var miniCopy = map[string]miniAppCopy{
 		ShareMessage: "Horarios de oración",
 		ZakatTitle:   "Calculadora de zakat", ZakatHelp: "Calcula el zakat de tus ahorros al 2,5% por encima del nisab.",
 		ZakatCurrency: "Moneda", ZakatHoldings: "Tu patrimonio sujeto al zakat",
-		ZakatNisab: "Nisab (mínimo)", ZakatNisabNote: "Nisab de oro {gold} · Nisab de plata {silver}",
+		ZakatNisab: "Nisab (mínimo)", ZakatNisabNote: "Nisab de oro {gold}\nNisab de plata {silver}",
 		ZakatDue: "Zakat a pagar (2,5%)", ZakatBelow: "Tu patrimonio está por debajo del nisab, así que no debes zakat.",
 		ZakatDisclaimer: "Estimación basada en precios actuales del oro y la plata. Consulta a un experto para tu caso.",
 		ZakatUpdated:    "Precios al {date}",
+		NavPrayer:       "Oración", NavDates: "Fechas", NavZakat: "Zakat",
 	},
 	"fr": {
 		Save: "Enregistrer", Saved: "Enregistré", Loading: "Chargement des horaires de prière…",
@@ -1047,10 +1052,11 @@ var miniCopy = map[string]miniAppCopy{
 		ShareMessage: "Horaires de prière",
 		ZakatTitle:   "Calculateur de zakat", ZakatHelp: "Estimez la zakat sur votre épargne à 2,5% au-dessus du nisab.",
 		ZakatCurrency: "Devise", ZakatHoldings: "Votre patrimoine soumis à la zakat",
-		ZakatNisab: "Nisab (minimum)", ZakatNisabNote: "Nisab or {gold} · Nisab argent {silver}",
+		ZakatNisab: "Nisab (minimum)", ZakatNisabNote: "Nisab or {gold}\nNisab argent {silver}",
 		ZakatDue: "Zakat à verser (2,5%)", ZakatBelow: "Votre patrimoine est inférieur au nisab, aucune zakat n’est due.",
 		ZakatDisclaimer: "Estimation basée sur les cours actuels de l’or et de l’argent. Consultez un savant pour votre cas.",
 		ZakatUpdated:    "Cours au {date}",
+		NavPrayer:       "Prière", NavDates: "Dates", NavZakat: "Zakat",
 	},
 	"ru": {
 		Save: "Сохранить", Saved: "Сохранено", Loading: "Загружаем время намаза…",
@@ -1078,10 +1084,11 @@ var miniCopy = map[string]miniAppCopy{
 		ShareMessage: "Время намаза",
 		ZakatTitle:   "Калькулятор закята", ZakatHelp: "Рассчитайте закят с накоплений — 2,5% при достижении нисаба.",
 		ZakatCurrency: "Валюта", ZakatHoldings: "Ваше имущество, облагаемое закятом",
-		ZakatNisab: "Нисаб (минимум)", ZakatNisabNote: "Нисаб золота {gold} · Нисаб серебра {silver}",
+		ZakatNisab: "Нисаб (минимум)", ZakatNisabNote: "Нисаб золота {gold}\nНисаб серебра {silver}",
 		ZakatDue: "Закят к выплате (2,5%)", ZakatBelow: "Ваше имущество ниже нисаба, поэтому закят не обязателен.",
 		ZakatDisclaimer: "Оценка на основе текущих цен на золото и серебро. Обратитесь к знающему для вашего случая.",
 		ZakatUpdated:    "Цены на {date}",
+		NavPrayer:       "Намаз", NavDates: "Даты", NavZakat: "Закят",
 	},
 	"tr": {
 		Save: "Değişiklikleri kaydet", Saved: "Kaydedildi", Loading: "Namaz vakitleri yükleniyor…",
@@ -1109,10 +1116,11 @@ var miniCopy = map[string]miniAppCopy{
 		ShareMessage: "Namaz vakitleri",
 		ZakatTitle:   "Zekât hesaplayıcı", ZakatHelp: "Nisabı aşan birikiminiz için %2,5 zekâtı hesaplayın.",
 		ZakatCurrency: "Para birimi", ZakatHoldings: "Zekâta tabi malınız",
-		ZakatNisab: "Nisap (asgari)", ZakatNisabNote: "Altın nisabı {gold} · Gümüş nisabı {silver}",
+		ZakatNisab: "Nisap (asgari)", ZakatNisabNote: "Altın nisabı {gold}\nGümüş nisabı {silver}",
 		ZakatDue: "Ödenecek zekât (%2,5)", ZakatBelow: "Malınız nisabın altında, bu yüzden zekât gerekmez.",
 		ZakatDisclaimer: "Güncel altın ve gümüş fiyatlarına dayalı tahmin. Durumunuz için bir âlime danışın.",
 		ZakatUpdated:    "{date} tarihli fiyatlar",
+		NavPrayer:       "Namaz", NavDates: "Günler", NavZakat: "Zekât",
 	},
 	"uz": {
 		Save: "O‘zgarishlarni saqlash", Saved: "Saqlandi", Loading: "Namoz vaqtlari yuklanmoqda…",
@@ -1140,10 +1148,11 @@ var miniCopy = map[string]miniAppCopy{
 		ShareMessage: "Namoz vaqtlari",
 		ZakatTitle:   "Zakot kalkulyatori", ZakatHelp: "Nisobdan oshgan jamg‘armangizdan 2,5% zakotni hisoblang.",
 		ZakatCurrency: "Valyuta", ZakatHoldings: "Zakotga tortiladigan mol-mulkingiz",
-		ZakatNisab: "Nisob (eng kam miqdor)", ZakatNisabNote: "Oltin nisobi {gold} · Kumush nisobi {silver}",
+		ZakatNisab: "Nisob (eng kam miqdor)", ZakatNisabNote: "Oltin nisobi {gold}\nKumush nisobi {silver}",
 		ZakatDue: "To‘lanadigan zakot (2,5%)", ZakatBelow: "Mol-mulkingiz nisobdan kam, shuning uchun zakot vojib emas.",
 		ZakatDisclaimer: "Joriy oltin va kumush narxlariga asoslangan taxmin. Holatingiz uchun olimga murojaat qiling.",
 		ZakatUpdated:    "{date} holatidagi narxlar",
+		NavPrayer:       "Namoz", NavDates: "Sanalar", NavZakat: "Zakot",
 	},
 	"tt": {
 		Save: "Үзгәрешләрне саклау", Saved: "Сакланды", Loading: "Намаз вакытлары йөкләнә…",
@@ -1171,9 +1180,10 @@ var miniCopy = map[string]miniAppCopy{
 		ShareMessage: "Намаз вакытлары",
 		ZakatTitle:   "Зәкят исәпләгече", ZakatHelp: "Нисабтан артык җыемыгыздан 2,5% зәкятне исәпләгез.",
 		ZakatCurrency: "Валюта", ZakatHoldings: "Зәкятка керә торган мал-мөлкәтегез",
-		ZakatNisab: "Нисаб (минимум)", ZakatNisabNote: "Алтын нисабы {gold} · Көмеш нисабы {silver}",
+		ZakatNisab: "Нисаб (минимум)", ZakatNisabNote: "Алтын нисабы {gold}\nКөмеш нисабы {silver}",
 		ZakatDue: "Түләнәсе зәкят (2,5%)", ZakatBelow: "Мал-мөлкәтегез нисабтан ким, шуңа зәкят фарыз түгел.",
 		ZakatDisclaimer: "Хәзерге алтын һәм көмеш бәяләренә нигезләнгән бәя. Хәлегез өчен галимгә мөрәҗәгать итегез.",
 		ZakatUpdated:    "{date} көненә бәяләр",
+		NavPrayer:       "Намаз", NavDates: "Даталар", NavZakat: "Зәкят",
 	},
 }

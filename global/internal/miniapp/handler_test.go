@@ -215,6 +215,26 @@ func TestLookupReturnsScheduleWithoutChangingProfile(t *testing.T) {
 	}
 }
 
+func TestSettingsIconIsSingleGearAndShellIsNetworkFirst(t *testing.T) {
+	html, err := embeddedStatic.ReadFile("static/index.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(html), `class="tab-gear"`) {
+		t.Error("Settings tab is missing the single-gear SVG icon")
+	}
+	if strings.Contains(string(html), "🎛️") || strings.Contains(string(html), "⚙️") {
+		t.Error("Settings tab still uses a gear/knobs emoji instead of the single-gear SVG")
+	}
+	sw, err := embeddedStatic.ReadFile("static/sw.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(sw), "network-first") {
+		t.Error("service worker no longer documents its network-first shell strategy")
+	}
+}
+
 func TestMiniAppAPIRejectsUnsignedRequests(t *testing.T) {
 	handler := NewHandler("token", nil, nil, nil, nil, nil)
 	mux := http.NewServeMux()

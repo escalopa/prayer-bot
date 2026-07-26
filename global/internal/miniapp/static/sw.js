@@ -1,6 +1,6 @@
 "use strict";
 
-const cacheName = "global-prayer-miniapp-shell-v6";
+const cacheName = "global-prayer-miniapp-shell-v7";
 const shellAssets = [
   "./",
   "./app.css",
@@ -36,19 +36,38 @@ self.addEventListener("fetch", (event) => {
     url.pathname === "/js/telegram-web-app.js";
   if (!isAppShell && !isTelegramSDK) return;
 
-  event.respondWith((async () => {
-    const cached = await caches.match(event.request, { ignoreSearch: isTelegramSDK });
-    const network = fetch(event.request).then(async (response) => {
+  // The Telegram SDK is a stable, versioned URL, so cache-first avoids a network
+  // round-trip and never goes stale.
+  if (isTelegramSDK) {
+    event.respondWith((async () => {
+      const cached = await caches.match(event.request, { ignoreSearch: true });
+      if (cached) return cached;
+      const response = await fetch(event.request);
       if (response.ok || response.type === "opaque") {
         const cache = await caches.open(cacheName);
         await cache.put(event.request, response.clone());
       }
       return response;
-    });
-    if (cached) {
-      void network.catch(() => undefined);
-      return cached;
+    })());
+    return;
+  }
+
+  // The app shell (HTML, CSS, JS) is network-first: a fresh deploy is visible on
+  // the next launch without any manual cache clearing, while the cached copy is
+  // still used as an offline fallback so a previously opened Mini App can start
+  // during a network interruption.
+  event.respondWith((async () => {
+    try {
+      const response = await fetch(event.request);
+      if (response.ok) {
+        const cache = await caches.open(cacheName);
+        await cache.put(event.request, response.clone());
+      }
+      return response;
+    } catch (error) {
+      const cached = await caches.match(event.request);
+      if (cached) return cached;
+      throw error;
     }
-    return network;
   })());
 });

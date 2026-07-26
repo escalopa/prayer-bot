@@ -79,6 +79,12 @@ the newly selected language.
 
 ### Cached startup and offline behavior
 
+The service worker serves the application shell (HTML, CSS, JavaScript)
+**network-first**: when online it always fetches the latest, so a new deploy is
+visible on the next launch without any manual cache clearing, and it falls back
+to the cached shell only when the network is unavailable. The Telegram SDK, a
+stable versioned URL, stays cache-first.
+
 On a returning launch, the Mini App reads a device-local snapshot scoped to the
 Telegram user and renders it immediately while requesting a fresh bootstrap.
 Snapshots older than 48 hours or missing a complete today/tomorrow schedule are

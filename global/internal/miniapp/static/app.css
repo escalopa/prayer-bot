@@ -440,6 +440,7 @@ select:focus, input[type="number"]:focus { border-color: var(--accent); box-shad
 }
 .tab.active { color: var(--accent); background: color-mix(in srgb, var(--accent) 9%, transparent); }
 .tab-icon { font-size: 19px; line-height: 1; }
+.tab-icon .tab-gear { display: block; width: 21px; height: 21px; }
 .tab-label { font-size: 10px; letter-spacing: .01em; }
 #zakat-nisab-note { white-space: pre-line; }
 

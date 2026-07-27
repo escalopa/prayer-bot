@@ -67,6 +67,26 @@
               <p id="calculation-note" class="card-note"></p>
             </article>
           </section>
+
+          <section class="panel tools-panel">
+            <div class="tool-grid">
+              <article class="tool-card share-card">
+                <div class="tool-heading">
+                  <span class="tool-icon" aria-hidden="true">✨</span>
+                  <div>
+                    <h3 id="share-card-title">Share prayer card</h3>
+                    <p id="share-card-help">Create a beautiful image with the selected day’s prayer times.</p>
+                  </div>
+                </div>
+                <div class="share-card-preview" aria-hidden="true">
+                  <span class="share-preview-moon">☾</span>
+                  <strong id="share-preview-date"></strong>
+                  <span id="share-preview-time"></span>
+                </div>
+                <button id="share-prayer-card" class="primary-button compact" type="button">Create &amp; share</button>
+              </article>
+            </div>
+          </section>
         </div>
 
         <div class="view hidden" id="view-dates">
@@ -80,38 +100,6 @@
             </div>
             <div id="occasion-list" class="occasion-list"></div>
             <p id="occasions-disclaimer" class="occasion-disclaimer"></p>
-          </section>
-        </div>
-
-        <div class="view hidden" id="view-zakat">
-          <section id="zakat-panel" class="panel zakat-panel hidden">
-            <div class="panel-heading zakat-heading">
-              <div>
-                <h2 id="zakat-title">Zakat calculator</h2>
-                <p id="zakat-help" class="panel-help">Calculate zakat on your wealth.</p>
-              </div>
-              <span class="section-icon" aria-hidden="true">💰</span>
-            </div>
-            <div class="zakat-form">
-              <label><span id="zakat-currency-label">Currency</span>
-                <select id="zakat-currency"></select></label>
-              <label><span id="zakat-holdings-label">Your zakatable wealth</span>
-                <input id="zakat-holdings" type="number" min="0" step="any" inputmode="decimal" placeholder="0"></label>
-            </div>
-            <div class="zakat-summary">
-              <div class="zakat-row">
-                <span id="zakat-nisab-label">Niṣāb (minimum)</span>
-                <strong id="zakat-nisab-value" class="zakat-amount"></strong>
-              </div>
-              <p id="zakat-nisab-note" class="tool-note"></p>
-              <div class="zakat-row zakat-due-row">
-                <span id="zakat-due-label">Zakat due (2.5%)</span>
-                <strong id="zakat-due-value" class="zakat-amount zakat-due-amount"></strong>
-              </div>
-              <p id="zakat-status" class="tool-note zakat-status"></p>
-            </div>
-            <p id="zakat-disclaimer" class="occasion-disclaimer"></p>
-            <p id="zakat-updated" class="tool-note zakat-updated"></p>
           </section>
         </div>
 
@@ -221,23 +209,37 @@
                 <button id="add-home-screen" class="secondary-button" type="button">Add to home screen</button>
                 <p id="home-screen-status" class="tool-note hidden" role="status"></p>
               </article>
-
-              <article class="tool-card share-card">
-                <div class="tool-heading">
-                  <span class="tool-icon" aria-hidden="true">✨</span>
-                  <div>
-                    <h3 id="share-card-title">Share prayer card</h3>
-                    <p id="share-card-help">Create a beautiful image with the selected day’s prayer times.</p>
-                  </div>
-                </div>
-                <div class="share-card-preview" aria-hidden="true">
-                  <span class="share-preview-moon">☾</span>
-                  <strong id="share-preview-date"></strong>
-                  <span id="share-preview-time"></span>
-                </div>
-                <button id="share-prayer-card" class="primary-button compact" type="button">Create &amp; share</button>
-              </article>
             </div>
+          </section>
+
+          <section id="zakat-panel" class="panel zakat-panel hidden">
+            <div class="panel-heading zakat-heading">
+              <div>
+                <h2 id="zakat-title">Zakat calculator</h2>
+                <p id="zakat-help" class="panel-help">Calculate zakat on your wealth.</p>
+              </div>
+              <span class="section-icon" aria-hidden="true">💰</span>
+            </div>
+            <div class="zakat-form">
+              <label><span id="zakat-currency-label">Currency</span>
+                <select id="zakat-currency"></select></label>
+              <label><span id="zakat-holdings-label">Your zakatable wealth</span>
+                <input id="zakat-holdings" type="number" min="0" step="any" inputmode="decimal" placeholder="0"></label>
+            </div>
+            <div class="zakat-summary">
+              <div class="zakat-row">
+                <span id="zakat-nisab-label">Niṣāb (minimum)</span>
+                <strong id="zakat-nisab-value" class="zakat-amount"></strong>
+              </div>
+              <p id="zakat-nisab-note" class="tool-note"></p>
+              <div class="zakat-row zakat-due-row">
+                <span id="zakat-due-label">Zakat due (2.5%)</span>
+                <strong id="zakat-due-value" class="zakat-amount zakat-due-amount"></strong>
+              </div>
+              <p id="zakat-status" class="tool-note zakat-status"></p>
+            </div>
+            <p id="zakat-disclaimer" class="occasion-disclaimer"></p>
+            <p id="zakat-updated" class="tool-note zakat-updated"></p>
           </section>
         </div>
 
@@ -314,9 +316,6 @@
         </button>
         <button class="tab" type="button" data-view="dates">
           <span class="tab-icon" aria-hidden="true">🌙</span><span id="tab-dates" class="tab-label">Dates</span>
-        </button>
-        <button id="tab-zakat-btn" class="tab" type="button" data-view="zakat">
-          <span class="tab-icon" aria-hidden="true">💰</span><span id="tab-zakat" class="tab-label">Zakat</span>
         </button>
         <button class="tab" type="button" data-view="places">
           <span class="tab-icon" aria-hidden="true">🗺️</span><span id="tab-places" class="tab-label">Places</span>

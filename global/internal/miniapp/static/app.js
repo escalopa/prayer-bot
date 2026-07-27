@@ -240,7 +240,7 @@
     setText("tab-dates", labels.nav_dates);
     setText("tab-places", labels.nav_places);
     setText("tab-tools", labels.tools);
-    setText("tab-settings", labels.settings);
+    setText("tab-settings", labels.nav_settings);
     setText("places-title", labels.places_title);
     setText("places-help", labels.places_help);
     setText("places-today-tab", labels.today);

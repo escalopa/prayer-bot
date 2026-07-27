@@ -239,6 +239,27 @@ func TestSettingsIconIsSingleGearAndShellIsNetworkFirst(t *testing.T) {
 	}
 }
 
+func TestSettingsTabLabelHasNoGearEmoji(t *testing.T) {
+	// The Settings tab already renders an SVG gear icon; its text label must be
+	// plain so the tab does not show a second (emoji) gear beside the word.
+	for _, locale := range i18n.Supported() {
+		label := labels(locale)["nav_settings"]
+		if label == "" {
+			t.Errorf("locale %q has no nav_settings label", locale.Code)
+		}
+		if strings.ContainsAny(label, "⚙🎛🛠") {
+			t.Errorf("locale %q settings tab label %q must not contain a gear emoji", locale.Code, label)
+		}
+	}
+	script, err := embeddedStatic.ReadFile("static/app.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(script), `setText("tab-settings", labels.nav_settings)`) {
+		t.Error("settings tab must use the emoji-free nav_settings label, not the button text")
+	}
+}
+
 func TestMiniAppAPIRejectsUnsignedRequests(t *testing.T) {
 	handler := NewHandler("token", nil, nil, nil, nil, nil)
 	mux := http.NewServeMux()

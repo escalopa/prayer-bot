@@ -978,7 +978,8 @@ func labels(locale i18n.Locale) map[string]string {
 		"zakat_due": copy.ZakatDue, "zakat_below": copy.ZakatBelow,
 		"zakat_disclaimer": copy.ZakatDisclaimer, "zakat_updated": copy.ZakatUpdated,
 		"nav_prayer": copy.NavPrayer, "nav_dates": copy.NavDates, "nav_zakat": copy.NavZakat,
-		"nav_places": copy.NavPlaces, "places_title": copy.PlacesTitle, "places_help": copy.PlacesHelp,
+		"nav_places": copy.NavPlaces, "nav_settings": copy.NavSettings,
+		"places_title": copy.PlacesTitle, "places_help": copy.PlacesHelp,
 	}
 }
 
@@ -1001,7 +1002,7 @@ type miniAppCopy struct {
 	ZakatTitle, ZakatHelp, ZakatCurrency, ZakatHoldings   string
 	ZakatNisab, ZakatNisabNote, ZakatDue, ZakatBelow      string
 	ZakatDisclaimer, ZakatUpdated                         string
-	NavPrayer, NavDates, NavZakat, NavPlaces              string
+	NavPrayer, NavDates, NavZakat, NavPlaces, NavSettings string
 	PlacesTitle, PlacesHelp                               string
 }
 
@@ -1036,7 +1037,7 @@ var miniCopy = map[string]miniAppCopy{
 		ZakatDue: "Zakat due (2.5%)", ZakatBelow: "Your wealth is below the nisab, so no zakat is due.",
 		ZakatDisclaimer: "Estimate based on live gold and silver prices. Consult a scholar for your situation.",
 		ZakatUpdated:    "Prices as of {date}",
-		NavPrayer:       "Prayer", NavDates: "Dates", NavZakat: "Zakat", NavPlaces: "Places",
+		NavPrayer:       "Prayer", NavDates: "Dates", NavZakat: "Zakat", NavPlaces: "Places", NavSettings: "Settings",
 		PlacesTitle: "Prayer times anywhere",
 		PlacesHelp:  "Drag the map to any place to see its prayer times.",
 	},
@@ -1070,7 +1071,7 @@ var miniCopy = map[string]miniAppCopy{
 		ZakatDue: "الزكاة المستحقة (2.5%)", ZakatBelow: "مالك دون النصاب، فلا زكاة عليك.",
 		ZakatDisclaimer: "تقدير بناءً على أسعار الذهب والفضة الحالية. استشر أهل العلم لحالتك.",
 		ZakatUpdated:    "الأسعار بتاريخ {date}",
-		NavPrayer:       "الصلاة", NavDates: "المناسبات", NavZakat: "الزكاة", NavPlaces: "أماكن",
+		NavPrayer:       "الصلاة", NavDates: "المناسبات", NavZakat: "الزكاة", NavPlaces: "أماكن", NavSettings: "الإعدادات",
 		PlacesTitle: "مواقيت الصلاة في أي مكان",
 		PlacesHelp:  "حرّك الخريطة إلى أي مكان لعرض مواقيت الصلاة فيه.",
 	},
@@ -1104,7 +1105,7 @@ var miniCopy = map[string]miniAppCopy{
 		ZakatDue: "Zakat a pagar (2,5%)", ZakatBelow: "Tu patrimonio está por debajo del nisab, así que no debes zakat.",
 		ZakatDisclaimer: "Estimación basada en precios actuales del oro y la plata. Consulta a un experto para tu caso.",
 		ZakatUpdated:    "Precios al {date}",
-		NavPrayer:       "Oración", NavDates: "Fechas", NavZakat: "Zakat", NavPlaces: "Lugares",
+		NavPrayer:       "Oración", NavDates: "Fechas", NavZakat: "Zakat", NavPlaces: "Lugares", NavSettings: "Ajustes",
 		PlacesTitle: "Horarios en cualquier lugar",
 		PlacesHelp:  "Arrastra el mapa a cualquier lugar para ver sus horarios de oración.",
 	},
@@ -1138,7 +1139,7 @@ var miniCopy = map[string]miniAppCopy{
 		ZakatDue: "Zakat à verser (2,5%)", ZakatBelow: "Votre patrimoine est inférieur au nisab, aucune zakat n’est due.",
 		ZakatDisclaimer: "Estimation basée sur les cours actuels de l’or et de l’argent. Consultez un savant pour votre cas.",
 		ZakatUpdated:    "Cours au {date}",
-		NavPrayer:       "Prière", NavDates: "Dates", NavZakat: "Zakat", NavPlaces: "Lieux",
+		NavPrayer:       "Prière", NavDates: "Dates", NavZakat: "Zakat", NavPlaces: "Lieux", NavSettings: "Réglages",
 		PlacesTitle: "Horaires n’importe où",
 		PlacesHelp:  "Faites glisser la carte vers n’importe quel lieu pour voir ses horaires de prière.",
 	},
@@ -1172,7 +1173,7 @@ var miniCopy = map[string]miniAppCopy{
 		ZakatDue: "Закят к выплате (2,5%)", ZakatBelow: "Ваше имущество ниже нисаба, поэтому закят не обязателен.",
 		ZakatDisclaimer: "Оценка на основе текущих цен на золото и серебро. Обратитесь к знающему для вашего случая.",
 		ZakatUpdated:    "Цены на {date}",
-		NavPrayer:       "Намаз", NavDates: "Даты", NavZakat: "Закят", NavPlaces: "Места",
+		NavPrayer:       "Намаз", NavDates: "Даты", NavZakat: "Закят", NavPlaces: "Места", NavSettings: "Настройки",
 		PlacesTitle: "Время намаза где угодно",
 		PlacesHelp:  "Перетащите карту на любое место, чтобы увидеть время намаза.",
 	},
@@ -1206,7 +1207,7 @@ var miniCopy = map[string]miniAppCopy{
 		ZakatDue: "Ödenecek zekât (%2,5)", ZakatBelow: "Malınız nisabın altında, bu yüzden zekât gerekmez.",
 		ZakatDisclaimer: "Güncel altın ve gümüş fiyatlarına dayalı tahmin. Durumunuz için bir âlime danışın.",
 		ZakatUpdated:    "{date} tarihli fiyatlar",
-		NavPrayer:       "Namaz", NavDates: "Günler", NavZakat: "Zekât", NavPlaces: "Yerler",
+		NavPrayer:       "Namaz", NavDates: "Günler", NavZakat: "Zekât", NavPlaces: "Yerler", NavSettings: "Ayarlar",
 		PlacesTitle: "Her yerde namaz vakitleri",
 		PlacesHelp:  "Namaz vakitlerini görmek için haritayı istediğiniz yere sürükleyin.",
 	},
@@ -1240,7 +1241,7 @@ var miniCopy = map[string]miniAppCopy{
 		ZakatDue: "To‘lanadigan zakot (2,5%)", ZakatBelow: "Mol-mulkingiz nisobdan kam, shuning uchun zakot vojib emas.",
 		ZakatDisclaimer: "Joriy oltin va kumush narxlariga asoslangan taxmin. Holatingiz uchun olimga murojaat qiling.",
 		ZakatUpdated:    "{date} holatidagi narxlar",
-		NavPrayer:       "Namoz", NavDates: "Sanalar", NavZakat: "Zakot", NavPlaces: "Joylar",
+		NavPrayer:       "Namoz", NavDates: "Sanalar", NavZakat: "Zakot", NavPlaces: "Joylar", NavSettings: "Sozlamalar",
 		PlacesTitle: "Istalgan joyda namoz vaqtlari",
 		PlacesHelp:  "Namoz vaqtlarini ko‘rish uchun xaritani istalgan joyga suring.",
 	},
@@ -1274,7 +1275,7 @@ var miniCopy = map[string]miniAppCopy{
 		ZakatDue: "Түләнәсе зәкят (2,5%)", ZakatBelow: "Мал-мөлкәтегез нисабтан ким, шуңа зәкят фарыз түгел.",
 		ZakatDisclaimer: "Хәзерге алтын һәм көмеш бәяләренә нигезләнгән бәя. Хәлегез өчен галимгә мөрәҗәгать итегез.",
 		ZakatUpdated:    "{date} көненә бәяләр",
-		NavPrayer:       "Намаз", NavDates: "Даталар", NavZakat: "Зәкят", NavPlaces: "Урыннар",
+		NavPrayer:       "Намаз", NavDates: "Даталар", NavZakat: "Зәкят", NavPlaces: "Урыннар", NavSettings: "Көйләүләр",
 		PlacesTitle: "Теләсә кайда намаз вакытлары",
 		PlacesHelp:  "Намаз вакытларын күрер өчен картаны теләсә кайсы урынга күчерегез.",
 	},

@@ -238,7 +238,6 @@
     setText("zakat-disclaimer", labels.zakat_disclaimer);
     setText("tab-prayer", labels.nav_prayer);
     setText("tab-dates", labels.nav_dates);
-    setText("tab-zakat", labels.nav_zakat);
     setText("tab-places", labels.nav_places);
     setText("tab-tools", labels.tools);
     setText("tab-settings", labels.settings);
@@ -492,15 +491,11 @@
 
   function renderZakat() {
     const panel = byId("zakat-panel");
-    const tab = byId("tab-zakat-btn");
     const nisab = state.nisab;
     if (!nisab || !Array.isArray(nisab.currencies) || nisab.currencies.length === 0) {
       panel.classList.add("hidden");
-      if (tab) tab.classList.add("hidden");
-      if (activeView === "zakat") selectView("prayer");
       return;
     }
-    if (tab) tab.classList.remove("hidden");
     panel.classList.remove("hidden");
     if (!zakatCurrency || !nisab.rates[zakatCurrency]) zakatCurrency = nisab.default_currency;
     const select = byId("zakat-currency");
@@ -1062,7 +1057,7 @@
   }
 
   function selectView(view) {
-    const known = ["prayer", "dates", "zakat", "places", "tools", "settings"];
+    const known = ["prayer", "dates", "places", "tools", "settings"];
     if (!known.includes(view)) view = "prayer";
     activeView = view;
     known.forEach((name) => {

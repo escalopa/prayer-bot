@@ -115,10 +115,14 @@ func TestZakatCalculatorMarkupAndLabelsExist(t *testing.T) {
 			t.Errorf("index.html is missing Zakat calculator element %q", id)
 		}
 	}
-	for _, marker := range []string{"tab-bar", "view-prayer", "view-zakat", "data-view=\"prayer\""} {
+	for _, marker := range []string{"tab-bar", "view-prayer", "view-tools", "data-view=\"prayer\""} {
 		if !strings.Contains(string(html), marker) {
 			t.Errorf("index.html is missing section navigation marker %q", marker)
 		}
+	}
+	// The Zakat calculator now lives inside the Tools view; there is no Zakat tab.
+	if strings.Contains(string(html), `data-view="zakat"`) {
+		t.Error("Zakat should no longer be a top-level tab")
 	}
 	script, err := embeddedStatic.ReadFile("static/app.js")
 	if err != nil {

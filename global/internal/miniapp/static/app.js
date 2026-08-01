@@ -194,8 +194,10 @@
     setText("prayer-reminders-label", labels.prayer_reminders);
     setText("pre-prayer-reminder-label", labels.pre_prayer_reminder);
     setText("fasting-reminders-label", labels.fasting_reminders);
+    setText("white-days-reminders-label", labels.white_days_reminders);
     setText("kahf-reminders-label", labels.kahf_reminders);
     setText("fasting-schedule", labels.fasting_schedule);
+    setText("white-days-schedule", labels.white_days_schedule);
     setText("kahf-schedule", labels.kahf_schedule);
     setText("occasions-title", labels.occasions_title);
     setText("occasions-help", labels.occasions_help);
@@ -385,6 +387,7 @@
     byId("prayer-reminders").checked = state.reminders.prayer;
     fillSelect("pre-prayer-minutes", state.options.pre_reminders, state.reminders.pre_prayer_minutes);
     byId("fasting-reminders").checked = state.reminders.fasting;
+    byId("white-days-reminders").checked = Boolean(state.reminders.white_days);
     byId("kahf-reminders").checked = state.reminders.kahf;
     byId("occasion-major-reminders").checked = state.reminders.occasion_major;
     byId("occasion-fasting-reminders").checked = state.reminders.occasion_fasting;
@@ -676,6 +679,7 @@
       prayer: byId("prayer-reminders").checked,
       pre_prayer_minutes: Number(byId("pre-prayer-minutes").value),
       fasting: byId("fasting-reminders").checked,
+      white_days: byId("white-days-reminders").checked,
       kahf: byId("kahf-reminders").checked,
       occasion_major: byId("occasion-major-reminders").checked,
       occasion_fasting: byId("occasion-fasting-reminders").checked,
@@ -1247,7 +1251,7 @@
   byId("share-prayer-card").addEventListener("click", sharePrayerCard);
   byId("save-preferences").addEventListener("click", savePreferences);
   byId("retry-app").addEventListener("click", bootstrapApp);
-  ["prayer-reminders", "pre-prayer-minutes", "fasting-reminders", "kahf-reminders",
+  ["prayer-reminders", "pre-prayer-minutes", "fasting-reminders", "white-days-reminders", "kahf-reminders",
     "occasion-major-reminders", "occasion-fasting-reminders", "occasion-observed-reminders",
     "language", "method", "madhab", "highlat", "hijri-adjustment"]
     .forEach((id) => byId(id).addEventListener("change", () => setDirty(true)));

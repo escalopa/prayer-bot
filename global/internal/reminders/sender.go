@@ -11,6 +11,7 @@ import (
 	"github.com/go-telegram/bot/models"
 
 	"github.com/escalopa/prayer-bot/global/internal/domain"
+	"github.com/escalopa/prayer-bot/global/internal/hijri"
 	"github.com/escalopa/prayer-bot/global/internal/i18n"
 	"github.com/escalopa/prayer-bot/global/internal/occasions"
 	"github.com/escalopa/prayer-bot/global/internal/store"
@@ -157,7 +158,9 @@ func (s *Sender) Delete(ctx context.Context, task domain.MessageDeletionTask) er
 
 func notificationCategory(kind domain.ReminderKind) string {
 	switch kind {
-	case domain.ReminderWeeklyFasting:
+	case domain.ReminderWeeklyFasting, domain.ReminderWhiteDays:
+		// All fasting reminders share one slot: only the latest "fasting
+		// tomorrow" notice matters, whether weekly or a white day.
 		return "weekly_fasting"
 	case domain.ReminderWeeklyKahf:
 		return "weekly_kahf"
@@ -179,6 +182,8 @@ func reminderText(rule domain.ReminderRule, schedule domain.ReminderSchedule, pr
 	switch rule.Kind {
 	case domain.ReminderWeeklyFasting:
 		return locale.Message("reminder_fasting")
+	case domain.ReminderWhiteDays:
+		return whiteDaysReminderText(schedule, profile, locale)
 	case domain.ReminderWeeklyKahf:
 		return locale.Message("reminder_kahf")
 	case domain.ReminderBefore:
@@ -226,6 +231,22 @@ func occasionReminderText(rule domain.ReminderRule, schedule domain.ReminderSche
 		}
 	}
 	return builder.String()
+}
+
+// whiteDaysReminderText names the Hijri date being fasted so the user knows
+// which of the white days tomorrow is. It falls back to the generic template
+// values on a conversion error rather than failing the delivery.
+func whiteDaysReminderText(schedule domain.ReminderSchedule, profile domain.PrayerProfile, locale i18n.Locale) string {
+	location := mustLocation(profile.Timezone)
+	date, err := time.ParseInLocation("2006-01-02", schedule.LocalDate, location)
+	if err != nil {
+		return locale.Message("reminder_fasting")
+	}
+	hijriDate, err := hijri.FromGregorian(date, profile.HijriAdjustment)
+	if err != nil {
+		return locale.Message("reminder_fasting")
+	}
+	return fmt.Sprintf(locale.Message("reminder_white_days"), hijriDate.Day, locale.HijriMonth(hijriDate.Month))
 }
 
 func mustLocation(name string) *time.Location {

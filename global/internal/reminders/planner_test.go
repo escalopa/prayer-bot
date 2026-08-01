@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/escalopa/prayer-bot/global/internal/domain"
+	"github.com/escalopa/prayer-bot/global/internal/hijri"
 	"github.com/escalopa/prayer-bot/global/internal/occasions"
 )
 
@@ -95,5 +96,76 @@ func TestNextIslamicOccasionUsesCorrectedHijriDateAndPreviousEvening(t *testing.
 	)
 	if !next.NextRunAt.Equal(expectedRun.UTC()) {
 		t.Fatalf("occasion run = %s, want %s", next.NextRunAt, expectedRun.UTC())
+	}
+}
+
+func TestNextWhiteDaysReminderUsesPreviousEveningOfHijri13to15(t *testing.T) {
+	location, _ := time.LoadLocation("Africa/Cairo")
+	after := time.Date(2026, 7, 17, 12, 0, 0, 0, location)
+	planner := &Planner{}
+	profile := domain.PrayerProfile{Timezone: "Africa/Cairo", Version: 5}
+	rule := domain.ReminderRule{ID: 9, ChatID: 10, Kind: domain.ReminderWhiteDays, LocalTime: "20:00"}
+
+	next, err := planner.Next(context.Background(), profile, rule, after)
+	if err != nil {
+		t.Fatal(err)
+	}
+	target, err := time.ParseInLocation("2006-01-02", next.LocalDate, location)
+	if err != nil {
+		t.Fatal(err)
+	}
+	date, err := hijri.FromGregorian(target, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if date.Day < 13 || date.Day > 15 {
+		t.Fatalf("target %s is Hijri day %d, want 13-15", next.LocalDate, date.Day)
+	}
+	run := next.NextRunAt.In(location)
+	if got := run.Format("15:04"); got != "20:00" {
+		t.Fatalf("reminder time = %s, want 20:00", got)
+	}
+	if got := run.AddDate(0, 0, 1).Format("2006-01-02"); got != next.LocalDate {
+		t.Fatalf("reminder day %s is not the evening before %s", run.Format("2006-01-02"), next.LocalDate)
+	}
+	if !next.NextRunAt.After(after) {
+		t.Fatalf("reminder %s is not after %s", next.NextRunAt, after)
+	}
+
+	// Planning again from just after this reminder must find the next white day,
+	// never repeat the same occurrence.
+	following, err := planner.Next(context.Background(), profile, rule, next.NextRunAt.Add(time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if following.LocalDate <= next.LocalDate {
+		t.Fatalf("following white day %s does not advance past %s", following.LocalDate, next.LocalDate)
+	}
+}
+
+func TestNextWhiteDaysRespectsHijriAdjustment(t *testing.T) {
+	location, _ := time.LoadLocation("Africa/Cairo")
+	after := time.Date(2026, 7, 17, 12, 0, 0, 0, location)
+	planner := &Planner{}
+	rule := domain.ReminderRule{ID: 9, ChatID: 10, Kind: domain.ReminderWhiteDays, LocalTime: "20:00"}
+
+	base, err := planner.Next(context.Background(), domain.PrayerProfile{Timezone: "Africa/Cairo"}, rule, after)
+	if err != nil {
+		t.Fatal(err)
+	}
+	shifted, err := planner.Next(context.Background(), domain.PrayerProfile{Timezone: "Africa/Cairo", HijriAdjustment: 2}, rule, after)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if base.LocalDate == shifted.LocalDate {
+		t.Fatalf("a +2 day Hijri correction must shift the white day, both were %s", base.LocalDate)
+	}
+	target, _ := time.ParseInLocation("2006-01-02", shifted.LocalDate, location)
+	date, err := hijri.FromGregorian(target, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if date.Day < 13 || date.Day > 15 {
+		t.Fatalf("corrected target %s is Hijri day %d, want 13-15", shifted.LocalDate, date.Day)
 	}
 }

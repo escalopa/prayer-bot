@@ -128,6 +128,7 @@ func remindersKeyboard(state reminderState, locale i18n.Locale) *models.InlineKe
 		[]models.InlineKeyboardButton{toggle(locale.Button("prayer_reminders"), "prayer", state.Prayer)},
 		[]models.InlineKeyboardButton{callbackButton("⏳ "+preReminder, "reminders:pre:choose")},
 		[]models.InlineKeyboardButton{toggle(locale.Button("fasting_reminders"), "fasting", state.Fasting)},
+		[]models.InlineKeyboardButton{toggle(locale.Button("white_days_reminders"), "white_days", state.WhiteDays)},
 		[]models.InlineKeyboardButton{toggle(locale.Button("kahf_reminders"), "kahf", state.Kahf)},
 		[]models.InlineKeyboardButton{toggle(locale.OccasionUI("major_reminders"), "occasion_major", state.OccasionMajor)},
 		[]models.InlineKeyboardButton{toggle(locale.OccasionUI("fasting_reminders"), "occasion_fasting", state.OccasionFasting)},

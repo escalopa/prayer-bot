@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/escalopa/prayer-bot/global/internal/domain"
+	"github.com/escalopa/prayer-bot/global/internal/hijri"
 	"github.com/escalopa/prayer-bot/global/internal/occasions"
 	"github.com/escalopa/prayer-bot/global/internal/prayertime"
 )
@@ -55,6 +56,9 @@ func (p *Planner) Next(ctx context.Context, profile domain.PrayerProfile, rule d
 	}
 	if rule.Kind.Weekly() {
 		return nextWeekly(profile, rule, after, location)
+	}
+	if rule.Kind == domain.ReminderWhiteDays {
+		return nextWhiteDays(profile, rule, after, location)
 	}
 	if rule.Kind.Occasion() {
 		return nextOccasion(profile, rule, after, location)
@@ -184,6 +188,40 @@ func nextWeekly(profile domain.PrayerProfile, rule domain.ReminderRule, after ti
 		}, nil
 	}
 	return domain.ReminderSchedule{}, fmt.Errorf("no valid weekly occurrence found in the next fifteen days")
+}
+
+// nextWhiteDays finds the next 13th, 14th, or 15th Hijri day (Ayyam al-Bid)
+// using the profile's moon-sighting correction and schedules the reminder for
+// the rule's local time on the preceding evening, mirroring the weekly fasting
+// reminder. A 40-day scan safely covers any 29/30-day Hijri month plus margin.
+func nextWhiteDays(profile domain.PrayerProfile, rule domain.ReminderRule, after time.Time, location *time.Location) (domain.ReminderSchedule, error) {
+	hour, minute, err := parseLocalTime(rule.LocalTime)
+	if err != nil {
+		return domain.ReminderSchedule{}, err
+	}
+	localAfter := after.In(location)
+	for dayOffset := 0; dayOffset < 40; dayOffset++ {
+		candidate := localAfter.AddDate(0, 0, dayOffset)
+		target := time.Date(candidate.Year(), candidate.Month(), candidate.Day(), 0, 0, 0, 0, location)
+		date, err := hijri.FromGregorian(target, profile.HijriAdjustment)
+		if err != nil {
+			return domain.ReminderSchedule{}, err
+		}
+		if date.Day < 13 || date.Day > 15 {
+			continue
+		}
+		previous := target.AddDate(0, 0, -1)
+		nextRun := time.Date(previous.Year(), previous.Month(), previous.Day(), hour, minute, 0, 0, location)
+		if !nextRun.After(after) {
+			continue
+		}
+		return domain.ReminderSchedule{
+			RuleID: rule.ID, ChatID: rule.ChatID, ProfileVersion: profile.Version,
+			LocalDate: target.Format("2006-01-02"), PrayerAt: target,
+			NextRunAt: nextRun.UTC(), State: "pending",
+		}, nil
+	}
+	return domain.ReminderSchedule{}, fmt.Errorf("no white day found in the next forty days")
 }
 
 func parseLocalTime(value string) (int, int, error) {

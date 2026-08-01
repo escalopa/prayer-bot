@@ -47,6 +47,7 @@ type Storage interface {
 	DisableRules(context.Context, int64) error
 	ConfigurePrayerRules(context.Context, int64, bool, int) error
 	SetWeeklyRule(context.Context, int64, domain.ReminderKind, bool) error
+	SetWhiteDaysRule(context.Context, int64, bool) error
 	SetOccasionRule(context.Context, int64, domain.ReminderKind, bool) error
 	CalendarSubscription(context.Context, int64) (domain.CalendarSubscription, error)
 	CalendarSubscriptionByToken(context.Context, string) (domain.CalendarSubscription, error)
@@ -367,6 +368,9 @@ type remindersRequest struct {
 	Prayer           *bool `json:"prayer"`
 	PrePrayerMinutes int   `json:"pre_prayer_minutes"`
 	Fasting          *bool `json:"fasting"`
+	// WhiteDays is optional so cached Mini App clients that predate the field
+	// keep saving successfully; nil preserves the current state.
+	WhiteDays        *bool `json:"white_days"`
 	Kahf             *bool `json:"kahf"`
 	OccasionMajor    *bool `json:"occasion_major"`
 	OccasionFasting  *bool `json:"occasion_fasting"`
@@ -469,7 +473,7 @@ func (h *Handler) updateReminders(w http.ResponseWriter, r *http.Request, identi
 	if err != nil {
 		return err
 	}
-	if changed && (desired.Prayer || desired.Fasting || desired.Kahf ||
+	if changed && (desired.Prayer || desired.Fasting || desired.WhiteDays || desired.Kahf ||
 		desired.OccasionMajor || desired.OccasionFasting || desired.OccasionObserved) {
 		if err := h.planner.RebuildChat(r.Context(), identity.UserID, h.now()); err != nil {
 			return fmt.Errorf("rebuild reminders: %w", err)
@@ -492,6 +496,10 @@ func (h *Handler) applyReminders(ctx context.Context, chatID int64, request remi
 		Fasting: *request.Fasting, Kahf: *request.Kahf,
 		OccasionMajor: *request.OccasionMajor, OccasionFasting: *request.OccasionFasting,
 		OccasionObserved: *request.OccasionObserved,
+		WhiteDays:        current.WhiteDays,
+	}
+	if request.WhiteDays != nil {
+		desired.WhiteDays = *request.WhiteDays
 	}
 	if !desired.Prayer {
 		desired.PrePrayerMinutes = 0
@@ -505,6 +513,11 @@ func (h *Handler) applyReminders(ctx context.Context, chatID int64, request remi
 	if current.Fasting != desired.Fasting {
 		if err := h.store.SetWeeklyRule(ctx, chatID, domain.ReminderWeeklyFasting, desired.Fasting); err != nil {
 			return false, reminderResponse{}, fmt.Errorf("update fasting reminders: %w", err)
+		}
+	}
+	if current.WhiteDays != desired.WhiteDays {
+		if err := h.store.SetWhiteDaysRule(ctx, chatID, desired.WhiteDays); err != nil {
+			return false, reminderResponse{}, fmt.Errorf("update white days reminders: %w", err)
 		}
 	}
 	if current.Kahf != desired.Kahf {
@@ -600,6 +613,7 @@ type reminderResponse struct {
 	Prayer           bool `json:"prayer"`
 	PrePrayerMinutes int  `json:"pre_prayer_minutes"`
 	Fasting          bool `json:"fasting"`
+	WhiteDays        bool `json:"white_days"`
 	Kahf             bool `json:"kahf"`
 	OccasionMajor    bool `json:"occasion_major"`
 	OccasionFasting  bool `json:"occasion_fasting"`
@@ -751,6 +765,8 @@ func (h *Handler) reminderState(ctx context.Context, chatID int64) (reminderResp
 		switch rule.Kind {
 		case domain.ReminderWeeklyFasting:
 			state.Fasting = true
+		case domain.ReminderWhiteDays:
+			state.WhiteDays = true
 		case domain.ReminderWeeklyKahf:
 			state.Kahf = true
 		case domain.ReminderOccasionMajor:
@@ -942,7 +958,9 @@ func labels(locale i18n.Locale) map[string]string {
 		"pre_prayer_reminder": locale.Message("pre_prayer_reminder"),
 		"fasting_reminders":   locale.Button("fasting_reminders"), "kahf_reminders": locale.Button("kahf_reminders"),
 		"fasting_schedule": locale.Message("fasting_schedule"), "kahf_schedule": locale.Message("kahf_schedule"),
-		"occasions_title": locale.OccasionUI("title"), "occasions_help": locale.OccasionUI("help"),
+		"white_days_reminders": locale.Button("white_days_reminders"),
+		"white_days_schedule":  locale.Message("white_days_schedule"),
+		"occasions_title":      locale.OccasionUI("title"), "occasions_help": locale.OccasionUI("help"),
 		"occasions_disclaimer": locale.OccasionUI("disclaimer"),
 		"occasion_recommended": locale.OccasionUI("recommended"), "occasion_sources": locale.OccasionUI("sources"),
 		"occasion_major_reminders":    locale.OccasionUI("major_reminders"),

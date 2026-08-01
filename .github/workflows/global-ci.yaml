@@ -22,8 +22,8 @@ jobs:
       run:
         working-directory: global
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version: '1.26.x'
           cache-dependency-path: global/go.sum
@@ -39,8 +39,8 @@ jobs:
       run:
         working-directory: global/infra/gcp
     steps:
-      - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: '1.13.3'
       - run: terraform fmt -check -recursive

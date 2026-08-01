@@ -2,7 +2,12 @@
 
 ## Health and logs
 
-All services expose `GET /healthz`. Application logs include update IDs or delivery keys, never full Telegram updates, coordinates, database URLs, bot tokens, webhook secrets, or Maps keys.
+All services expose `GET /health` (use this for external checks) and
+`GET /healthz` (container-internal only: Google Front End intercepts `/healthz`
+on `run.app` domains and returns its own 404 before the request reaches the
+service). Application logs include update IDs or delivery keys, never full
+Telegram updates, coordinates, database URLs, bot tokens, webhook secrets, or
+Maps keys.
 
 Useful alerts are Cloud Run 5xx rate, Cloud Tasks oldest task age, queue retry count, Scheduler failures, PostgreSQL connection errors, and Google Time Zone/Geocoding non-`OK` statuses.
 

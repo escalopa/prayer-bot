@@ -130,7 +130,8 @@ so infrastructure deployment is not rolled back by a cosmetic operation.
 
 1. Confirm the workflow summary shows successful tests, migration, Terraform,
    and webhook configuration.
-2. Check `GET /healthz` for all three services.
+2. Check `GET /health` for all three services (`/healthz` is intercepted by
+   Google Front End on `run.app` domains and never reaches the container).
 3. Run `/start`, `/today`, and one settings save in the selected bot.
 4. Open the Mini App from Telegram and verify bootstrap, location state, and
    today/tomorrow switching.

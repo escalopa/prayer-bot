@@ -40,8 +40,14 @@ func Serve(port string, handler http.Handler) error {
 	}
 }
 
+// HealthMux registers the health endpoints. Google Front End intercepts
+// "/healthz" at the edge on run.app domains and answers 404 before the request
+// reaches the container, so "/health" is the route external checks must use;
+// "/healthz" is kept for container-internal probes and local runs.
 func HealthMux(mux *http.ServeMux) {
-	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
+	health := func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
-	})
+	}
+	mux.HandleFunc("GET /health", health)
+	mux.HandleFunc("GET /healthz", health)
 }

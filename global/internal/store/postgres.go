@@ -283,6 +283,7 @@ func (s *Store) AdminMetrics(ctx context.Context) (AdminDashboard, error) {
 				WHEN kind IN ('before', 'at', 'tomorrow') THEN 'prayer'
 				WHEN kind = 'weekly_fasting' THEN 'fasting'
 				WHEN kind = 'weekly_kahf' THEN 'kahf'
+				WHEN kind = 'white_days' THEN 'white_days'
 				WHEN kind = 'occasion_major' THEN 'occasion_major'
 				WHEN kind = 'occasion_fasting' THEN 'occasion_fasting'
 				WHEN kind = 'occasion_observed' THEN 'occasion_observed'
@@ -436,6 +437,16 @@ func (s *Store) SetWeeklyRule(ctx context.Context, chatID int64, kind domain.Rem
 	if kind == domain.ReminderWeeklyKahf {
 		localTime = "09:00"
 	}
+	return s.setRecurringRule(ctx, chatID, kind, localTime, enabled)
+}
+
+// SetWhiteDaysRule toggles the Ayyam al-Bid fasting reminder, delivered at
+// 20:00 on the evening before each of the 13th-15th Hijri days.
+func (s *Store) SetWhiteDaysRule(ctx context.Context, chatID int64, enabled bool) error {
+	return s.setRecurringRule(ctx, chatID, domain.ReminderWhiteDays, "20:00", enabled)
+}
+
+func (s *Store) setRecurringRule(ctx context.Context, chatID int64, kind domain.ReminderKind, localTime string, enabled bool) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return err

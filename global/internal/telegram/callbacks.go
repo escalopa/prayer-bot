@@ -219,6 +219,10 @@ func (h *Handler) handleReminderCallback(ctx context.Context, message *models.Me
 		if err := h.store.SetWeeklyRule(ctx, message.Chat.ID, domain.ReminderWeeklyFasting, enabled); err != nil {
 			return err
 		}
+	case "white_days":
+		if err := h.store.SetWhiteDaysRule(ctx, message.Chat.ID, enabled); err != nil {
+			return err
+		}
 	case "kahf":
 		if err := h.store.SetWeeklyRule(ctx, message.Chat.ID, domain.ReminderWeeklyKahf, enabled); err != nil {
 			return err

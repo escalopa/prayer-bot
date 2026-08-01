@@ -304,6 +304,7 @@ type reminderState struct {
 	Prayer           bool
 	PrePrayerMinutes int
 	Fasting          bool
+	WhiteDays        bool
 	Kahf             bool
 	OccasionMajor    bool
 	OccasionFasting  bool
@@ -320,6 +321,8 @@ func (h *Handler) loadReminderState(ctx context.Context, chatID int64) (reminder
 		switch rule.Kind {
 		case domain.ReminderWeeklyFasting:
 			state.Fasting = true
+		case domain.ReminderWhiteDays:
+			state.WhiteDays = true
 		case domain.ReminderWeeklyKahf:
 			state.Kahf = true
 		case domain.ReminderOccasionMajor:
@@ -348,10 +351,11 @@ func formatReminders(state reminderState, locale i18n.Locale) string {
 	if state.PrePrayerMinutes > 0 {
 		preReminder = fmt.Sprintf(locale.Message("minutes_before"), state.PrePrayerMinutes)
 	}
-	return fmt.Sprintf("%s\n\n🔔 <b>%s</b> · %s\n   ⏳ %s\n\n🌙 <b>%s</b> · %s\n   %s\n\n📖 <b>%s</b> · %s\n   %s\n\n🕌 <b>%s</b> · %s\n   %s\n\n🤲 <b>%s</b> · %s\n   %s\n\n🌙 <b>%s</b> · %s\n   %s",
+	return fmt.Sprintf("%s\n\n🔔 <b>%s</b> · %s\n   ⏳ %s\n\n🌙 <b>%s</b> · %s\n   %s\n\n🌕 <b>%s</b> · %s\n   %s\n\n📖 <b>%s</b> · %s\n   %s\n\n🕌 <b>%s</b> · %s\n   %s\n\n🤲 <b>%s</b> · %s\n   %s\n\n🌙 <b>%s</b> · %s\n   %s",
 		locale.Message("reminders_title"), escape(locale.Button("prayer_reminders")), status(state.Prayer),
 		escape(preReminder),
 		escape(locale.Button("fasting_reminders")), status(state.Fasting), escape(locale.Message("fasting_schedule")),
+		escape(locale.Button("white_days_reminders")), status(state.WhiteDays), escape(locale.Message("white_days_schedule")),
 		escape(locale.Button("kahf_reminders")), status(state.Kahf), escape(locale.Message("kahf_schedule")),
 		escape(locale.OccasionUI("major_reminders")), status(state.OccasionMajor), escape(locale.OccasionUI("schedule")),
 		escape(locale.OccasionUI("fasting_reminders")), status(state.OccasionFasting), escape(locale.OccasionUI("schedule")),

@@ -777,6 +777,54 @@ func TestPreferencesUpdateSavesSettingsAndRemindersTogether(t *testing.T) {
 	}
 }
 
+func TestWhiteDaysToggleAndStaleClientPreservation(t *testing.T) {
+	now := time.Date(2026, time.July, 17, 12, 0, 0, 0, time.UTC)
+	storage := newFakeStorage()
+	storage.chats[42] = domain.Chat{TelegramChatID: 42, Type: "private", LanguageCode: "en"}
+	storage.profiles[42] = domain.PrayerProfile{
+		ChatID: 42, Latitude: 30.044, Longitude: 31.236, Timezone: "UTC",
+		Method: domain.MethodEgyptian, Madhab: domain.MadhabShafii,
+		HighLatitudeRule: domain.HighLatitudeAngleBased,
+	}
+	planner := &fakePlanner{}
+	handler := NewHandler("test-token", storage, nil, prayertime.New(), planner, nil)
+	handler.now = func() time.Time { return now }
+	mux := http.NewServeMux()
+	handler.Register(mux)
+	send := func(body string) bootstrapResponse {
+		t.Helper()
+		request := httptest.NewRequest(http.MethodPut, "/api/miniapp/reminders", strings.NewReader(body))
+		request.Header.Set("X-Telegram-Init-Data", signedInitData(t, "test-token", now, initDataUser{ID: 42, FirstName: "Amina", LanguageCode: "en"}))
+		response := httptest.NewRecorder()
+		mux.ServeHTTP(response, request)
+		if response.Code != http.StatusOK {
+			t.Fatalf("status = %d, body = %s", response.Code, response.Body.String())
+		}
+		var data bootstrapResponse
+		if err := json.Unmarshal(response.Body.Bytes(), &data); err != nil {
+			t.Fatal(err)
+		}
+		return data
+	}
+
+	enabled := send(`{"prayer":false,"pre_prayer_minutes":0,"fasting":false,"white_days":true,"kahf":false,
+		"occasion_major":false,"occasion_fasting":false,"occasion_observed":false}`)
+	if !enabled.Reminders.WhiteDays {
+		t.Fatalf("white days reminder was not enabled: %+v", enabled.Reminders)
+	}
+
+	// A cached Mini App client that predates the field omits it entirely; the
+	// save must preserve the enabled white days rule instead of disabling it.
+	stale := send(`{"prayer":false,"pre_prayer_minutes":0,"fasting":true,"kahf":false,
+		"occasion_major":false,"occasion_fasting":false,"occasion_observed":false}`)
+	if !stale.Reminders.WhiteDays {
+		t.Fatalf("stale client save must not disable white days: %+v", stale.Reminders)
+	}
+	if !stale.Reminders.Fasting {
+		t.Fatalf("stale client save lost its own change: %+v", stale.Reminders)
+	}
+}
+
 func TestParseAdjustmentsRequiresCompleteSnapshot(t *testing.T) {
 	if _, err := parseAdjustments(map[string]int{"fajr": 1}); err == nil {
 		t.Fatal("expected an incomplete adjustment snapshot to fail")
@@ -944,6 +992,10 @@ func (s *fakeStorage) SetWeeklyRule(_ context.Context, chatID int64, kind domain
 	}
 	s.rules[chatID] = append(s.rules[chatID], domain.ReminderRule{ChatID: chatID, Kind: kind, Enabled: enabled})
 	return nil
+}
+
+func (s *fakeStorage) SetWhiteDaysRule(ctx context.Context, chatID int64, enabled bool) error {
+	return s.SetWeeklyRule(ctx, chatID, domain.ReminderWhiteDays, enabled)
 }
 
 func (s *fakeStorage) SetOccasionRule(_ context.Context, chatID int64, kind domain.ReminderKind, enabled bool) error {

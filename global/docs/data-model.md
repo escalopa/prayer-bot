@@ -150,7 +150,9 @@ category:
 - `islamic_occasion`
 
 Before-prayer and at-prayer messages deliberately share `prayer`. All three
-Islamic occasion rule kinds deliberately share `islamic_occasion`.
+Islamic occasion rule kinds deliberately share `islamic_occasion`, and the
+`white_days` rule kind deliberately shares `weekly_fasting` because both are
+"fasting tomorrow" notices where only the latest matters.
 
 ### `calendar_subscriptions`
 

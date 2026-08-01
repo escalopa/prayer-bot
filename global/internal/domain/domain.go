@@ -185,6 +185,9 @@ const (
 	ReminderOccasionMajor    ReminderKind = "occasion_major"
 	ReminderOccasionFasting  ReminderKind = "occasion_fasting"
 	ReminderOccasionObserved ReminderKind = "occasion_observed"
+	// ReminderWhiteDays reminds on the evening before each of the 13th, 14th,
+	// and 15th Hijri days (Ayyam al-Bid), when voluntary fasting is recommended.
+	ReminderWhiteDays ReminderKind = "white_days"
 )
 
 func (kind ReminderKind) Weekly() bool {

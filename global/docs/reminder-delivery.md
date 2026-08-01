@@ -62,11 +62,18 @@ same task twice returns `AlreadyExists` and is treated as success.
 | Prayer time | `prayer` | Replaces its pre-reminder, or the preceding prayer |
 | Tomorrow reminder | `tomorrow` | Replaces the prior tomorrow reminder |
 | Monday/Thursday fasting | `weekly_fasting` | Replaces only the prior fasting reminder |
+| White days fasting (Hijri 13–15) | `weekly_fasting` | Shares the fasting slot: only the latest "fasting tomorrow" notice remains |
 | Friday Al-Kahf | `weekly_kahf` | Replaces only the prior Al-Kahf reminder |
 | Major, fasting, or commonly observed Islamic occasion | `islamic_occasion` | Replaces the prior Islamic occasion reminder |
 
 Every message also expires after 36 hours because Telegram cannot delete bot
 messages once they are older than 48 hours.
+
+White days (Ayyam al-Bid) recurrence is calculated from the Hijri calendar with
+the profile's -2 to +2 day correction: the planner scans forward for the next
+Gregorian day whose corrected Hijri day is 13, 14, or 15 and schedules the
+reminder for 20:00 on the preceding local evening, mirroring the weekly fasting
+reminder.
 
 Islamic occasion recurrence is calculated, not stored as a list of Gregorian
 dates. The planner scans the curated Hijri catalog with the profile's -2 to +2

@@ -91,7 +91,7 @@ In this execution mode, JSONB parameters must be passed as JSON text rather than
 Go `[]byte`. pgx otherwise encodes the byte slice as PostgreSQL `bytea` before
 the target JSONB type is resolved, causing `SQLSTATE 22P02 invalid input syntax
 for type json`. All profile adjustments and outbox payloads use the shared
-JSON-text encoder in `internal/store`.
+JSON-text encoder in `internal/adapter/out/store`.
 
 ## Deployment workflow
 

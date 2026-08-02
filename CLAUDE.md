@@ -38,7 +38,7 @@ Three Cloud Run services from **one immutable image**, selected by container com
 - `cmd/send` — Cloud Tasks-only. Idempotent Telegram delivery, recurrence advance, message cleanup.
 - `cmd/botprofile`, `cmd/bootstrapdb` — deploy-time commands (profile/webhook sync; schema creation).
 
-Internal packages (largest UI surfaces first): `internal/telegram` (bot UI), `internal/miniapp` (web UI + signed init-data auth + calendar feed), `internal/store` (all SQL), `internal/i18n` (8 locales: en, ar, es, fr, ru, tr, uz, tt), `internal/reminders` (planner/dispatch/sender), plus `domain`, `prayertime`, `hijri`, `occasions`, `location`, `qibla`, `calendarfile`, `botprofile`, `config`, `database`, `assets`, `httpx`. See [`code-map.md`](global/docs/code-map.md) for ownership and dependencies.
+The module is **hexagonal (ports and adapters)**; dependencies point inward and `cmd/*` are the only composition roots. Layers: `internal/domain` (DTOs + pure policy + `ErrNotFound` — the shared vocabulary of every signature), `internal/port` (shared interfaces: `Store`, `Calculator`, `LocationResolver`, `MetalSource`), `internal/core/*` (pure logic and application services: `prayertime`, `hijri`, `occasions`, `qibla`, `calendarfile`, `i18n` with 8 locales — en, ar, es, fr, ru, tr, uz, tt — and `reminders` planner/dispatch/sender), `internal/adapter/in/*` (driving: `telegram` bot UI, `miniapp` web UI + signed init-data auth + calendar feed), `internal/adapter/out/*` (driven: `store` all SQL, `location` Google Maps, `metals`, `botprofile`; each carries a `var _ port.X` assertion and translates its errors to `domain.ErrNotFound`), plus platform packages `config`, `database`, `assets`, `httpx`. Core never imports an adapter. See [`code-map.md`](global/docs/code-map.md) for ownership and dependencies.
 
 ## Commands (run inside `global/`)
 
@@ -52,14 +52,14 @@ Run `make check` before finishing a change. The legacy root module has its own `
 
 ## Non-obvious constraints (don't relearn these the hard way)
 
-- **pgx + Supabase transaction pooler:** runtime connections MUST use `pgx.QueryExecModeExec` (no named prepared-statement cache), or you get `42P05`/`26000`. In that mode, **JSONB params must be passed as JSON text, not `[]byte`** (else `22P02`) — use the shared JSON-text encoder in `internal/store`.
-- **Schema isolation:** all global SQL goes through `internal/store`, which qualifies the logical `global_bot` schema with the env schema (`global_bot_testing` / `global_bot_production`). Never touch legacy `public.*`. Goose must always target `-table="${GLOBAL_DB_SCHEMA}.goose_db_version"`; bootstrap the schema before the first migration.
+- **pgx + Supabase transaction pooler:** runtime connections MUST use `pgx.QueryExecModeExec` (no named prepared-statement cache), or you get `42P05`/`26000`. In that mode, **JSONB params must be passed as JSON text, not `[]byte`** (else `22P02`) — use the shared JSON-text encoder in `internal/adapter/out/store`.
+- **Schema isolation:** all global SQL goes through `internal/adapter/out/store`, which qualifies the logical `global_bot` schema with the env schema (`global_bot_testing` / `global_bot_production`). Never touch legacy `public.*`. Goose must always target `-table="${GLOBAL_DB_SCHEMA}.goose_db_version"`; bootstrap the schema before the first migration.
 - **Delivery is at-least-once** in a narrow window (Telegram send succeeds, completion commit fails). The sender must make a compensating `deleteMessages` call after a post-send failure before returning a retryable error. Cleanup uses one message slot per category (`prayer`, `tomorrow`, `weekly_fasting`, `weekly_kahf`, `islamic_occasion`); every message also gets a 36h cleanup task (Telegram can't delete messages older than 48h).
 - **Profile version** increments on any change affecting calculated times; queued tasks carry it and go **stale** instead of sending after a change.
 - **Mini App auth:** never trust a Telegram user ID from a JSON body. Identity comes only from the signed `initData` header (HMAC verified, dedup fields, <24h). Private-chat scoped; group config stays in the bot with admin authorization.
 - **Privacy:** coordinates rounded to 3 decimals on persist; reverse-geocoded city is not stored (only Place ID); feedback is never stored in Postgres. Never log tokens, secrets, DB URLs, coordinates, Maps keys, full Telegram updates, or the calendar bearer URL.
 - **Hijri correction** (-2..+2 days) shifts displayed Hijri dates and occasion matching only — never prayer instants.
-- **Calculation engine** is hidden behind `prayertime.Calculator` (currently `github.com/hablullah/go-prayer`); keep that boundary so engines stay swappable.
+- **Calculation engine** is hidden behind the `port.Calculator` interface (implemented by `core/prayertime` over `github.com/hablullah/go-prayer`); keep that boundary so engines stay swappable.
 
 ## Deployment
 

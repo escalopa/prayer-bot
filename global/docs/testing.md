@@ -27,16 +27,16 @@ request when the strategy changes.
 | Layer | Scope | Depends on | Runs in `make test` |
 | --- | --- | --- | --- |
 | Unit | One package, pure logic and orchestration over fakes | Nothing external | Always |
-| Integration | Real SQL through `internal/store` against PostgreSQL | `TEST_DATABASE_URL` | Only when the variable is set |
+| Integration | Real SQL through `internal/adapter/out/store` against PostgreSQL | `TEST_DATABASE_URL` | Only when the variable is set |
 
 ### Unit tests
 
 Most coverage is unit level. Examples worth copying:
 
-- `internal/reminders/planner_test.go` — a `fixedCalculator` fake and explicit
+- `internal/core/reminders/planner_test.go` — a `fixedCalculator` fake and explicit
   `after` instants assert next-occurrence timing across weekly, occasion, and
   before-prayer rules.
-- `internal/reminders/sender_process_test.go` — fakes for `SenderStore`,
+- `internal/core/reminders/sender_process_test.go` — fakes for `SenderStore`,
   `nextPlanner`, and `MessageSender`, plus an injected clock, cover the full
   delivery state machine: send, complete, staleness, lease contention, and the
   post-send compensation described in [Reminder delivery](reminder-delivery.md).
@@ -44,7 +44,7 @@ Most coverage is unit level. Examples worth copying:
 
 ### Integration tests
 
-`internal/store/integration_test.go` exercises real SQL because the parts that
+`internal/adapter/out/store/integration_test.go` exercises real SQL because the parts that
 break under the Supabase transaction pooler — `pgx.QueryExecModeExec`, JSONB
 passed as text, and the transactional outbox — are invisible to fakes. A missing
 integration test is exactly why the JSONB-as-`[]byte` profile-save bug reached
@@ -61,7 +61,7 @@ Run against a disposable database:
 ```sh
 docker run -d --name pb-pg-test -e POSTGRES_PASSWORD=postgres -p 55432:5432 postgres:16-alpine
 export TEST_DATABASE_URL='postgres://postgres:postgres@localhost:55432/postgres?sslmode=disable'
-go test ./internal/store/
+go test ./internal/adapter/out/store/
 docker rm -f pb-pg-test
 ```
 

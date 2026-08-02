@@ -11,14 +11,14 @@ import (
 	botapi "github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
 
+	"github.com/escalopa/prayer-bot/global/internal/adapter/in/miniapp"
+	telegramhandler "github.com/escalopa/prayer-bot/global/internal/adapter/in/telegram"
+	"github.com/escalopa/prayer-bot/global/internal/adapter/out/location"
+	"github.com/escalopa/prayer-bot/global/internal/adapter/out/store"
 	"github.com/escalopa/prayer-bot/global/internal/config"
+	"github.com/escalopa/prayer-bot/global/internal/core/prayertime"
+	"github.com/escalopa/prayer-bot/global/internal/core/reminders"
 	"github.com/escalopa/prayer-bot/global/internal/httpx"
-	"github.com/escalopa/prayer-bot/global/internal/location"
-	"github.com/escalopa/prayer-bot/global/internal/miniapp"
-	"github.com/escalopa/prayer-bot/global/internal/prayertime"
-	"github.com/escalopa/prayer-bot/global/internal/reminders"
-	"github.com/escalopa/prayer-bot/global/internal/store"
-	telegramhandler "github.com/escalopa/prayer-bot/global/internal/telegram"
 )
 
 func main() {

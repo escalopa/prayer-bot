@@ -9,7 +9,7 @@ import (
 	botapi "github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
 
-	profile "github.com/escalopa/prayer-bot/global/internal/botprofile"
+	profile "github.com/escalopa/prayer-bot/global/internal/adapter/out/botprofile"
 	"github.com/escalopa/prayer-bot/global/internal/config"
 )
 

@@ -7,11 +7,11 @@ import (
 	"os"
 	"time"
 
+	"github.com/escalopa/prayer-bot/global/internal/adapter/out/metals"
+	"github.com/escalopa/prayer-bot/global/internal/adapter/out/store"
 	"github.com/escalopa/prayer-bot/global/internal/config"
+	"github.com/escalopa/prayer-bot/global/internal/core/reminders"
 	"github.com/escalopa/prayer-bot/global/internal/httpx"
-	"github.com/escalopa/prayer-bot/global/internal/metals"
-	"github.com/escalopa/prayer-bot/global/internal/reminders"
-	"github.com/escalopa/prayer-bot/global/internal/store"
 )
 
 func main() {

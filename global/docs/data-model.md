@@ -5,7 +5,7 @@ Testing and production use the same PostgreSQL database but different schemas:
 - `global_bot_testing`
 - `global_bot_production`
 
-Every SQL query passes through `internal/store`, which qualifies the logical
+Every SQL query passes through `internal/adapter/out/store`, which qualifies the logical
 `global_bot` schema with the configured environment schema. The legacy `public`
 tables are outside this boundary.
 

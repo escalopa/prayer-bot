@@ -99,6 +99,10 @@ The root of user-owned global-bot data. It stores chat type, saved language, and
 whether Telegram has blocked delivery. Deleting a chat cascades to its profile,
 rules, schedules, deliveries, outbox rows, and message slots.
 
+`jamaat_poll` (default false) opts a **group** chat into receiving its
+pre-prayer reminder as a non-anonymous jamaa'ah poll. It is a delivery
+presentation flag, not a reminder rule, and is ignored for private chats.
+
 ### `prayer_profiles`
 
 One row per configured chat. Coordinates are rounded to three decimals. The

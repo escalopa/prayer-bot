@@ -223,6 +223,15 @@ func (h *Handler) handleReminderCallback(ctx context.Context, message *models.Me
 		if err := h.store.SetWhiteDaysRule(ctx, message.Chat.ID, enabled); err != nil {
 			return err
 		}
+	case "jamaat_poll":
+		// Group-only delivery mode; the toggle never renders in private chats,
+		// but a stale keyboard must not flip the flag there either.
+		if message.Chat.Type == models.ChatTypePrivate {
+			return nil
+		}
+		if err := h.store.SetJamaatPoll(ctx, message.Chat.ID, enabled); err != nil {
+			return err
+		}
 	case "kahf":
 		if err := h.store.SetWeeklyRule(ctx, message.Chat.ID, domain.ReminderWeeklyKahf, enabled); err != nil {
 			return err

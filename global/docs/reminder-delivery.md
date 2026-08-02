@@ -59,6 +59,7 @@ same task twice returns `AlreadyExists` and is treated as success.
 | Notification | Category | Replacement behavior |
 | --- | --- | --- |
 | Pre-prayer | `prayer` | Replaces the preceding prayer notification |
+| Pre-prayer jamaa'ah poll (opted-in groups) | `prayer` | Same slot as the pre-prayer message it replaces |
 | Prayer time | `prayer` | Replaces its pre-reminder, or the preceding prayer |
 | Tomorrow reminder | `tomorrow` | Replaces the prior tomorrow reminder |
 | Monday/Thursday fasting | `weekly_fasting` | Replaces only the prior fasting reminder |
@@ -68,6 +69,14 @@ same task twice returns `AlreadyExists` and is treated as success.
 
 Every message also expires after 36 hours because Telegram cannot delete bot
 messages once they are older than 48 hours.
+
+Groups can opt in (bot reminders keyboard, group chats only) to receive the
+pre-prayer reminder as a **non-anonymous jamaa'ah poll** ("I'll join prayer" /
+"I might be late") instead of a plain message. The flag lives on the chat row
+(`chats.jamaat_poll`); it changes delivery presentation only — scheduling,
+retries, staleness, slot replacement, expiry, and post-send compensation are
+identical because the poll is an ordinary Telegram message. Private chats never
+receive polls.
 
 White days (Ayyam al-Bid) recurrence is calculated from the Hijri calendar with
 the profile's -2 to +2 day correction: the planner scans forward for the next

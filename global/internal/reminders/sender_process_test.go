@@ -3,6 +3,7 @@ package reminders
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -84,6 +85,7 @@ type fakeBot struct {
 	sendID  int
 	sendErr error
 	sent    []string
+	polls   []*botapi.SendPollParams
 	deleted [][]int
 }
 
@@ -92,6 +94,14 @@ func (f *fakeBot) SendMessage(_ context.Context, params *botapi.SendMessageParam
 		return nil, f.sendErr
 	}
 	f.sent = append(f.sent, params.Text)
+	return &models.Message{ID: f.sendID}, nil
+}
+
+func (f *fakeBot) SendPoll(_ context.Context, params *botapi.SendPollParams) (*models.Message, error) {
+	if f.sendErr != nil {
+		return nil, f.sendErr
+	}
+	f.polls = append(f.polls, params)
 	return &models.Message{ID: f.sendID}, nil
 }
 
@@ -250,5 +260,60 @@ func TestProcessRejectsInvalidTask(t *testing.T) {
 	_, _, _, sender := alignedFixture(t)
 	if err := sender.Process(context.Background(), domain.DeliveryTask{}); err == nil {
 		t.Fatal("expected an error for a task missing identifiers")
+	}
+}
+
+func TestGroupPreReminderBecomesJamaatPollWhenEnabled(t *testing.T) {
+	task, senderStore, bot, sender := alignedFixture(t)
+	senderStore.rule = domain.ReminderRule{
+		ID: 2, ChatID: 3, Kind: domain.ReminderBefore,
+		Prayer: domain.PrayerMaghrib, OffsetMinutes: 30, Enabled: true,
+	}
+	senderStore.chat = domain.Chat{
+		TelegramChatID: 3, Type: "supergroup", LanguageCode: "en", JamaatPoll: true,
+	}
+
+	if err := sender.Process(context.Background(), task); err != nil {
+		t.Fatal(err)
+	}
+	if len(bot.sent) != 0 {
+		t.Fatalf("expected no plain message, got %v", bot.sent)
+	}
+	if len(bot.polls) != 1 {
+		t.Fatalf("expected one poll, got %d", len(bot.polls))
+	}
+	poll := bot.polls[0]
+	if poll.IsAnonymous == nil || *poll.IsAnonymous {
+		t.Fatal("jamaa'ah poll must be non-anonymous so members see who joins")
+	}
+	if len(poll.Options) != 2 {
+		t.Fatalf("expected join/late options, got %v", poll.Options)
+	}
+	if !strings.Contains(poll.Question, "Maghrib") || !strings.Contains(poll.Question, "30") {
+		t.Fatalf("poll question is missing the prayer or minutes: %q", poll.Question)
+	}
+	if senderStore.completeCalls != 1 || senderStore.completeArgs.category != "prayer" {
+		t.Fatalf("poll delivery must complete into the prayer slot: calls=%d category=%q",
+			senderStore.completeCalls, senderStore.completeArgs.category)
+	}
+}
+
+func TestGroupPreReminderStaysTextWhenPollDisabledOrPrivate(t *testing.T) {
+	for name, chat := range map[string]domain.Chat{
+		"group poll disabled": {TelegramChatID: 3, Type: "supergroup", LanguageCode: "en"},
+		"private chat":        {TelegramChatID: 3, Type: "private", LanguageCode: "en", JamaatPoll: true},
+	} {
+		task, senderStore, bot, sender := alignedFixture(t)
+		senderStore.rule = domain.ReminderRule{
+			ID: 2, ChatID: 3, Kind: domain.ReminderBefore,
+			Prayer: domain.PrayerMaghrib, OffsetMinutes: 30, Enabled: true,
+		}
+		senderStore.chat = chat
+		if err := sender.Process(context.Background(), task); err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		if len(bot.polls) != 0 || len(bot.sent) != 1 {
+			t.Fatalf("%s: expected a plain message, polls=%d sent=%d", name, len(bot.polls), len(bot.sent))
+		}
 	}
 }

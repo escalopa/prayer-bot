@@ -41,7 +41,7 @@ flows that call Google APIs (timezone and reverse geocoding).
 1. Telegram supplies latitude and longitude from a location message or the Mini
    App location manager.
 2. The handler validates coordinate bounds.
-3. `internal/location` resolves an IANA timezone and approximate place with the
+3. `internal/adapter/out/location` resolves an IANA timezone and approximate place with the
    Google Time Zone and Geocoding APIs.
 4. Persistence rounds coordinates to three decimal places and stores the
    timezone and Google Place ID. The formatted Google address is not stored.
@@ -137,10 +137,10 @@ matches an Islamic occasion. It never changes prayer instants.
 
 ## Islamic occasions
 
-`internal/occasions` is the single catalog used by the Mini App, calendar, and
+`internal/core/occasions` is the single catalog used by the Mini App, calendar, and
 reminder planner. Each definition contains a Hijri month/day, category, emoji,
 and optional HTTPS Quran/Hadith references; localized explanatory and
-recommended-action text lives in `internal/i18n`.
+recommended-action text lives in `internal/core/i18n`.
 
 The Mini App returns the next three occurrences after applying the profile's
 Hijri correction. The calendar adds matching all-day events within its rolling

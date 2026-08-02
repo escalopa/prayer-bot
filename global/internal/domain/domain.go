@@ -11,8 +11,14 @@ type Chat struct {
 	TelegramChatID int64
 	Type           string
 	LanguageCode   string
-	BlockedAt      *time.Time
+	// JamaatPoll switches the group's pre-prayer reminder to a non-anonymous
+	// "who is joining" poll. Meaningless in private chats.
+	JamaatPoll bool
+	BlockedAt  *time.Time
 }
+
+// IsGroup reports whether the chat is a Telegram group or supergroup.
+func (c Chat) IsGroup() bool { return c.Type == "group" || c.Type == "supergroup" }
 
 type Method string
 

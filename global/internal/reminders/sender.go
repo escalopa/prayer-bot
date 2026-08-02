@@ -19,6 +19,7 @@ import (
 
 type MessageSender interface {
 	SendMessage(context.Context, *botapi.SendMessageParams) (*models.Message, error)
+	SendPoll(context.Context, *botapi.SendPollParams) (*models.Message, error)
 	DeleteMessages(context.Context, *botapi.DeleteMessagesParams) (bool, error)
 }
 
@@ -98,10 +99,20 @@ func (s *Sender) Process(ctx context.Context, task domain.DeliveryTask) error {
 	if err != nil {
 		return fail(fmt.Errorf("load chat language: %w", err))
 	}
-	text := reminderText(rule, schedule, profile, i18n.Resolve(chat.LanguageCode))
-	message, err := s.bot.SendMessage(ctx, &botapi.SendMessageParams{
-		ChatID: task.ChatID, Text: text, ParseMode: models.ParseModeHTML,
-	})
+	locale := i18n.Resolve(chat.LanguageCode)
+	var message *models.Message
+	if rule.Kind == domain.ReminderBefore && chat.IsGroup() && chat.JamaatPoll {
+		// Groups that opted in receive the pre-prayer reminder as a
+		// non-anonymous poll so members can see who is joining the jamaa'ah.
+		// The poll is a regular Telegram message, so slot replacement,
+		// expiry, and compensation deletion all apply unchanged.
+		message, err = s.bot.SendPoll(ctx, jamaatPollParams(task.ChatID, rule, schedule, profile, locale))
+	} else {
+		text := reminderText(rule, schedule, profile, locale)
+		message, err = s.bot.SendMessage(ctx, &botapi.SendMessageParams{
+			ChatID: task.ChatID, Text: text, ParseMode: models.ParseModeHTML,
+		})
+	}
 	if err != nil {
 		return fail(fmt.Errorf("Telegram reminder send failed"))
 	}
@@ -231,6 +242,23 @@ func occasionReminderText(rule domain.ReminderRule, schedule domain.ReminderSche
 		}
 	}
 	return builder.String()
+}
+
+// jamaatPollParams builds the group pre-prayer poll. Poll questions cannot
+// carry HTML, so the question uses a plain-text template.
+func jamaatPollParams(chatID int64, rule domain.ReminderRule, schedule domain.ReminderSchedule, profile domain.PrayerProfile, locale i18n.Locale) *botapi.SendPollParams {
+	name := locale.Prayer(rule.Prayer)
+	timeText := schedule.PrayerAt.In(mustLocation(profile.Timezone)).Format("15:04")
+	anonymous := false
+	return &botapi.SendPollParams{
+		ChatID:   chatID,
+		Question: fmt.Sprintf(locale.Message("jamaat_poll_question"), name, rule.OffsetMinutes, timeText),
+		Options: []models.InputPollOption{
+			{Text: locale.Message("jamaat_join")},
+			{Text: locale.Message("jamaat_late")},
+		},
+		IsAnonymous: &anonymous,
+	}
 }
 
 // whiteDaysReminderText names the Hijri date being fasted so the user knows

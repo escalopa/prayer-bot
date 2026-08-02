@@ -160,11 +160,19 @@ func (s *Store) UpsertChat(ctx context.Context, chat domain.Chat) error {
 func (s *Store) Chat(ctx context.Context, chatID int64) (domain.Chat, error) {
 	var chat domain.Chat
 	err := s.pool.QueryRow(ctx, `
-		SELECT telegram_chat_id, chat_type, language_code, blocked_at
+		SELECT telegram_chat_id, chat_type, language_code, jamaat_poll, blocked_at
 		FROM global_bot.chats WHERE telegram_chat_id = $1`, chatID).Scan(
-		&chat.TelegramChatID, &chat.Type, &chat.LanguageCode, &chat.BlockedAt,
+		&chat.TelegramChatID, &chat.Type, &chat.LanguageCode, &chat.JamaatPoll, &chat.BlockedAt,
 	)
 	return chat, err
+}
+
+// SetJamaatPoll toggles the group's pre-prayer jamaa'ah poll delivery mode.
+func (s *Store) SetJamaatPoll(ctx context.Context, chatID int64, enabled bool) error {
+	_, err := s.pool.Exec(ctx, `
+		UPDATE global_bot.chats SET jamaat_poll = $2, updated_at = now()
+		WHERE telegram_chat_id = $1`, chatID, enabled)
+	return err
 }
 
 func (s *Store) SetLanguage(ctx context.Context, chatID int64, languageCode string) error {

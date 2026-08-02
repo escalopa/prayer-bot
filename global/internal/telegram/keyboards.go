@@ -124,17 +124,26 @@ func remindersKeyboard(state reminderState, locale i18n.Locale) *models.InlineKe
 	if state.PrePrayerMinutes > 0 {
 		preReminder = fmt.Sprintf(locale.Message("minutes_before"), state.PrePrayerMinutes)
 	}
-	return inlineKeyboard(
-		[]models.InlineKeyboardButton{toggle(locale.Button("prayer_reminders"), "prayer", state.Prayer)},
-		[]models.InlineKeyboardButton{callbackButton("⏳ "+preReminder, "reminders:pre:choose")},
-		[]models.InlineKeyboardButton{toggle(locale.Button("fasting_reminders"), "fasting", state.Fasting)},
-		[]models.InlineKeyboardButton{toggle(locale.Button("white_days_reminders"), "white_days", state.WhiteDays)},
-		[]models.InlineKeyboardButton{toggle(locale.Button("kahf_reminders"), "kahf", state.Kahf)},
-		[]models.InlineKeyboardButton{toggle(locale.OccasionUI("major_reminders"), "occasion_major", state.OccasionMajor)},
-		[]models.InlineKeyboardButton{toggle(locale.OccasionUI("fasting_reminders"), "occasion_fasting", state.OccasionFasting)},
-		[]models.InlineKeyboardButton{toggle(locale.OccasionUI("observed_reminders"), "occasion_observed", state.OccasionObserved)},
-		[]models.InlineKeyboardButton{callbackButton(locale.Button("close"), "close")},
-	)
+	rows := [][]models.InlineKeyboardButton{
+		{toggle(locale.Button("prayer_reminders"), "prayer", state.Prayer)},
+		{callbackButton("⏳ "+preReminder, "reminders:pre:choose")},
+		{toggle(locale.Button("fasting_reminders"), "fasting", state.Fasting)},
+		{toggle(locale.Button("white_days_reminders"), "white_days", state.WhiteDays)},
+		{toggle(locale.Button("kahf_reminders"), "kahf", state.Kahf)},
+		{toggle(locale.OccasionUI("major_reminders"), "occasion_major", state.OccasionMajor)},
+		{toggle(locale.OccasionUI("fasting_reminders"), "occasion_fasting", state.OccasionFasting)},
+		{toggle(locale.OccasionUI("observed_reminders"), "occasion_observed", state.OccasionObserved)},
+	}
+	if state.IsGroup {
+		// The jamaa'ah poll changes how a group receives its pre-prayer
+		// reminder; it has no meaning in private chats, so the toggle is
+		// group-only.
+		rows = append(rows, []models.InlineKeyboardButton{
+			toggle(locale.Button("jamaat_poll_reminders"), "jamaat_poll", state.JamaatPoll),
+		})
+	}
+	rows = append(rows, []models.InlineKeyboardButton{callbackButton(locale.Button("close"), "close")})
+	return inlineKeyboard(rows...)
 }
 
 func preReminderKeyboard(current int, locale i18n.Locale) *models.InlineKeyboardMarkup {

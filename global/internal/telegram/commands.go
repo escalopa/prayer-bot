@@ -309,6 +309,10 @@ type reminderState struct {
 	OccasionMajor    bool
 	OccasionFasting  bool
 	OccasionObserved bool
+	// IsGroup and JamaatPoll come from the chat row: the jamaa'ah poll is a
+	// group-only delivery mode, not a schedule rule.
+	IsGroup    bool
+	JamaatPoll bool
 }
 
 func (h *Handler) loadReminderState(ctx context.Context, chatID int64) (reminderState, error) {
@@ -317,6 +321,12 @@ func (h *Handler) loadReminderState(ctx context.Context, chatID int64) (reminder
 		return reminderState{}, err
 	}
 	var state reminderState
+	if chat, err := h.store.Chat(ctx, chatID); err == nil {
+		state.IsGroup = chat.IsGroup()
+		state.JamaatPoll = chat.JamaatPoll
+	} else if !store.IsNotFound(err) {
+		return reminderState{}, err
+	}
 	for _, rule := range rules {
 		switch rule.Kind {
 		case domain.ReminderWeeklyFasting:
@@ -351,7 +361,7 @@ func formatReminders(state reminderState, locale i18n.Locale) string {
 	if state.PrePrayerMinutes > 0 {
 		preReminder = fmt.Sprintf(locale.Message("minutes_before"), state.PrePrayerMinutes)
 	}
-	return fmt.Sprintf("%s\n\n🔔 <b>%s</b> · %s\n   ⏳ %s\n\n🌙 <b>%s</b> · %s\n   %s\n\n🌕 <b>%s</b> · %s\n   %s\n\n📖 <b>%s</b> · %s\n   %s\n\n🕌 <b>%s</b> · %s\n   %s\n\n🤲 <b>%s</b> · %s\n   %s\n\n🌙 <b>%s</b> · %s\n   %s",
+	text := fmt.Sprintf("%s\n\n🔔 <b>%s</b> · %s\n   ⏳ %s\n\n🌙 <b>%s</b> · %s\n   %s\n\n🌕 <b>%s</b> · %s\n   %s\n\n📖 <b>%s</b> · %s\n   %s\n\n🕌 <b>%s</b> · %s\n   %s\n\n🤲 <b>%s</b> · %s\n   %s\n\n🌙 <b>%s</b> · %s\n   %s",
 		locale.Message("reminders_title"), escape(locale.Button("prayer_reminders")), status(state.Prayer),
 		escape(preReminder),
 		escape(locale.Button("fasting_reminders")), status(state.Fasting), escape(locale.Message("fasting_schedule")),
@@ -360,6 +370,11 @@ func formatReminders(state reminderState, locale i18n.Locale) string {
 		escape(locale.OccasionUI("major_reminders")), status(state.OccasionMajor), escape(locale.OccasionUI("schedule")),
 		escape(locale.OccasionUI("fasting_reminders")), status(state.OccasionFasting), escape(locale.OccasionUI("schedule")),
 		escape(locale.OccasionUI("observed_reminders")), status(state.OccasionObserved), escape(locale.OccasionUI("schedule")))
+	if state.IsGroup {
+		text += fmt.Sprintf("\n\n🗳 <b>%s</b> · %s\n   %s",
+			escape(locale.Button("jamaat_poll_reminders")), status(state.JamaatPoll), escape(locale.Message("jamaat_schedule")))
+	}
+	return text
 }
 
 func localizedDate(date time.Time, locale i18n.Locale) string {

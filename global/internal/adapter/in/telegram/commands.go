@@ -23,18 +23,24 @@ func (h *Handler) handleLocation(ctx context.Context, message *models.Message, l
 	if latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180 {
 		return h.send(ctx, message.Chat.ID, locale.Message("invalid_location"), mainKeyboard(locale))
 	}
+	return h.saveLocation(ctx, message.Chat.ID, latitude, longitude, locale)
+}
+
+// saveLocation is the single persistence path for every way a chat can set
+// its location: a shared location message, the Mini App, or a /city pick.
+func (h *Handler) saveLocation(ctx context.Context, chatID int64, latitude, longitude float64, locale i18n.Locale) error {
 	resolved, err := h.resolver.Resolve(ctx, latitude, longitude)
 	if err != nil {
 		return fmt.Errorf("resolve location: %w", err)
 	}
 	latitude, longitude = domain.RoundedCoordinates(latitude, longitude)
 	profile := domain.PrayerProfile{
-		ChatID: message.Chat.ID, Latitude: latitude, Longitude: longitude,
+		ChatID: chatID, Latitude: latitude, Longitude: longitude,
 		Timezone: resolved.Timezone, PlaceID: resolved.PlaceID, CountryCode: resolved.CountryCode,
 		Method: domain.RecommendedMethod(resolved.CountryCode), Madhab: domain.MadhabShafii,
 		HighLatitudeRule: domain.HighLatitudeAngleBased,
 	}
-	if current, err := h.store.Profile(ctx, message.Chat.ID); err == nil {
+	if current, err := h.store.Profile(ctx, chatID); err == nil {
 		profile.Method = current.Method
 		profile.Madhab = current.Madhab
 		profile.HighLatitudeRule = current.HighLatitudeRule
@@ -48,16 +54,35 @@ func (h *Handler) handleLocation(ctx context.Context, message *models.Message, l
 	if err != nil {
 		return fmt.Errorf("save prayer profile: %w", err)
 	}
-	if err := h.planner.RebuildChat(ctx, message.Chat.ID, h.now()); err != nil {
+	if err := h.planner.RebuildChat(ctx, chatID, h.now()); err != nil {
 		return fmt.Errorf("rebuild reminders: %w", err)
 	}
 	city := resolved.City
 	if city == "" {
 		city = resolved.Timezone
 	}
-	return h.send(ctx, message.Chat.ID, fmt.Sprintf(
+	return h.send(ctx, chatID, fmt.Sprintf(
 		locale.Message("location_set"), escape(city), escape(resolved.Timezone), escape(locale.Method(profile.Method)),
 	), mainKeyboard(locale))
+}
+
+// searchCity handles /city <name>: forward-geocode the query and offer the
+// matches as inline buttons. This is the only location path that works in
+// group chats and on Telegram Desktop, where the share-location button does
+// not exist.
+func (h *Handler) searchCity(ctx context.Context, chatID int64, query string, locale i18n.Locale) error {
+	query = strings.TrimSpace(query)
+	if query == "" {
+		return h.send(ctx, chatID, locale.Message("city_usage"), nil)
+	}
+	candidates, err := h.resolver.Search(ctx, query, locale.Code)
+	if err != nil {
+		return fmt.Errorf("search city: %w", err)
+	}
+	if len(candidates) == 0 {
+		return h.send(ctx, chatID, locale.Message("city_no_results"), nil)
+	}
+	return h.send(ctx, chatID, locale.Message("city_choose"), cityKeyboard(candidates, locale))
 }
 
 func (h *Handler) requestLocation(ctx context.Context, chat models.Chat, locale i18n.Locale) error {

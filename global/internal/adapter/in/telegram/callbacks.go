@@ -46,6 +46,26 @@ func (h *Handler) handleCallback(ctx context.Context, query *models.CallbackQuer
 		return h.editAdminDashboard(ctx, message, view)
 	}
 
+	if strings.HasPrefix(query.Data, "city:") {
+		if ok, err := h.canConfigureActor(ctx, message.Chat, &query.From, locale); err != nil || !ok {
+			return err
+		}
+		parts := strings.Split(strings.TrimPrefix(query.Data, "city:"), ":")
+		if len(parts) != 2 {
+			return nil
+		}
+		latitude, latErr := strconv.ParseFloat(parts[0], 64)
+		longitude, lngErr := strconv.ParseFloat(parts[1], 64)
+		if latErr != nil || lngErr != nil || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180 {
+			return nil
+		}
+		// Retire the picker so a second tap cannot double-apply.
+		if err := h.edit(ctx, message.Chat.ID, message.ID, escape(message.Text), nil); err != nil {
+			return err
+		}
+		return h.saveLocation(ctx, message.Chat.ID, latitude, longitude, locale)
+	}
+
 	if strings.HasPrefix(query.Data, "language:") {
 		if ok, err := h.canConfigureActor(ctx, message.Chat, &query.From, locale); err != nil || !ok {
 			return err

@@ -63,10 +63,11 @@ func TestLocalesAreCompleteAndWithinTelegramLimits(t *testing.T) {
 		"language_saved", "admin_only", "unknown", "deleted", "help", "privacy", "reminder_at",
 		"reminder_before", "reminder_tomorrow", "enabled", "disabled", "fasting_schedule", "kahf_schedule",
 		"pre_prayer_reminder", "pre_reminder_off", "minutes_before", "choose_pre_reminder",
+		"city_usage", "city_no_results", "city_choose",
 		"hijri_date", "hijri_era", "hijri_setting", "hijri_note", "choose_hijri", "reminder_fasting", "reminder_kahf",
 		"feedback_prompt", "feedback_placeholder", "feedback_sent", "feedback_private",
 	}
-	commandKeys := []string{"location", "today", "tomorrow", "next", "settings", "remind", "language", "feedback", "privacy", "help"}
+	commandKeys := []string{"location", "city", "today", "tomorrow", "next", "settings", "remind", "language", "feedback", "privacy", "help"}
 	prayers := []domain.Prayer{domain.PrayerFajr, domain.PrayerSunrise, domain.PrayerDhuhr, domain.PrayerAsr, domain.PrayerMaghrib, domain.PrayerIsha}
 
 	seen := make(map[string]bool)

@@ -183,6 +183,27 @@ func languageKeyboard(current string) *models.InlineKeyboardMarkup {
 	return inlineKeyboard(rows...)
 }
 
+// cityKeyboard offers one button per geocoding match. The callback payload
+// carries only rounded coordinates (Telegram caps callback data at 64 bytes),
+// so no server-side picker state is needed.
+func cityKeyboard(candidates []domain.LocationCandidate, locale i18n.Locale) *models.InlineKeyboardMarkup {
+	rows := make([][]models.InlineKeyboardButton, 0, len(candidates)+1)
+	for _, candidate := range candidates {
+		data := fmt.Sprintf("city:%.3f:%.3f", candidate.Latitude, candidate.Longitude)
+		rows = append(rows, []models.InlineKeyboardButton{callbackButton(truncateLabel(candidate.Label, 60), data)})
+	}
+	rows = append(rows, []models.InlineKeyboardButton{callbackButton(locale.Button("close"), "close")})
+	return inlineKeyboard(rows...)
+}
+
+func truncateLabel(label string, limit int) string {
+	runes := []rune(label)
+	if len(runes) <= limit {
+		return label
+	}
+	return string(runes[:limit-1]) + "…"
+}
+
 func inlineKeyboard(rows ...[]models.InlineKeyboardButton) *models.InlineKeyboardMarkup {
 	return &models.InlineKeyboardMarkup{InlineKeyboard: rows}
 }

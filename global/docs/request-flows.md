@@ -53,6 +53,27 @@ If Google is unavailable, existing profiles, schedules, commands, reminders,
 Qibla direction, and calendar subscriptions continue working. Only location writes
 fail.
 
+### Setting the location by name (`/city`)
+
+Telegram renders neither the share-location button nor Mini App buttons in
+group chats, and Telegram Desktop cannot attach a location at all. `/city
+<name>` closes both gaps and also works in private chats:
+
+1. The command is admin-gated in groups through the same authorization check
+   as every other configuration command.
+2. The typed name is forward-geocoded with the Google Geocoding API (same key
+   and endpoint family as reverse geocoding), localized to the chat language.
+3. Up to five matches are offered as inline buttons. The callback payload
+   carries only rounded coordinates, so no picker state is stored server-side
+   and the payload fits Telegram's 64-byte callback limit.
+4. Picking a match retires the picker message and enters the exact same save
+   path as a shared location: resolve timezone/place, round coordinates to
+   three decimals, preserve existing calculation preferences, bump the profile
+   version, and rebuild reminder schedules.
+
+Because the coordinates are a public city center rather than a person's
+position, this path is privacy-neutral; persistence rules are unchanged.
+
 ## Mini App session and API
 
 ```mermaid

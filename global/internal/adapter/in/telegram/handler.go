@@ -100,6 +100,11 @@ func (h *Handler) Handle(ctx context.Context, update models.Update) error {
 			return err
 		}
 		return h.requestLocation(ctx, message.Chat, locale)
+	case "city":
+		if ok, err := h.canConfigure(ctx, message, locale); err != nil || !ok {
+			return err
+		}
+		return h.searchCity(ctx, message.Chat.ID, argument, locale)
 	case i18n.ActionToday:
 		return h.sendSchedule(ctx, message.Chat.ID, h.now(), locale.Message("today_title"), locale)
 	case i18n.ActionTomorrow:

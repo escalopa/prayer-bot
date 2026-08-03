@@ -19,9 +19,12 @@ type Calculator interface {
 }
 
 // LocationResolver turns raw coordinates into a timezone and approximate
-// place. Implemented by adapter/out/location.GoogleMaps.
+// place, and forward-geocodes a typed place name into candidate coordinates
+// (the group-chat and desktop fallback where Telegram offers no location
+// button). Implemented by adapter/out/location.GoogleMaps.
 type LocationResolver interface {
 	Resolve(context.Context, float64, float64) (domain.ResolvedLocation, error)
+	Search(ctx context.Context, query, language string) ([]domain.LocationCandidate, error)
 }
 
 // MetalSource fetches the daily gold/silver spot prices and USD rate table

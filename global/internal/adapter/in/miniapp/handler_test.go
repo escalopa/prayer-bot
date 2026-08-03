@@ -1071,6 +1071,10 @@ func (r *fakeResolver) Resolve(_ context.Context, latitude, longitude float64) (
 	return r.resolved, nil
 }
 
+func (r *fakeResolver) Search(context.Context, string, string) ([]domain.LocationCandidate, error) {
+	return nil, nil
+}
+
 type fakePlanner struct{ rebuilds int }
 
 func (p *fakePlanner) RebuildChat(context.Context, int64, time.Time) error {

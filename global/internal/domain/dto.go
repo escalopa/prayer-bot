@@ -12,6 +12,15 @@ type ResolvedLocation struct {
 	CountryCode string
 }
 
+// LocationCandidate is one forward-geocoding match for a typed place name.
+// It carries only what the picker needs: a display label and coordinates to
+// feed back into the normal location-resolution path.
+type LocationCandidate struct {
+	Label     string
+	Latitude  float64
+	Longitude float64
+}
+
 // MetricCount is one keyed counter in the owner dashboard.
 type MetricCount struct {
 	Key   string

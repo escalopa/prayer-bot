@@ -101,12 +101,30 @@ func (h *Handler) sendNext(ctx context.Context, chatID int64, locale i18n.Locale
 			at, found := schedule.At(prayer)
 			if found && at.After(now) {
 				return h.send(ctx, chatID, fmt.Sprintf(
-					locale.Message("next_prayer"), escape(locale.Prayer(prayer)), at.Format("15:04"), escape(profile.Timezone),
+					locale.Message("next_prayer"), escape(locale.Prayer(prayer)), at.Format("15:04"), escape(untilNext(locale, at.Sub(now))),
 				), mainKeyboard(locale))
 			}
 		}
 	}
 	return fmt.Errorf("could not find the next prayer")
+}
+
+// untilNext renders the localized countdown to the next prayer. Sub-minute
+// remainders round up so the message never claims "0 min".
+func untilNext(locale i18n.Locale, until time.Duration) string {
+	minutes := int((until + time.Minute - 1) / time.Minute)
+	if minutes < 1 {
+		minutes = 1
+	}
+	hours, minutes := minutes/60, minutes%60
+	switch {
+	case hours > 0 && minutes > 0:
+		return fmt.Sprintf(locale.Message("next_in_hm"), hours, minutes)
+	case hours > 0:
+		return fmt.Sprintf(locale.Message("next_in_h"), hours)
+	default:
+		return fmt.Sprintf(locale.Message("next_in_m"), minutes)
+	}
 }
 
 func (h *Handler) sendSettings(ctx context.Context, chatID int64, locale i18n.Locale) error {

@@ -78,3 +78,21 @@ func TestAdjustmentCallbacksStayWithinTelegramLimit(t *testing.T) {
 		}
 	}
 }
+
+func TestUntilNextRendersLocalizedCountdown(t *testing.T) {
+	locale := i18n.Resolve("en")
+	cases := []struct {
+		until time.Duration
+		want  string
+	}{
+		{30 * time.Second, "in 1 min"},
+		{15 * time.Minute, "in 15 min"},
+		{90*time.Minute + time.Second, "in 1 h 31 min"},
+		{2 * time.Hour, "in 2 h"},
+	}
+	for _, c := range cases {
+		if got := untilNext(locale, c.until); got != c.want {
+			t.Errorf("untilNext(%v) = %q, want %q", c.until, got, c.want)
+		}
+	}
+}

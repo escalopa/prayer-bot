@@ -17,6 +17,9 @@ func init() {
 			},
 			text: map[string]string{
 				"jamaat_schedule":      "Pre-prayer reminder becomes a poll",
+				"next_in_h":            "in %d h",
+				"next_in_m":            "in %d min",
+				"next_in_hm":           "in %d h %d min",
 				"jamaat_poll_question": "🕌 %s is in %d min (%s) — who is joining the jamaa'ah?",
 				"jamaat_join":          "I'll join prayer",
 				"jamaat_late":          "I might be late",
@@ -37,6 +40,9 @@ func init() {
 			buttons: map[string]string{"hijri": "🌙 تصحيح التاريخ الهجري", "prayer_reminders": "مواقيت الصلاة", "fasting_reminders": "صيام الاثنين والخميس", "kahf_reminders": "سورة الكهف يوم الجمعة", "white_days_reminders": "صيام الأيام البيض (13–15)", "jamaat_poll_reminders": "🕌 استطلاع الجماعة"},
 			text: map[string]string{
 				"jamaat_schedule":      "يتحول تنبيه ما قبل الصلاة إلى استطلاع",
+				"next_in_h":            "بعد %d س",
+				"next_in_m":            "بعد %d د",
+				"next_in_hm":           "بعد %d س %d د",
 				"jamaat_poll_question": "🕌 %s بعد %d دقيقة (%s) — من سينضم إلى الجماعة؟",
 				"jamaat_join":          "سأنضم إلى الصلاة",
 				"jamaat_late":          "قد أتأخر",
@@ -54,6 +60,9 @@ func init() {
 			buttons: map[string]string{"hijri": "🌙 Corrección de fecha hiyri", "prayer_reminders": "Horarios de oración", "fasting_reminders": "Ayuno lunes y jueves", "kahf_reminders": "Al-Kahf del viernes", "white_days_reminders": "Ayuno de los días blancos (13–15)", "jamaat_poll_reminders": "🕌 Encuesta de yamaa"},
 			text: map[string]string{
 				"jamaat_schedule":      "El aviso previo se convierte en encuesta",
+				"next_in_h":            "en %d h",
+				"next_in_m":            "en %d min",
+				"next_in_hm":           "en %d h %d min",
 				"jamaat_poll_question": "🕌 %s en %d min (%s), ¿quién se une a la oración en yamaa?",
 				"jamaat_join":          "Me uniré a la oración",
 				"jamaat_late":          "Podría llegar tarde",
@@ -71,6 +80,9 @@ func init() {
 			buttons: map[string]string{"hijri": "🌙 Correction de date hégirienne", "prayer_reminders": "Horaires de prière", "fasting_reminders": "Jeûne lundi et jeudi", "kahf_reminders": "Al-Kahf du vendredi", "white_days_reminders": "Jeûne des jours blancs (13–15)", "jamaat_poll_reminders": "🕌 Sondage jamaa"},
 			text: map[string]string{
 				"jamaat_schedule":      "Le rappel préalable devient un sondage",
+				"next_in_h":            "dans %d h",
+				"next_in_m":            "dans %d min",
+				"next_in_hm":           "dans %d h %d min",
 				"jamaat_poll_question": "🕌 %s dans %d min (%s) — qui rejoint la prière en jamaa ?",
 				"jamaat_join":          "Je rejoindrai la prière",
 				"jamaat_late":          "Je pourrais être en retard",
@@ -88,6 +100,9 @@ func init() {
 			buttons: map[string]string{"hijri": "🌙 Поправка даты Хиджры", "prayer_reminders": "Время намаза", "fasting_reminders": "Пост в понедельник и четверг", "kahf_reminders": "Аль-Кахф в пятницу", "white_days_reminders": "Пост в белые дни (13–15)", "jamaat_poll_reminders": "🕌 Опрос на джамаат"},
 			text: map[string]string{
 				"jamaat_schedule":      "Напоминание перед намазом станет опросом",
+				"next_in_h":            "через %d ч",
+				"next_in_m":            "через %d мин",
+				"next_in_hm":           "через %d ч %d мин",
 				"jamaat_poll_question": "🕌 %s через %d мин. (%s) — кто присоединится к джамаату?",
 				"jamaat_join":          "Я присоединюсь к молитве",
 				"jamaat_late":          "Я могу опоздать",
@@ -105,6 +120,9 @@ func init() {
 			buttons: map[string]string{"hijri": "🌙 Hicri tarih düzeltmesi", "prayer_reminders": "Namaz vakitleri", "fasting_reminders": "Pazartesi ve Perşembe orucu", "kahf_reminders": "Cuma Kehf Suresi", "white_days_reminders": "Beyaz günler orucu (13–15)", "jamaat_poll_reminders": "🕌 Cemaat anketi"},
 			text: map[string]string{
 				"jamaat_schedule":      "Namaz öncesi hatırlatma ankete dönüşür",
+				"next_in_h":            "%d sa sonra",
+				"next_in_m":            "%d dk sonra",
+				"next_in_hm":           "%d sa %d dk sonra",
 				"jamaat_poll_question": "🕌 %s vaktine %d dk (%s) — cemaate kim katılıyor?",
 				"jamaat_join":          "Namaza katılacağım",
 				"jamaat_late":          "Gecikebilirim",
@@ -122,6 +140,9 @@ func init() {
 			buttons: map[string]string{"hijri": "🌙 Hijriy sana tuzatishi", "prayer_reminders": "Namoz vaqtlari", "fasting_reminders": "Dushanba va payshanba ro‘zasi", "kahf_reminders": "Juma kuni Kahf surasi", "white_days_reminders": "Oq kunlar ro‘zasi (13–15)", "jamaat_poll_reminders": "🕌 Jamoat so‘rovi"},
 			text: map[string]string{
 				"jamaat_schedule":      "Namozdan oldingi eslatma so‘rovnomaga aylanadi",
+				"next_in_h":            "%d soatdan keyin",
+				"next_in_m":            "%d daqiqadan keyin",
+				"next_in_hm":           "%d soat %d daqiqadan keyin",
 				"jamaat_poll_question": "🕌 %s gacha %d daqiqa (%s) — jamoatga kim qo‘shiladi?",
 				"jamaat_join":          "Namozga qo‘shilaman",
 				"jamaat_late":          "Kechikishim mumkin",
@@ -139,6 +160,9 @@ func init() {
 			buttons: map[string]string{"hijri": "🌙 Һиҗри дата төзәтмәсе", "prayer_reminders": "Намаз вакытлары", "fasting_reminders": "Дүшәмбе һәм пәнҗешәмбе уразасы", "kahf_reminders": "Җомга Кәһф сүрәсе", "white_days_reminders": "Ак көннәр уразасы (13–15)", "jamaat_poll_reminders": "🕌 Җәмәгать сораштыруы"},
 			text: map[string]string{
 				"jamaat_schedule":      "Намаз алдыннан искәртү сораштыруга әйләнә",
+				"next_in_h":            "%d сәгатьтән соң",
+				"next_in_m":            "%d минуттан соң",
+				"next_in_hm":           "%d сәгать %d минуттан соң",
 				"jamaat_poll_question": "🕌 %s га %d минут калды (%s) — җәмәгатькә кем кушыла?",
 				"jamaat_join":          "Мин догага кушылам",
 				"jamaat_late":          "Соңга калырга мөмкинмен",

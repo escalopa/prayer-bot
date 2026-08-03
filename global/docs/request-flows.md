@@ -162,7 +162,9 @@ fetching:
 
 1. An authenticated Mini App request creates or reuses a random private feed
    token and stable UID namespace.
-2. The Mini App opens Google Calendar with the HTTPS feed URL. A copy-link
+2. The Mini App opens Google Calendar's add-by-URL flow with the feed URL in
+   the **`webcal://` scheme** — Google's `cid` parameter requires it; an
+   `https://` URL is accepted but its events are never fetched. A copy-link
    button supports Google's desktop **Other calendars → From URL** flow.
 3. Google fetches the `.ics` URL without Telegram authentication.
 4. The server validates the random token, loads the current profile, and

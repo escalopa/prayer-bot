@@ -22,7 +22,10 @@ func main() {
 	if webhookURL == "" {
 		fatal(fmt.Errorf("WEBHOOK_URL is required"))
 	}
-	client, err := botapi.New(cfg.TelegramToken, botapi.WithSkipGetMe())
+	// profile.HTTPClient works around Telegram rejecting the empty multipart
+	// bodies the library produces for parameterless methods like getMyName.
+	client, err := botapi.New(cfg.TelegramToken, botapi.WithSkipGetMe(),
+		botapi.WithHTTPClient(0, profile.HTTPClient()))
 	if err != nil {
 		fatal(err)
 	}

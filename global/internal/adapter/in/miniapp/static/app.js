@@ -782,7 +782,10 @@
     byId("calendar-status").classList.remove("hidden");
     try {
       const feedURL = await ensureCalendarSubscription();
-      const googleURL = `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(feedURL)}`;
+      // Google's add-by-URL flow requires a webcal:// URL inside cid. With an
+      // https:// URL the calendar is added but its events are never fetched.
+      const webcalURL = feedURL.replace(/^https:\/\//, "webcal://");
+      const googleURL = `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(webcalURL)}`;
       if (telegram && telegram.openLink) {
         telegram.openLink(googleURL);
       } else {

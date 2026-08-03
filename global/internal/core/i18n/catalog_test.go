@@ -24,7 +24,10 @@ func TestResolveNormalizesTelegramLanguageTags(t *testing.T) {
 func TestLocalizedFormatStringsAcceptExpectedArguments(t *testing.T) {
 	samples := map[string][]any{
 		"location_set":      {"Cairo", "Africa/Cairo", "Egyptian"},
-		"next_prayer":       {"Fajr", "04:15", "Africa/Cairo"},
+		"next_prayer":       {"Fajr", "04:15", "in 2 h 15 min"},
+		"next_in_h":         {2},
+		"next_in_m":         {15},
+		"next_in_hm":        {2, 15},
 		"adjust_prayer":     {"Fajr", 2},
 		"method_saved":      {"Egyptian"},
 		"madhab_saved":      {"Hanafi"},
@@ -52,7 +55,8 @@ func TestLocalesAreCompleteAndWithinTelegramLimits(t *testing.T) {
 		"prayer_reminders", "fasting_reminders", "kahf_reminders")
 	textKeys := []string{
 		"welcome", "location_prompt", "location_group", "location_set", "invalid_location", "need_location",
-		"today_title", "tomorrow_title", "next_prayer", "settings_title", "timezone", "method", "madhab",
+		"today_title", "tomorrow_title", "next_prayer", "next_in_h", "next_in_m", "next_in_hm",
+		"settings_title", "timezone", "method", "madhab",
 		"highlat", "adjustments", "choose_method", "choose_madhab", "choose_highlat", "choose_adjustment",
 		"adjust_prayer", "method_saved", "madhab_saved", "highlat_saved", "adjust_saved", "reminders_title",
 		"reminders_on", "reminders_off", "reminders_enabled", "reminders_disabled", "choose_language",

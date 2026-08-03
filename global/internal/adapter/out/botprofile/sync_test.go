@@ -21,8 +21,8 @@ import (
 func TestLocalizedCommandsAreCompleteAndWithinTelegramLimits(t *testing.T) {
 	for _, locale := range i18n.Supported() {
 		items := commands(locale)
-		if len(items) != 11 {
-			t.Fatalf("%s has %d commands, want 11", locale.Code, len(items))
+		if len(items) != 12 {
+			t.Fatalf("%s has %d commands, want 12", locale.Code, len(items))
 		}
 		seen := make(map[string]bool)
 		for _, item := range items {

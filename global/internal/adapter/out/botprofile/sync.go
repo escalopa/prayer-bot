@@ -330,7 +330,7 @@ func commandsEqual(current, desired []models.BotCommand) bool {
 }
 
 func commands(locale i18n.Locale) []models.BotCommand {
-	order := []string{"start", "location", "today", "tomorrow", "next", "settings", "remind", "language", "feedback", "privacy", "help"}
+	order := []string{"start", "location", "city", "today", "tomorrow", "next", "settings", "remind", "language", "feedback", "privacy", "help"}
 	result := make([]models.BotCommand, 0, len(order))
 	for _, command := range order {
 		description := locale.Commands[command]

@@ -109,6 +109,55 @@ func (g *GoogleMaps) reverseGeocode(ctx context.Context, latitude, longitude flo
 	return result.PlaceID, city, country, nil
 }
 
+// Search forward-geocodes a typed place name. ZERO_RESULTS is an empty
+// slice, not an error, so callers can render a "nothing found" reply.
+func (g *GoogleMaps) Search(ctx context.Context, query, language string) ([]domain.LocationCandidate, error) {
+	values := url.Values{
+		"address":  {query},
+		"language": {language},
+		"key":      {g.apiKey},
+	}
+	var response struct {
+		Status       string `json:"status"`
+		ErrorMessage string `json:"error_message"`
+		Results      []struct {
+			FormattedAddress string `json:"formatted_address"`
+			Geometry         struct {
+				Location struct {
+					Lat float64 `json:"lat"`
+					Lng float64 `json:"lng"`
+				} `json:"location"`
+			} `json:"geometry"`
+		} `json:"results"`
+	}
+	if err := g.getJSON(ctx, g.geocodingURL, values, &response); err != nil {
+		return nil, fmt.Errorf("search location: %w", err)
+	}
+	if response.Status == "ZERO_RESULTS" {
+		return nil, nil
+	}
+	if response.Status != "OK" {
+		return nil, fmt.Errorf("search location: Google status %s: %s", response.Status, response.ErrorMessage)
+	}
+	candidates := make([]domain.LocationCandidate, 0, maxSearchCandidates)
+	for _, result := range response.Results {
+		if result.FormattedAddress == "" {
+			continue
+		}
+		candidates = append(candidates, domain.LocationCandidate{
+			Label:     result.FormattedAddress,
+			Latitude:  result.Geometry.Location.Lat,
+			Longitude: result.Geometry.Location.Lng,
+		})
+		if len(candidates) == maxSearchCandidates {
+			break
+		}
+	}
+	return candidates, nil
+}
+
+const maxSearchCandidates = 5
+
 func (g *GoogleMaps) getJSON(ctx context.Context, endpoint string, values url.Values, target any) error {
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint+"?"+values.Encode(), nil)
 	if err != nil {

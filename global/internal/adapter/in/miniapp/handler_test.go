@@ -54,6 +54,11 @@ func TestStaticMiniAppIsEmbeddedWithSecurityHeaders(t *testing.T) {
 		!strings.Contains(string(script), "/api/miniapp/calendar-subscription") {
 		t.Fatal("Mini App is missing Qibla compass or rolling calendar subscription support")
 	}
+	if !strings.Contains(string(script), "requestPermission") ||
+		!strings.Contains(string(script), "webkitCompassHeading") ||
+		!strings.Contains(string(script), "deviceorientationabsolute") {
+		t.Fatal("Mini App Qibla compass is missing its browser-orientation fallback")
+	}
 	// Google's render?cid= flow requires the webcal:// scheme: an https:// URL
 	// inside cid adds a calendar whose events are never fetched.
 	if !strings.Contains(string(script), `"webcal://"`) ||

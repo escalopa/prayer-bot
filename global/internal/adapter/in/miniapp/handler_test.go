@@ -59,6 +59,9 @@ func TestStaticMiniAppIsEmbeddedWithSecurityHeaders(t *testing.T) {
 		!strings.Contains(string(script), "deviceorientationabsolute") {
 		t.Fatal("Mini App Qibla compass is missing its browser-orientation fallback")
 	}
+	if strings.Contains(string(script), `setText("compass-status", state.labels.compass_active)`) {
+		t.Fatal("Mini App Qibla compass duplicates its active status outside the button")
+	}
 	// Google's render?cid= flow requires the webcal:// scheme: an https:// URL
 	// inside cid adds a calendar whose events are never fetched.
 	if !strings.Contains(string(script), `"webcal://"`) ||

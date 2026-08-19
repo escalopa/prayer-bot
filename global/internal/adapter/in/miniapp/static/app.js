@@ -743,8 +743,7 @@
     if (!compassStarted) {
       compassStarted = true;
       setText("start-compass", state.labels.compass_active);
-      setText("compass-status", state.labels.compass_active);
-      byId("compass-status").classList.remove("hidden");
+      byId("compass-status").classList.add("hidden");
       byId("start-compass").disabled = true;
       if (telegram && telegram.HapticFeedback) telegram.HapticFeedback.notificationOccurred("success");
     }

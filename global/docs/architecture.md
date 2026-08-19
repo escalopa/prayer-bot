@@ -24,7 +24,7 @@ The webhook service embeds and serves a dependency-free HTML/CSS/JavaScript Mini
 
 The backend never trusts a Telegram user ID sent in JSON. Every Mini App API request carries the exact `Telegram.WebApp.initData` string in a header. The server verifies Telegram's HMAC signature with the environment's bot token, rejects duplicate fields and sessions older than 24 hours, and derives the private chat ID from the signed user object. The app is private-chat scoped; group configuration remains in the bot, where administrator authorization is enforced.
 
-The Qibla tool derives a great-circle bearing from the rounded coordinates already present in the profile and sends only the resulting bearing and distance to the browser. Supported Telegram clients can rotate the displayed needle with absolute device-orientation data; unsupported clients retain the numeric bearing and static compass.
+The Qibla tool derives a great-circle bearing from the rounded coordinates already present in the profile and sends only the resulting bearing and distance to the browser. The Mini App first uses Telegram's absolute device-orientation API and falls back to the browser orientation API, requesting iOS permission from the user's compass action when required. A device without a usable absolute heading retains the numeric bearing and static compass.
 
 After an authenticated bootstrap, the Mini App stores a rendering snapshot for
 at most 48 hours. Storage is namespaced by the signed Telegram user and uses

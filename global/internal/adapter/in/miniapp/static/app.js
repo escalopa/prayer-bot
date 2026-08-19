@@ -8,6 +8,8 @@
   let toastTimer = null;
   let dirty = false;
   let compassStarted = false;
+  let nativeCompassListening = false;
+  let nativeCompassPermission = null;
   let calendarFeedURL = "";
   let offlineMode = false;
   let homeScreenStatus = "unknown";
@@ -716,9 +718,17 @@
     }
   }
 
+  function stopNativeCompass() {
+    if (!nativeCompassListening) return;
+    window.removeEventListener("deviceorientationabsolute", updateNativeCompassOrientation);
+    window.removeEventListener("deviceorientation", updateNativeCompassOrientation);
+    nativeCompassListening = false;
+  }
+
   function showCompassUnavailable() {
     const sensor = telegram && telegram.DeviceOrientation;
     if (sensor && sensor.isStarted) sensor.stop();
+    stopNativeCompass();
     compassStarted = false;
     setText("compass-status", state.labels.compass_unavailable);
     byId("compass-status").classList.remove("hidden");
@@ -726,17 +736,8 @@
     setText("start-compass", state.labels.compass_start);
   }
 
-  function updateCompassOrientation() {
-    const sensor = telegram && telegram.DeviceOrientation;
-    if (!state || !state.qibla || !sensor || !sensor.isStarted) return;
-    if (!sensor.absolute || !Number.isFinite(sensor.alpha)) {
-      showCompassUnavailable();
-      return;
-    }
-    // Telegram exposes the standard positive Z-axis rotation. Convert it to
-    // the clockwise compass heading used by bearings from magnetic north.
-    const alpha = ((sensor.alpha * 180 / Math.PI) % 360 + 360) % 360;
-    const heading = (360 - alpha) % 360;
+  function setCompassHeading(heading) {
+    if (!state || !state.qibla || !Number.isFinite(heading)) return false;
     const rotation = Number(state.qibla.bearing_degrees) - heading;
     byId("qibla-needle").style.setProperty("--qibla-rotation", `${rotation}deg`);
     if (!compassStarted) {
@@ -745,19 +746,76 @@
       setText("compass-status", state.labels.compass_active);
       byId("compass-status").classList.remove("hidden");
       byId("start-compass").disabled = true;
-      if (telegram.HapticFeedback) telegram.HapticFeedback.notificationOccurred("success");
+      if (telegram && telegram.HapticFeedback) telegram.HapticFeedback.notificationOccurred("success");
     }
+    return true;
+  }
+
+  function updateCompassOrientation() {
+    const sensor = telegram && telegram.DeviceOrientation;
+    if (!state || !state.qibla || !sensor || !sensor.isStarted) return;
+    if (!sensor.absolute || !Number.isFinite(sensor.alpha)) {
+      startNativeCompass().then((started) => {
+        if (!started) showCompassUnavailable();
+      });
+      return;
+    }
+    // Telegram exposes the standard positive Z-axis rotation. Convert it to
+    // the clockwise compass heading used by bearings from magnetic north.
+    const alpha = ((sensor.alpha * 180 / Math.PI) % 360 + 360) % 360;
+    const heading = (360 - alpha) % 360;
+    setCompassHeading(heading);
+  }
+
+  function updateNativeCompassOrientation(event) {
+    // Safari provides a calibrated compass heading directly. Other browsers
+    // expose alpha in degrees, counter-clockwise from north.
+    if (Number.isFinite(event.webkitCompassHeading)) {
+      setCompassHeading(event.webkitCompassHeading);
+    } else if (event.absolute && Number.isFinite(event.alpha)) {
+      setCompassHeading((360 - event.alpha) % 360);
+    }
+  }
+
+  function requestNativeCompassPermission() {
+    if (nativeCompassPermission) return nativeCompassPermission;
+    if (!("DeviceOrientationEvent" in window)) return Promise.resolve(false);
+    const orientation = window.DeviceOrientationEvent;
+    nativeCompassPermission = typeof orientation.requestPermission === "function"
+      ? orientation.requestPermission().then((result) => result === "granted").catch(() => false)
+      : Promise.resolve(true);
+    return nativeCompassPermission;
+  }
+
+  async function startNativeCompass() {
+    if (nativeCompassListening) return true;
+    if (!(await requestNativeCompassPermission())) return false;
+    const sensor = telegram && telegram.DeviceOrientation;
+    if (sensor && sensor.isStarted) sensor.stop();
+    window.addEventListener("deviceorientationabsolute", updateNativeCompassOrientation);
+    window.addEventListener("deviceorientation", updateNativeCompassOrientation);
+    nativeCompassListening = true;
+    return true;
   }
 
   function startCompass() {
     const sensor = telegram && telegram.DeviceOrientation;
+    // iOS only permits this permission request during the button click. Keep
+    // the result for a later fallback if Telegram starts in relative mode.
+    void requestNativeCompassPermission();
     if (!sensor || !telegram.isVersionAtLeast("8.0")) {
-      showCompassUnavailable();
+      startNativeCompass().then((started) => {
+        if (!started) showCompassUnavailable();
+      });
       return;
     }
     byId("start-compass").disabled = true;
     sensor.start({ refresh_rate: 100, need_absolute: true }, (started) => {
-      if (!started) showCompassUnavailable();
+      if (!started) {
+        startNativeCompass().then((nativeStarted) => {
+          if (!nativeStarted) showCompassUnavailable();
+        });
+      }
     });
   }
 
@@ -1275,6 +1333,7 @@
   window.addEventListener("pagehide", () => {
     const sensor = telegram && telegram.DeviceOrientation;
     if (sensor && sensor.isStarted) sensor.stop();
+    stopNativeCompass();
   });
   if (telegram && telegram.onEvent) {
     telegram.onEvent("deviceOrientationChanged", updateCompassOrientation);

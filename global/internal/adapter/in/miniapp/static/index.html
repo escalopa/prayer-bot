@@ -207,7 +207,6 @@
                   <span>☾</span>
                 </div>
                 <button id="add-home-screen" class="secondary-button" type="button">Add to home screen</button>
-                <p id="home-screen-status" class="tool-note hidden" role="status"></p>
               </article>
             </div>
           </section>
@@ -272,21 +271,33 @@
               <input id="kahf-reminders" type="checkbox">
               <span class="toggle" aria-hidden="true"></span>
             </label>
-            <label class="toggle-row">
-              <span><strong id="occasion-major-reminders-label">Major Islamic occasions</strong><small id="occasion-major-schedule"></small></span>
-              <input id="occasion-major-reminders" type="checkbox">
-              <span class="toggle" aria-hidden="true"></span>
-            </label>
-            <label class="toggle-row">
-              <span><strong id="occasion-fasting-reminders-label">Special fasting days</strong><small id="occasion-fasting-schedule"></small></span>
-              <input id="occasion-fasting-reminders" type="checkbox">
-              <span class="toggle" aria-hidden="true"></span>
-            </label>
-            <label class="toggle-row">
-              <span><strong id="occasion-observed-reminders-label">Commonly observed dates</strong><small id="occasion-observed-schedule"></small></span>
-              <input id="occasion-observed-reminders" type="checkbox">
-              <span class="toggle" aria-hidden="true"></span>
-            </label>
+            <div class="reminder-group" aria-labelledby="reminder-occasions-title">
+              <div class="reminder-group-heading">
+                <strong id="reminder-occasions-title">Upcoming Islamic dates</strong>
+                <small id="reminder-occasions-help">Calculated from your corrected Hijri calendar.</small>
+              </div>
+              <label class="toggle-row">
+                <span><strong id="occasion-major-reminders-label">Major Islamic occasions</strong><small id="occasion-major-help"></small><small id="occasion-major-schedule"></small></span>
+                <input id="occasion-major-reminders" type="checkbox">
+                <span class="toggle" aria-hidden="true"></span>
+              </label>
+              <div class="reminder-row-with-info">
+                <label class="toggle-row">
+                  <span><strong id="occasion-fasting-reminders-label">Special fasting days</strong><small id="occasion-fasting-schedule"></small></span>
+                  <input id="occasion-fasting-reminders" type="checkbox">
+                  <span class="toggle" aria-hidden="true"></span>
+                </label>
+                <details class="reminder-info">
+                  <summary id="occasion-fasting-info" aria-label="About special fasting days">ⓘ</summary>
+                  <p id="occasion-fasting-help"></p>
+                </details>
+              </div>
+              <label class="toggle-row">
+                <span><strong id="occasion-observed-reminders-label">Commonly observed dates</strong><small id="occasion-observed-help"></small><small id="occasion-observed-schedule"></small></span>
+                <input id="occasion-observed-reminders" type="checkbox">
+                <span class="toggle" aria-hidden="true"></span>
+              </label>
+            </div>
           </section>
 
           <section class="panel settings-panel">

@@ -34,6 +34,9 @@ var occasionUI = map[string]map[string]string{
 		"recommended": "Recommended", "sources": "Sources",
 		"major_reminders": "Major Islamic occasions", "fasting_reminders": "Special fasting days",
 		"observed_reminders": "Commonly observed dates", "schedule": "Evening before · 20:00",
+		"major_reminders_help":    "Key dates such as Ramadan, the two Eids, and Hajj.",
+		"fasting_reminders_help":  "Voluntary fasts such as Ashura and Arafah. You will be reminded the evening before.",
+		"observed_reminders_help": "Widely observed dates; practices may differ by community.",
 	},
 	"ar": {
 		"title": "المناسبات الإسلامية القادمة", "help": "محسوبة وفق تقويمك الهجري المصحح.",
@@ -41,6 +44,9 @@ var occasionUI = map[string]map[string]string{
 		"recommended": "المقترح", "sources": "المصادر",
 		"major_reminders": "المناسبات الإسلامية الكبرى", "fasting_reminders": "أيام الصيام الخاصة",
 		"observed_reminders": "المناسبات الشائعة", "schedule": "مساء اليوم السابق · 20:00",
+		"major_reminders_help":    "تواريخ رئيسية مثل رمضان والعيدين والحج.",
+		"fasting_reminders_help":  "صيام تطوعي مثل عاشوراء وعرفة. ستصلك تذكرة في مساء اليوم السابق.",
+		"observed_reminders_help": "مناسبات واسعة الانتشار، وقد تختلف الممارسات بحسب المجتمع.",
 	},
 	"es": {
 		"title": "Próximas fechas islámicas", "help": "Calculadas con tu calendario hiyri corregido.",
@@ -48,6 +54,9 @@ var occasionUI = map[string]map[string]string{
 		"recommended": "Recomendado", "sources": "Fuentes",
 		"major_reminders": "Ocasiones islámicas principales", "fasting_reminders": "Días especiales de ayuno",
 		"observed_reminders": "Fechas habitualmente observadas", "schedule": "Víspera · 20:00",
+		"major_reminders_help":    "Fechas clave como Ramadán, los dos Eids y el Hajj.",
+		"fasting_reminders_help":  "Ayunos voluntarios como Ashura y Arafah. Recibirás un aviso la víspera.",
+		"observed_reminders_help": "Fechas ampliamente observadas; las prácticas pueden variar según la comunidad.",
 	},
 	"fr": {
 		"title": "Prochaines dates islamiques", "help": "Calculées selon votre calendrier hégirien corrigé.",
@@ -55,6 +64,9 @@ var occasionUI = map[string]map[string]string{
 		"recommended": "Recommandé", "sources": "Sources",
 		"major_reminders": "Grandes occasions islamiques", "fasting_reminders": "Jours de jeûne particuliers",
 		"observed_reminders": "Dates couramment observées", "schedule": "La veille · 20:00",
+		"major_reminders_help":    "Dates clés comme le Ramadan, les deux Aïds et le Hajj.",
+		"fasting_reminders_help":  "Jeûnes volontaires comme Achoura et Arafat. Un rappel est envoyé la veille.",
+		"observed_reminders_help": "Dates largement observées ; les pratiques peuvent varier selon la communauté.",
 	},
 	"ru": {
 		"title": "Ближайшие исламские даты", "help": "Рассчитаны по вашему скорректированному календарю Хиджры.",
@@ -62,6 +74,9 @@ var occasionUI = map[string]map[string]string{
 		"recommended": "Рекомендуется", "sources": "Источники",
 		"major_reminders": "Важные исламские даты", "fasting_reminders": "Особые дни поста",
 		"observed_reminders": "Распространённые даты", "schedule": "Накануне · 20:00",
+		"major_reminders_help":    "Ключевые даты: Рамадан, два Ида и хадж.",
+		"fasting_reminders_help":  "Добровольные посты, например Ашура и Арафа. Напомним накануне вечером.",
+		"observed_reminders_help": "Широко отмечаемые даты; традиции могут различаться между общинами.",
 	},
 	"tr": {
 		"title": "Yaklaşan İslami tarihler", "help": "Düzeltilmiş Hicri takviminize göre hesaplanır.",
@@ -69,6 +84,9 @@ var occasionUI = map[string]map[string]string{
 		"recommended": "Önerilen", "sources": "Kaynaklar",
 		"major_reminders": "Önemli İslami günler", "fasting_reminders": "Özel oruç günleri",
 		"observed_reminders": "Yaygın anma tarihleri", "schedule": "Önceki akşam · 20:00",
+		"major_reminders_help":    "Ramazan, iki bayram ve Hac gibi önemli günler.",
+		"fasting_reminders_help":  "Aşure ve Arefe gibi nafile oruçlar. Bir önceki akşam hatırlatılır.",
+		"observed_reminders_help": "Yaygın olarak anılan tarihler; uygulamalar topluluğa göre değişebilir.",
 	},
 	"uz": {
 		"title": "Yaqin Islomiy sanalar", "help": "Tuzatilgan Hijriy taqvimingiz bo‘yicha hisoblanadi.",
@@ -76,6 +94,9 @@ var occasionUI = map[string]map[string]string{
 		"recommended": "Tavsiya", "sources": "Manbalar",
 		"major_reminders": "Muhim Islomiy sanalar", "fasting_reminders": "Maxsus ro‘za kunlari",
 		"observed_reminders": "Keng nishonlanadigan sanalar", "schedule": "Oldingi oqshom · 20:00",
+		"major_reminders_help":    "Ramazon, ikki Hayit va Haj kabi muhim sanalar.",
+		"fasting_reminders_help":  "Ashuro va Arafot kabi nafl ro‘zalar. Oldingi oqshom eslatma keladi.",
+		"observed_reminders_help": "Keng nishonlanadigan sanalar; amaliyot jamoaga qarab farq qilishi mumkin.",
 	},
 	"tt": {
 		"title": "Якын Ислам даталары", "help": "Төзәтелгән Һиҗри календарегыз буенча исәпләнә.",
@@ -83,6 +104,9 @@ var occasionUI = map[string]map[string]string{
 		"recommended": "Киңәш", "sources": "Чыганаклар",
 		"major_reminders": "Мөһим Ислам көннәре", "fasting_reminders": "Махсус ураза көннәре",
 		"observed_reminders": "Киң билгеләп үтелгән даталар", "schedule": "Алдагы кич · 20:00",
+		"major_reminders_help":    "Рамазан, ике Гает һәм хаҗ кебек төп көннәр.",
+		"fasting_reminders_help":  "Гашура һәм Арафә кебек нәфел уразалар. Алдагы кичтә искәртербез.",
+		"observed_reminders_help": "Киң билгеләп үтелгән даталар; гамәлләр җәмгыятькә карап төрле булырга мөмкин.",
 	},
 }
 

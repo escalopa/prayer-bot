@@ -204,9 +204,15 @@
     setText("occasions-title", labels.occasions_title);
     setText("occasions-help", labels.occasions_help);
     setText("occasions-disclaimer", labels.occasions_disclaimer);
+    setText("reminder-occasions-title", labels.occasions_title);
+    setText("reminder-occasions-help", labels.occasions_help);
     setText("occasion-major-reminders-label", labels.occasion_major_reminders);
     setText("occasion-fasting-reminders-label", labels.occasion_fasting_reminders);
     setText("occasion-observed-reminders-label", labels.occasion_observed_reminders);
+    setText("occasion-major-help", labels.occasion_major_reminders_help);
+    setText("occasion-fasting-help", labels.occasion_fasting_reminders_help);
+    setText("occasion-observed-help", labels.occasion_observed_reminders_help);
+    byId("occasion-fasting-info").setAttribute("aria-label", labels.occasion_fasting_reminders);
     ["occasion-major-schedule", "occasion-fasting-schedule", "occasion-observed-schedule"]
       .forEach((id) => setText(id, labels.occasion_schedule));
     setText("language-label", labels.language);
@@ -361,12 +367,9 @@
       return;
     }
     const button = byId("add-home-screen");
-    const statusElement = byId("home-screen-status");
     const added = homeScreenStatus === "added";
     button.disabled = added;
     setText("add-home-screen", added ? state.labels.home_added : state.labels.home_add);
-    setText("home-screen-status", added ? state.labels.home_added : "");
-    statusElement.classList.toggle("hidden", !added);
   }
 
   function renderHomeScreen() {

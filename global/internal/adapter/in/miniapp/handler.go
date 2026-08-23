@@ -986,8 +986,7 @@ func labels(locale i18n.Locale) map[string]string {
 		"offline_title": copy.OfflineTitle, "offline_help": copy.OfflineHelp,
 		"home_title": copy.HomeTitle, "home_help": copy.HomeHelp,
 		"home_add": copy.HomeAdd, "home_added": copy.HomeAdded,
-		"mobile_feature": copy.MobileFeature,
-		"share_title":    copy.ShareTitle, "share_help": copy.ShareHelp,
+		"share_title": copy.ShareTitle, "share_help": copy.ShareHelp,
 		"share_action": copy.ShareAction, "share_preparing": copy.SharePreparing,
 		"share_sent": copy.ShareSent, "share_failed": copy.ShareFailed,
 		"share_card_heading": copy.ShareCardHeading, "share_card_footer": copy.ShareCardFooter,
@@ -1004,26 +1003,26 @@ func labels(locale i18n.Locale) map[string]string {
 }
 
 type miniAppCopy struct {
-	Save, Saved, Loading, LocationHelp, LocationError      string
-	OpenInTelegram, TemporaryFailure, CalculatedLocally    string
-	Companion, UpdateLocation                              string
-	Tools, QiblaTitle, QiblaHelp, QiblaBearing             string
-	QiblaDistance, CompassStart, CompassActive             string
-	CompassUnavailable, CalendarTitle, CalendarHelp        string
-	CalendarConnect, CalendarCopy, CalendarDisconnect      string
-	CalendarOpening, CalendarCopied, CalendarDisconnected  string
-	CalendarPrivate                                        string
-	OfflineUpdating, OfflineUpdatingHelp                   string
-	OfflineTitle, OfflineHelp                              string
-	HomeTitle, HomeHelp, HomeAdd, HomeAdded, MobileFeature string
-	ShareTitle, ShareHelp, ShareAction, SharePreparing     string
-	ShareSent, ShareFailed                                 string
-	ShareCardHeading, ShareCardFooter, ShareMessage        string
-	ZakatTitle, ZakatHelp, ZakatCurrency, ZakatHoldings    string
-	ZakatNisab, ZakatNisabNote, ZakatDue, ZakatBelow       string
-	ZakatDisclaimer, ZakatUpdated                          string
-	NavPrayer, NavDates, NavZakat, NavPlaces, NavSettings  string
-	PlacesTitle, PlacesHelp                                string
+	Save, Saved, Loading, LocationHelp, LocationError     string
+	OpenInTelegram, TemporaryFailure, CalculatedLocally   string
+	Companion, UpdateLocation                             string
+	Tools, QiblaTitle, QiblaHelp, QiblaBearing            string
+	QiblaDistance, CompassStart, CompassActive            string
+	CompassUnavailable, CalendarTitle, CalendarHelp       string
+	CalendarConnect, CalendarCopy, CalendarDisconnect     string
+	CalendarOpening, CalendarCopied, CalendarDisconnected string
+	CalendarPrivate                                       string
+	OfflineUpdating, OfflineUpdatingHelp                  string
+	OfflineTitle, OfflineHelp                             string
+	HomeTitle, HomeHelp, HomeAdd, HomeAdded               string
+	ShareTitle, ShareHelp, ShareAction, SharePreparing    string
+	ShareSent, ShareFailed                                string
+	ShareCardHeading, ShareCardFooter, ShareMessage       string
+	ZakatTitle, ZakatHelp, ZakatCurrency, ZakatHoldings   string
+	ZakatNisab, ZakatNisabNote, ZakatDue, ZakatBelow      string
+	ZakatDisclaimer, ZakatUpdated                         string
+	NavPrayer, NavDates, NavZakat, NavPlaces, NavSettings string
+	PlacesTitle, PlacesHelp                               string
 }
 
 var miniCopy = map[string]miniAppCopy{
@@ -1044,7 +1043,7 @@ var miniCopy = map[string]miniAppCopy{
 		CalendarPrivate:      "Keep the link private. Google controls when subscribed calendars refresh.",
 		OfflineUpdating:      "Updating prayer times…", OfflineUpdatingHelp: "Showing the saved schedule while the latest data loads.",
 		OfflineTitle: "Offline schedule", OfflineHelp: "Showing the schedule saved at {time}. Changes will be available after reconnecting.",
-		HomeTitle: "Quick access", HomeHelp: "Available in Telegram's mobile app. Add prayer times to your home screen.", MobileFeature: "Mobile feature",
+		HomeTitle: "Quick access", HomeHelp: "Available only in Telegram's mobile app.",
 		HomeAdd: "Add to home screen", HomeAdded: "Added to home screen",
 		ShareTitle: "Share prayer card", ShareHelp: "Create a beautiful image with the selected day’s prayer times.",
 		ShareAction: "Create & share", SharePreparing: "Creating card…",
@@ -1078,7 +1077,7 @@ var miniCopy = map[string]miniAppCopy{
 		CalendarPrivate:      "احتفظ بالرابط سريًا. يحدد Google وقت تحديث التقويمات المشتركة.",
 		OfflineUpdating:      "جارٍ تحديث المواقيت…", OfflineUpdatingHelp: "نعرض الجدول المحفوظ أثناء تحميل أحدث البيانات.",
 		OfflineTitle: "الجدول دون اتصال", OfflineHelp: "نعرض الجدول المحفوظ الساعة {time}. ستتوفر التغييرات بعد عودة الاتصال.",
-		HomeTitle: "وصول سريع", HomeHelp: "متاح في تطبيق تيليجرام للجوال: أضف المواقيت إلى الشاشة الرئيسية.", MobileFeature: "ميزة للجوال",
+		HomeTitle: "وصول سريع", HomeHelp: "متاح فقط في تطبيق تيليجرام للجوال.",
 		HomeAdd: "إضافة إلى الشاشة الرئيسية", HomeAdded: "تمت الإضافة إلى الشاشة الرئيسية",
 		ShareTitle: "مشاركة بطاقة الصلاة", ShareHelp: "أنشئ صورة جميلة بمواقيت اليوم المحدد.",
 		ShareAction: "إنشاء ومشاركة", SharePreparing: "جارٍ إنشاء البطاقة…",
@@ -1112,7 +1111,7 @@ var miniCopy = map[string]miniAppCopy{
 		CalendarPrivate:      "Mantén el enlace privado. Google decide cuándo actualizar los calendarios suscritos.",
 		OfflineUpdating:      "Actualizando horarios…", OfflineUpdatingHelp: "Mostramos el horario guardado mientras se cargan los datos nuevos.",
 		OfflineTitle: "Horario sin conexión", OfflineHelp: "Mostrando el horario guardado a las {time}. Los cambios estarán disponibles al reconectar.",
-		HomeTitle: "Acceso rápido", HomeHelp: "Disponible en Telegram móvil. Añade los horarios a tu pantalla de inicio.", MobileFeature: "Función móvil",
+		HomeTitle: "Acceso rápido", HomeHelp: "Disponible solo en la aplicación móvil de Telegram.",
 		HomeAdd: "Añadir a inicio", HomeAdded: "Añadido a inicio",
 		ShareTitle: "Compartir tarjeta", ShareHelp: "Crea una imagen con los horarios del día seleccionado.",
 		ShareAction: "Crear y compartir", SharePreparing: "Creando tarjeta…",
@@ -1146,7 +1145,7 @@ var miniCopy = map[string]miniAppCopy{
 		CalendarPrivate:      "Gardez ce lien privé. Google décide quand actualiser les calendriers abonnés.",
 		OfflineUpdating:      "Actualisation des horaires…", OfflineUpdatingHelp: "L’horaire enregistré reste affiché pendant le chargement.",
 		OfflineTitle: "Horaire hors ligne", OfflineHelp: "Horaire enregistré à {time}. Les modifications seront disponibles après reconnexion.",
-		HomeTitle: "Accès rapide", HomeHelp: "Disponible dans Telegram mobile. Ajoutez les horaires à votre écran d’accueil.", MobileFeature: "Fonction mobile",
+		HomeTitle: "Accès rapide", HomeHelp: "Disponible uniquement dans l’application mobile Telegram.",
 		HomeAdd: "Ajouter à l’accueil", HomeAdded: "Ajouté à l’accueil",
 		ShareTitle: "Partager une carte", ShareHelp: "Créez une image avec les horaires du jour sélectionné.",
 		ShareAction: "Créer et partager", SharePreparing: "Création de la carte…",
@@ -1180,7 +1179,7 @@ var miniCopy = map[string]miniAppCopy{
 		CalendarPrivate:      "Не передавайте ссылку другим. Частоту обновления подписки определяет Google.",
 		OfflineUpdating:      "Обновляем время намаза…", OfflineUpdatingHelp: "Пока новые данные загружаются, показываем сохранённое расписание.",
 		OfflineTitle: "Расписание офлайн", OfflineHelp: "Показано расписание, сохранённое в {time}. Изменения станут доступны после подключения.",
-		HomeTitle: "Быстрый доступ", HomeHelp: "Доступно в мобильном Telegram: добавьте время намаза на главный экран.", MobileFeature: "Функция для мобильных",
+		HomeTitle: "Быстрый доступ", HomeHelp: "Доступно только в мобильном приложении Telegram.",
 		HomeAdd: "Добавить на главный экран", HomeAdded: "Добавлено на главный экран",
 		ShareTitle: "Поделиться карточкой", ShareHelp: "Создайте красивую карточку с расписанием выбранного дня.",
 		ShareAction: "Создать и поделиться", SharePreparing: "Создаём карточку…",
@@ -1214,7 +1213,7 @@ var miniCopy = map[string]miniAppCopy{
 		CalendarPrivate:      "Bağlantıyı gizli tutun. Abone takvimlerin yenilenme zamanını Google belirler.",
 		OfflineUpdating:      "Namaz vakitleri güncelleniyor…", OfflineUpdatingHelp: "Yeni veriler yüklenirken kayıtlı takvim gösteriliyor.",
 		OfflineTitle: "Çevrimdışı takvim", OfflineHelp: "{time} saatinde kaydedilen takvim gösteriliyor. Değişiklikler bağlantı gelince açılır.",
-		HomeTitle: "Hızlı erişim", HomeHelp: "Telegram mobilde kullanılabilir. Namaz vakitlerini ana ekrana ekleyin.", MobileFeature: "Mobil özellik",
+		HomeTitle: "Hızlı erişim", HomeHelp: "Yalnızca Telegram mobil uygulamasında kullanılabilir.",
 		HomeAdd: "Ana ekrana ekle", HomeAdded: "Ana ekrana eklendi",
 		ShareTitle: "Namaz kartını paylaş", ShareHelp: "Seçilen günün vakitleriyle güzel bir görsel oluşturun.",
 		ShareAction: "Oluştur ve paylaş", SharePreparing: "Kart oluşturuluyor…",
@@ -1248,7 +1247,7 @@ var miniCopy = map[string]miniAppCopy{
 		CalendarPrivate:      "Havolani maxfiy saqlang. Obuna taqvimini qachon yangilashni Google belgilaydi.",
 		OfflineUpdating:      "Namoz vaqtlari yangilanmoqda…", OfflineUpdatingHelp: "Yangi ma’lumot yuklanayotganda saqlangan jadval ko‘rsatiladi.",
 		OfflineTitle: "Oflayn jadval", OfflineHelp: "{time} da saqlangan jadval ko‘rsatilmoqda. O‘zgarishlar ulanish qaytgach ishlaydi.",
-		HomeTitle: "Tezkor kirish", HomeHelp: "Telegram mobilida mavjud. Namoz vaqtlarini bosh ekranga qo‘shing.", MobileFeature: "Mobil funksiya",
+		HomeTitle: "Tezkor kirish", HomeHelp: "Faqat Telegram mobil ilovasida mavjud.",
 		HomeAdd: "Bosh ekranga qo‘shish", HomeAdded: "Bosh ekranga qo‘shildi",
 		ShareTitle: "Namoz kartasini ulashish", ShareHelp: "Tanlangan kun vaqtlari bilan chiroyli rasm yarating.",
 		ShareAction: "Yaratish va ulashish", SharePreparing: "Karta yaratilmoqda…",
@@ -1282,7 +1281,7 @@ var miniCopy = map[string]miniAppCopy{
 		CalendarPrivate:      "Сылтаманы яшерен саклагыз. Яңарту вакытын Google билгели.",
 		OfflineUpdating:      "Намаз вакытлары яңартыла…", OfflineUpdatingHelp: "Яңа мәгълүмат йөкләнгәндә сакланган җәдвәл күрсәтелә.",
 		OfflineTitle: "Офлайн җәдвәл", OfflineHelp: "{time} сәгатьтә сакланган җәдвәл күрсәтелә. Үзгәрешләр элемтә кайткач эшләячәк.",
-		HomeTitle: "Тиз керү", HomeHelp: "Telegram мобиль кушымтасында бар. Намаз вакытларын төп экранга өстәгез.", MobileFeature: "Мобиль функция",
+		HomeTitle: "Тиз керү", HomeHelp: "Telegram мобиль кушымтасында гына бар.",
 		HomeAdd: "Төп экранга өстәү", HomeAdded: "Төп экранга өстәлде",
 		ShareTitle: "Намаз карточкасын бүлешү", ShareHelp: "Сайланган көн вакытлары белән матур рәсем ясагыз.",
 		ShareAction: "Ясау һәм бүлешү", SharePreparing: "Карточка ясала…",

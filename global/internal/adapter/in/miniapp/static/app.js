@@ -227,7 +227,6 @@
     setText("qibla-title", labels.qibla_title);
     setText("qibla-help", labels.qibla_help);
     setText("start-compass", labels.compass_start);
-    setText("compass-mobile-badge", labels.mobile_feature);
     setText("calendar-title", labels.calendar_title);
     setText("calendar-help", labels.calendar_help);
     setText("calendar-private", labels.calendar_private);
@@ -236,7 +235,6 @@
     setText("disconnect-calendar", labels.calendar_disconnect);
     setText("home-screen-title", labels.home_title);
     setText("home-screen-help", labels.home_help);
-    setText("home-screen-mobile-badge", labels.mobile_feature);
     setText("add-home-screen", homeScreenStatus === "added" ? labels.home_added : labels.home_add);
     setText("share-card-title", labels.share_title);
     setText("share-card-help", labels.share_help);

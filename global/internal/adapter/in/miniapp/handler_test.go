@@ -65,8 +65,8 @@ func TestStaticMiniAppIsEmbeddedWithSecurityHeaders(t *testing.T) {
 	if strings.Contains(html, "home-screen-status") || strings.Contains(string(script), `setText("home-screen-status"`) {
 		t.Fatal("Mini App quick access duplicates its added status outside the button")
 	}
-	if !strings.Contains(html, "mobile-feature-badge") || !strings.Contains(string(script), "showFeatureNotice") {
-		t.Fatal("Mini App must visibly explain and safely handle mobile-only tool actions")
+	if strings.Contains(html, "mobile-feature-badge") || !strings.Contains(string(script), "showFeatureNotice") {
+		t.Fatal("Mini App must clearly explain and safely handle mobile-only tool actions without a redundant badge")
 	}
 	// Google's render?cid= flow requires the webcal:// scheme: an https:// URL
 	// inside cid adds a calendar whose events are never fetched.

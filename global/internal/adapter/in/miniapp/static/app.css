@@ -374,8 +374,6 @@ button { -webkit-tap-highlight-color: transparent; }
 .reminder-info[open] summary { float: inline-end; margin-inline-start: 10px; }
 .reminder-info p { margin: 0; padding-inline-end: 24px; color: var(--app-muted); font-size: 11px; line-height: 1.45; }
 
-.tool-title-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
-.mobile-feature-badge { display: inline-flex; align-items: center; min-height: 20px; padding: 2px 7px; border-radius: 999px; color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); font-size: 10px; font-weight: 750; white-space: nowrap; }
 .tool-card.is-unavailable .secondary-button { border-style: dashed; }
 
 .reminder-option {

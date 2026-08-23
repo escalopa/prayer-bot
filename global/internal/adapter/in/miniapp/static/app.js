@@ -227,6 +227,7 @@
     setText("qibla-title", labels.qibla_title);
     setText("qibla-help", labels.qibla_help);
     setText("start-compass", labels.compass_start);
+    setText("compass-mobile-badge", labels.mobile_feature);
     setText("calendar-title", labels.calendar_title);
     setText("calendar-help", labels.calendar_help);
     setText("calendar-private", labels.calendar_private);
@@ -235,6 +236,7 @@
     setText("disconnect-calendar", labels.calendar_disconnect);
     setText("home-screen-title", labels.home_title);
     setText("home-screen-help", labels.home_help);
+    setText("home-screen-mobile-badge", labels.mobile_feature);
     setText("add-home-screen", homeScreenStatus === "added" ? labels.home_added : labels.home_add);
     setText("share-card-title", labels.share_title);
     setText("share-card-help", labels.share_help);
@@ -362,10 +364,6 @@
 
   function updateHomeScreenStatus(status) {
     homeScreenStatus = status || "unknown";
-    if (homeScreenStatus === "unsupported") {
-      byId("home-screen-card").classList.add("hidden");
-      return;
-    }
     const button = byId("add-home-screen");
     const added = homeScreenStatus === "added";
     button.disabled = added;
@@ -375,8 +373,12 @@
   function renderHomeScreen() {
     const supported = telegramVersionAtLeast("8.0") &&
       telegram && typeof telegram.addToHomeScreen === "function";
-    byId("home-screen-card").classList.toggle("hidden", !supported);
-    if (!supported) return;
+    byId("home-screen-card").classList.toggle("is-unavailable", !supported);
+    if (!supported) {
+      byId("add-home-screen").disabled = false;
+      setText("add-home-screen", state.labels.home_add);
+      return;
+    }
     updateHomeScreenStatus(homeScreenStatus);
     if (typeof telegram.checkHomeScreenStatus === "function") {
       telegram.checkHomeScreenStatus((status) => updateHomeScreenStatus(status));
@@ -384,8 +386,19 @@
   }
 
   function addToHomeScreen() {
-    if (!telegram || typeof telegram.addToHomeScreen !== "function") return;
+    if (!telegram || !telegramVersionAtLeast("8.0") || typeof telegram.addToHomeScreen !== "function") {
+      showFeatureNotice(state.labels.home_help);
+      return;
+    }
     telegram.addToHomeScreen();
+  }
+
+  function showFeatureNotice(message) {
+    if (telegram && typeof telegram.showAlert === "function") {
+      telegram.showAlert(message);
+      return;
+    }
+    window.alert(message);
   }
 
   function renderReminders() {

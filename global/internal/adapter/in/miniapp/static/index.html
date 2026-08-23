@@ -281,16 +281,21 @@
                 <input id="occasion-major-reminders" type="checkbox">
                 <span class="toggle" aria-hidden="true"></span>
               </label>
-              <div class="reminder-row-with-info">
-                <label class="toggle-row">
-                  <span><strong id="occasion-fasting-reminders-label">Special fasting days</strong><small id="occasion-fasting-schedule"></small></span>
+              <div class="toggle-row reminder-row-with-info">
+                <span>
+                  <span class="reminder-label-with-info">
+                    <strong id="occasion-fasting-reminders-label">Special fasting days</strong>
+                    <details class="reminder-info">
+                      <summary id="occasion-fasting-info" aria-label="About special fasting days">ⓘ</summary>
+                      <p id="occasion-fasting-help"></p>
+                    </details>
+                  </span>
+                  <small id="occasion-fasting-schedule"></small>
+                </span>
+                <label class="toggle-control" aria-labelledby="occasion-fasting-reminders-label">
                   <input id="occasion-fasting-reminders" type="checkbox">
                   <span class="toggle" aria-hidden="true"></span>
                 </label>
-                <details class="reminder-info">
-                  <summary id="occasion-fasting-info" aria-label="About special fasting days">ⓘ</summary>
-                  <p id="occasion-fasting-help"></p>
-                </details>
               </div>
               <label class="toggle-row">
                 <span><strong id="occasion-observed-reminders-label">Commonly observed dates</strong><small id="occasion-observed-help"></small><small id="occasion-observed-schedule"></small></span>

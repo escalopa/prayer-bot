@@ -62,6 +62,12 @@ func TestStaticMiniAppIsEmbeddedWithSecurityHeaders(t *testing.T) {
 	if strings.Contains(string(script), `setText("compass-status", state.labels.compass_active)`) {
 		t.Fatal("Mini App Qibla compass duplicates its active status outside the button")
 	}
+	if strings.Contains(html, "home-screen-status") || strings.Contains(string(script), `setText("home-screen-status"`) {
+		t.Fatal("Mini App quick access duplicates its added status outside the button")
+	}
+	if !strings.Contains(html, "mobile-feature-badge") || !strings.Contains(string(script), "showFeatureNotice") {
+		t.Fatal("Mini App must visibly explain and safely handle mobile-only tool actions")
+	}
 	// Google's render?cid= flow requires the webcal:// scheme: an https:// URL
 	// inside cid adds a calendar whose events are never fetched.
 	if !strings.Contains(string(script), `"webcal://"`) ||
@@ -82,6 +88,8 @@ func TestStaticMiniAppIsEmbeddedWithSecurityHeaders(t *testing.T) {
 	}
 	if !strings.Contains(html, "occasion-list") ||
 		!strings.Contains(html, "occasion-observed-reminders") ||
+		!strings.Contains(html, "reminder-occasions-title") ||
+		!strings.Contains(html, "occasion-fasting-info") ||
 		!strings.Contains(string(script), "renderOccasions") {
 		t.Fatal("Mini App is missing Islamic occasion cards or opt-in reminder controls")
 	}

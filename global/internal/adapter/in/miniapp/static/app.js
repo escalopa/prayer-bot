@@ -204,9 +204,15 @@
     setText("occasions-title", labels.occasions_title);
     setText("occasions-help", labels.occasions_help);
     setText("occasions-disclaimer", labels.occasions_disclaimer);
+    setText("reminder-occasions-title", labels.occasions_title);
+    setText("reminder-occasions-help", labels.occasions_help);
     setText("occasion-major-reminders-label", labels.occasion_major_reminders);
     setText("occasion-fasting-reminders-label", labels.occasion_fasting_reminders);
     setText("occasion-observed-reminders-label", labels.occasion_observed_reminders);
+    setText("occasion-major-help", labels.occasion_major_reminders_help);
+    setText("occasion-fasting-help", labels.occasion_fasting_reminders_help);
+    setText("occasion-observed-help", labels.occasion_observed_reminders_help);
+    byId("occasion-fasting-info").setAttribute("aria-label", labels.occasion_fasting_reminders);
     ["occasion-major-schedule", "occasion-fasting-schedule", "occasion-observed-schedule"]
       .forEach((id) => setText(id, labels.occasion_schedule));
     setText("language-label", labels.language);
@@ -221,6 +227,7 @@
     setText("qibla-title", labels.qibla_title);
     setText("qibla-help", labels.qibla_help);
     setText("start-compass", labels.compass_start);
+    setText("compass-mobile-badge", labels.mobile_feature);
     setText("calendar-title", labels.calendar_title);
     setText("calendar-help", labels.calendar_help);
     setText("calendar-private", labels.calendar_private);
@@ -229,6 +236,7 @@
     setText("disconnect-calendar", labels.calendar_disconnect);
     setText("home-screen-title", labels.home_title);
     setText("home-screen-help", labels.home_help);
+    setText("home-screen-mobile-badge", labels.mobile_feature);
     setText("add-home-screen", homeScreenStatus === "added" ? labels.home_added : labels.home_add);
     setText("share-card-title", labels.share_title);
     setText("share-card-help", labels.share_help);
@@ -356,24 +364,21 @@
 
   function updateHomeScreenStatus(status) {
     homeScreenStatus = status || "unknown";
-    if (homeScreenStatus === "unsupported") {
-      byId("home-screen-card").classList.add("hidden");
-      return;
-    }
     const button = byId("add-home-screen");
-    const statusElement = byId("home-screen-status");
     const added = homeScreenStatus === "added";
     button.disabled = added;
     setText("add-home-screen", added ? state.labels.home_added : state.labels.home_add);
-    setText("home-screen-status", added ? state.labels.home_added : "");
-    statusElement.classList.toggle("hidden", !added);
   }
 
   function renderHomeScreen() {
     const supported = telegramVersionAtLeast("8.0") &&
       telegram && typeof telegram.addToHomeScreen === "function";
-    byId("home-screen-card").classList.toggle("hidden", !supported);
-    if (!supported) return;
+    byId("home-screen-card").classList.toggle("is-unavailable", !supported);
+    if (!supported) {
+      byId("add-home-screen").disabled = false;
+      setText("add-home-screen", state.labels.home_add);
+      return;
+    }
     updateHomeScreenStatus(homeScreenStatus);
     if (typeof telegram.checkHomeScreenStatus === "function") {
       telegram.checkHomeScreenStatus((status) => updateHomeScreenStatus(status));
@@ -381,8 +386,19 @@
   }
 
   function addToHomeScreen() {
-    if (!telegram || typeof telegram.addToHomeScreen !== "function") return;
+    if (!telegram || !telegramVersionAtLeast("8.0") || typeof telegram.addToHomeScreen !== "function") {
+      showFeatureNotice(state.labels.home_help);
+      return;
+    }
     telegram.addToHomeScreen();
+  }
+
+  function showFeatureNotice(message) {
+    if (telegram && typeof telegram.showAlert === "function") {
+      telegram.showAlert(message);
+      return;
+    }
+    window.alert(message);
   }
 
   function renderReminders() {

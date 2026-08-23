@@ -961,11 +961,14 @@ func labels(locale i18n.Locale) map[string]string {
 		"occasions_title":      locale.OccasionUI("title"), "occasions_help": locale.OccasionUI("help"),
 		"occasions_disclaimer": locale.OccasionUI("disclaimer"),
 		"occasion_recommended": locale.OccasionUI("recommended"), "occasion_sources": locale.OccasionUI("sources"),
-		"occasion_major_reminders":    locale.OccasionUI("major_reminders"),
-		"occasion_fasting_reminders":  locale.OccasionUI("fasting_reminders"),
-		"occasion_observed_reminders": locale.OccasionUI("observed_reminders"),
-		"occasion_schedule":           locale.OccasionUI("schedule"),
-		"save":                        copy.Save, "saved": copy.Saved, "loading": copy.Loading,
+		"occasion_major_reminders":         locale.OccasionUI("major_reminders"),
+		"occasion_fasting_reminders":       locale.OccasionUI("fasting_reminders"),
+		"occasion_observed_reminders":      locale.OccasionUI("observed_reminders"),
+		"occasion_major_reminders_help":    locale.OccasionUI("major_reminders_help"),
+		"occasion_fasting_reminders_help":  locale.OccasionUI("fasting_reminders_help"),
+		"occasion_observed_reminders_help": locale.OccasionUI("observed_reminders_help"),
+		"occasion_schedule":                locale.OccasionUI("schedule"),
+		"save":                             copy.Save, "saved": copy.Saved, "loading": copy.Loading,
 		"location_help": copy.LocationHelp, "location_error": copy.LocationError,
 		"open_in_telegram": copy.OpenInTelegram, "temporary_failure": copy.TemporaryFailure,
 		"calculated_locally": copy.CalculatedLocally, "companion": copy.Companion,
@@ -983,7 +986,8 @@ func labels(locale i18n.Locale) map[string]string {
 		"offline_title": copy.OfflineTitle, "offline_help": copy.OfflineHelp,
 		"home_title": copy.HomeTitle, "home_help": copy.HomeHelp,
 		"home_add": copy.HomeAdd, "home_added": copy.HomeAdded,
-		"share_title": copy.ShareTitle, "share_help": copy.ShareHelp,
+		"mobile_feature": copy.MobileFeature,
+		"share_title":    copy.ShareTitle, "share_help": copy.ShareHelp,
 		"share_action": copy.ShareAction, "share_preparing": copy.SharePreparing,
 		"share_sent": copy.ShareSent, "share_failed": copy.ShareFailed,
 		"share_card_heading": copy.ShareCardHeading, "share_card_footer": copy.ShareCardFooter,
@@ -1000,26 +1004,26 @@ func labels(locale i18n.Locale) map[string]string {
 }
 
 type miniAppCopy struct {
-	Save, Saved, Loading, LocationHelp, LocationError     string
-	OpenInTelegram, TemporaryFailure, CalculatedLocally   string
-	Companion, UpdateLocation                             string
-	Tools, QiblaTitle, QiblaHelp, QiblaBearing            string
-	QiblaDistance, CompassStart, CompassActive            string
-	CompassUnavailable, CalendarTitle, CalendarHelp       string
-	CalendarConnect, CalendarCopy, CalendarDisconnect     string
-	CalendarOpening, CalendarCopied, CalendarDisconnected string
-	CalendarPrivate                                       string
-	OfflineUpdating, OfflineUpdatingHelp                  string
-	OfflineTitle, OfflineHelp                             string
-	HomeTitle, HomeHelp, HomeAdd, HomeAdded               string
-	ShareTitle, ShareHelp, ShareAction, SharePreparing    string
-	ShareSent, ShareFailed                                string
-	ShareCardHeading, ShareCardFooter, ShareMessage       string
-	ZakatTitle, ZakatHelp, ZakatCurrency, ZakatHoldings   string
-	ZakatNisab, ZakatNisabNote, ZakatDue, ZakatBelow      string
-	ZakatDisclaimer, ZakatUpdated                         string
-	NavPrayer, NavDates, NavZakat, NavPlaces, NavSettings string
-	PlacesTitle, PlacesHelp                               string
+	Save, Saved, Loading, LocationHelp, LocationError      string
+	OpenInTelegram, TemporaryFailure, CalculatedLocally    string
+	Companion, UpdateLocation                              string
+	Tools, QiblaTitle, QiblaHelp, QiblaBearing             string
+	QiblaDistance, CompassStart, CompassActive             string
+	CompassUnavailable, CalendarTitle, CalendarHelp        string
+	CalendarConnect, CalendarCopy, CalendarDisconnect      string
+	CalendarOpening, CalendarCopied, CalendarDisconnected  string
+	CalendarPrivate                                        string
+	OfflineUpdating, OfflineUpdatingHelp                   string
+	OfflineTitle, OfflineHelp                              string
+	HomeTitle, HomeHelp, HomeAdd, HomeAdded, MobileFeature string
+	ShareTitle, ShareHelp, ShareAction, SharePreparing     string
+	ShareSent, ShareFailed                                 string
+	ShareCardHeading, ShareCardFooter, ShareMessage        string
+	ZakatTitle, ZakatHelp, ZakatCurrency, ZakatHoldings    string
+	ZakatNisab, ZakatNisabNote, ZakatDue, ZakatBelow       string
+	ZakatDisclaimer, ZakatUpdated                          string
+	NavPrayer, NavDates, NavZakat, NavPlaces, NavSettings  string
+	PlacesTitle, PlacesHelp                                string
 }
 
 var miniCopy = map[string]miniAppCopy{
@@ -1029,7 +1033,7 @@ var miniCopy = map[string]miniAppCopy{
 		LocationError:  "Location access failed. Check Telegram's location permission and try again.",
 		OpenInTelegram: "Open this page from the bot inside Telegram.", TemporaryFailure: "Something went wrong. Please try again.",
 		CalculatedLocally: "Calculated locally for your saved timezone", Companion: "Prayer companion", UpdateLocation: "Update location",
-		Tools: "Tools", QiblaTitle: "Qibla direction", QiblaHelp: "The arrow points from north toward the Kaaba.",
+		Tools: "Tools", QiblaTitle: "Qibla direction", QiblaHelp: "The bearing works everywhere. Live compass needs Telegram's mobile app and a supported sensor.",
 		QiblaBearing: "{bearing}° from north", QiblaDistance: "Approximately {distance} km to the Kaaba",
 		CompassStart: "Use live compass", CompassActive: "Live compass active",
 		CompassUnavailable: "An absolute compass is unavailable on this device. Use the bearing above.",
@@ -1040,7 +1044,7 @@ var miniCopy = map[string]miniAppCopy{
 		CalendarPrivate:      "Keep the link private. Google controls when subscribed calendars refresh.",
 		OfflineUpdating:      "Updating prayer times…", OfflineUpdatingHelp: "Showing the saved schedule while the latest data loads.",
 		OfflineTitle: "Offline schedule", OfflineHelp: "Showing the schedule saved at {time}. Changes will be available after reconnecting.",
-		HomeTitle: "Quick access", HomeHelp: "Add prayer times to your Telegram home screen.",
+		HomeTitle: "Quick access", HomeHelp: "Available in Telegram's mobile app. Add prayer times to your home screen.", MobileFeature: "Mobile feature",
 		HomeAdd: "Add to home screen", HomeAdded: "Added to home screen",
 		ShareTitle: "Share prayer card", ShareHelp: "Create a beautiful image with the selected day’s prayer times.",
 		ShareAction: "Create & share", SharePreparing: "Creating card…",
@@ -1063,7 +1067,7 @@ var miniCopy = map[string]miniAppCopy{
 		LocationError:  "تعذر الوصول إلى الموقع. تحقق من إذن الموقع في تيليجرام وحاول مجددًا.",
 		OpenInTelegram: "افتح هذه الصفحة من داخل البوت في تيليجرام.", TemporaryFailure: "حدث خطأ. حاول مرة أخرى.",
 		CalculatedLocally: "محسوبة محليًا حسب منطقتك الزمنية", Companion: "رفيق الصلاة", UpdateLocation: "تحديث الموقع",
-		Tools: "الأدوات", QiblaTitle: "اتجاه القبلة", QiblaHelp: "يشير السهم من الشمال نحو الكعبة.",
+		Tools: "الأدوات", QiblaTitle: "اتجاه القبلة", QiblaHelp: "تظهر الزاوية على كل الأجهزة. تتطلب البوصلة المباشرة تطبيق تيليجرام للجوال ومستشعرًا مدعومًا.",
 		QiblaBearing: "{bearing}° من الشمال", QiblaDistance: "حوالي {distance} كم إلى الكعبة",
 		CompassStart: "استخدام البوصلة المباشرة", CompassActive: "البوصلة المباشرة مفعّلة",
 		CompassUnavailable: "البوصلة المطلقة غير متاحة على هذا الجهاز. استخدم الزاوية الموضحة أعلاه.",
@@ -1074,7 +1078,7 @@ var miniCopy = map[string]miniAppCopy{
 		CalendarPrivate:      "احتفظ بالرابط سريًا. يحدد Google وقت تحديث التقويمات المشتركة.",
 		OfflineUpdating:      "جارٍ تحديث المواقيت…", OfflineUpdatingHelp: "نعرض الجدول المحفوظ أثناء تحميل أحدث البيانات.",
 		OfflineTitle: "الجدول دون اتصال", OfflineHelp: "نعرض الجدول المحفوظ الساعة {time}. ستتوفر التغييرات بعد عودة الاتصال.",
-		HomeTitle: "وصول سريع", HomeHelp: "أضف مواقيت الصلاة إلى شاشة تيليجرام الرئيسية.",
+		HomeTitle: "وصول سريع", HomeHelp: "متاح في تطبيق تيليجرام للجوال: أضف المواقيت إلى الشاشة الرئيسية.", MobileFeature: "ميزة للجوال",
 		HomeAdd: "إضافة إلى الشاشة الرئيسية", HomeAdded: "تمت الإضافة إلى الشاشة الرئيسية",
 		ShareTitle: "مشاركة بطاقة الصلاة", ShareHelp: "أنشئ صورة جميلة بمواقيت اليوم المحدد.",
 		ShareAction: "إنشاء ومشاركة", SharePreparing: "جارٍ إنشاء البطاقة…",
@@ -1097,7 +1101,7 @@ var miniCopy = map[string]miniAppCopy{
 		LocationError:  "No se pudo obtener la ubicación. Revisa el permiso de Telegram e inténtalo de nuevo.",
 		OpenInTelegram: "Abre esta página desde el bot en Telegram.", TemporaryFailure: "Algo salió mal. Inténtalo de nuevo.",
 		CalculatedLocally: "Calculado localmente para tu zona horaria", Companion: "Compañero de oración", UpdateLocation: "Actualizar ubicación",
-		Tools: "Herramientas", QiblaTitle: "Dirección de la alquibla", QiblaHelp: "La flecha apunta desde el norte hacia la Kaaba.",
+		Tools: "Herramientas", QiblaTitle: "Dirección de la alquibla", QiblaHelp: "El rumbo funciona en cualquier dispositivo. La brújula en vivo requiere Telegram móvil y un sensor compatible.",
 		QiblaBearing: "{bearing}° desde el norte", QiblaDistance: "Aproximadamente {distance} km hasta la Kaaba",
 		CompassStart: "Usar brújula en vivo", CompassActive: "Brújula en vivo activa",
 		CompassUnavailable: "Este dispositivo no ofrece una brújula absoluta. Usa el ángulo indicado arriba.",
@@ -1108,7 +1112,7 @@ var miniCopy = map[string]miniAppCopy{
 		CalendarPrivate:      "Mantén el enlace privado. Google decide cuándo actualizar los calendarios suscritos.",
 		OfflineUpdating:      "Actualizando horarios…", OfflineUpdatingHelp: "Mostramos el horario guardado mientras se cargan los datos nuevos.",
 		OfflineTitle: "Horario sin conexión", OfflineHelp: "Mostrando el horario guardado a las {time}. Los cambios estarán disponibles al reconectar.",
-		HomeTitle: "Acceso rápido", HomeHelp: "Añade los horarios a la pantalla de inicio de Telegram.",
+		HomeTitle: "Acceso rápido", HomeHelp: "Disponible en Telegram móvil. Añade los horarios a tu pantalla de inicio.", MobileFeature: "Función móvil",
 		HomeAdd: "Añadir a inicio", HomeAdded: "Añadido a inicio",
 		ShareTitle: "Compartir tarjeta", ShareHelp: "Crea una imagen con los horarios del día seleccionado.",
 		ShareAction: "Crear y compartir", SharePreparing: "Creando tarjeta…",
@@ -1131,7 +1135,7 @@ var miniCopy = map[string]miniAppCopy{
 		LocationError:  "Impossible d'accéder à la position. Vérifiez l'autorisation Telegram et réessayez.",
 		OpenInTelegram: "Ouvrez cette page depuis le bot dans Telegram.", TemporaryFailure: "Une erreur est survenue. Réessayez.",
 		CalculatedLocally: "Calculé localement pour votre fuseau horaire", Companion: "Compagnon de prière", UpdateLocation: "Actualiser le lieu",
-		Tools: "Outils", QiblaTitle: "Direction de la Qibla", QiblaHelp: "La flèche indique la direction de la Kaaba depuis le nord.",
+		Tools: "Outils", QiblaTitle: "Direction de la Qibla", QiblaHelp: "L’angle fonctionne sur tout appareil. La boussole en direct nécessite Telegram mobile et un capteur compatible.",
 		QiblaBearing: "{bearing}° depuis le nord", QiblaDistance: "Environ {distance} km jusqu’à la Kaaba",
 		CompassStart: "Utiliser la boussole", CompassActive: "Boussole active",
 		CompassUnavailable: "La boussole absolue n’est pas disponible sur cet appareil. Utilisez l’angle ci-dessus.",
@@ -1142,7 +1146,7 @@ var miniCopy = map[string]miniAppCopy{
 		CalendarPrivate:      "Gardez ce lien privé. Google décide quand actualiser les calendriers abonnés.",
 		OfflineUpdating:      "Actualisation des horaires…", OfflineUpdatingHelp: "L’horaire enregistré reste affiché pendant le chargement.",
 		OfflineTitle: "Horaire hors ligne", OfflineHelp: "Horaire enregistré à {time}. Les modifications seront disponibles après reconnexion.",
-		HomeTitle: "Accès rapide", HomeHelp: "Ajoutez les horaires à l’écran d’accueil Telegram.",
+		HomeTitle: "Accès rapide", HomeHelp: "Disponible dans Telegram mobile. Ajoutez les horaires à votre écran d’accueil.", MobileFeature: "Fonction mobile",
 		HomeAdd: "Ajouter à l’accueil", HomeAdded: "Ajouté à l’accueil",
 		ShareTitle: "Partager une carte", ShareHelp: "Créez une image avec les horaires du jour sélectionné.",
 		ShareAction: "Créer et partager", SharePreparing: "Création de la carte…",
@@ -1165,7 +1169,7 @@ var miniCopy = map[string]miniAppCopy{
 		LocationError:  "Не удалось получить геопозицию. Проверьте разрешение Telegram и повторите попытку.",
 		OpenInTelegram: "Откройте эту страницу из бота в Telegram.", TemporaryFailure: "Произошла ошибка. Попробуйте ещё раз.",
 		CalculatedLocally: "Рассчитано локально для вашего часового пояса", Companion: "Помощник для намаза", UpdateLocation: "Обновить геопозицию",
-		Tools: "Инструменты", QiblaTitle: "Направление Кыблы", QiblaHelp: "Стрелка показывает направление от севера к Каабе.",
+		Tools: "Инструменты", QiblaTitle: "Направление Кыблы", QiblaHelp: "Направление доступно на любом устройстве. Компас работает в мобильном Telegram с поддерживаемым датчиком.",
 		QiblaBearing: "{bearing}° от севера", QiblaDistance: "Примерно {distance} км до Каабы",
 		CompassStart: "Включить компас", CompassActive: "Компас включён",
 		CompassUnavailable: "Абсолютный компас недоступен на этом устройстве. Используйте угол выше.",
@@ -1176,7 +1180,7 @@ var miniCopy = map[string]miniAppCopy{
 		CalendarPrivate:      "Не передавайте ссылку другим. Частоту обновления подписки определяет Google.",
 		OfflineUpdating:      "Обновляем время намаза…", OfflineUpdatingHelp: "Пока новые данные загружаются, показываем сохранённое расписание.",
 		OfflineTitle: "Расписание офлайн", OfflineHelp: "Показано расписание, сохранённое в {time}. Изменения станут доступны после подключения.",
-		HomeTitle: "Быстрый доступ", HomeHelp: "Добавьте время намаза на главный экран Telegram.",
+		HomeTitle: "Быстрый доступ", HomeHelp: "Доступно в мобильном Telegram: добавьте время намаза на главный экран.", MobileFeature: "Функция для мобильных",
 		HomeAdd: "Добавить на главный экран", HomeAdded: "Добавлено на главный экран",
 		ShareTitle: "Поделиться карточкой", ShareHelp: "Создайте красивую карточку с расписанием выбранного дня.",
 		ShareAction: "Создать и поделиться", SharePreparing: "Создаём карточку…",
@@ -1199,7 +1203,7 @@ var miniCopy = map[string]miniAppCopy{
 		LocationError:  "Konum alınamadı. Telegram konum iznini kontrol edip tekrar deneyin.",
 		OpenInTelegram: "Bu sayfayı Telegram içindeki bottan açın.", TemporaryFailure: "Bir hata oluştu. Lütfen tekrar deneyin.",
 		CalculatedLocally: "Kayıtlı saat diliminiz için yerel olarak hesaplandı", Companion: "Namaz yardımcısı", UpdateLocation: "Konumu güncelle",
-		Tools: "Araçlar", QiblaTitle: "Kıble yönü", QiblaHelp: "Ok, kuzeyden Kâbe’ye doğru yönü gösterir.",
+		Tools: "Araçlar", QiblaTitle: "Kıble yönü", QiblaHelp: "Yön açısı her cihazda çalışır. Canlı pusula, Telegram mobil ve uyumlu bir sensör gerektirir.",
 		QiblaBearing: "Kuzeyden {bearing}°", QiblaDistance: "Kâbe’ye yaklaşık {distance} km",
 		CompassStart: "Canlı pusulayı kullan", CompassActive: "Canlı pusula etkin",
 		CompassUnavailable: "Bu cihazda mutlak pusula kullanılamıyor. Yukarıdaki açıyı kullanın.",
@@ -1210,7 +1214,7 @@ var miniCopy = map[string]miniAppCopy{
 		CalendarPrivate:      "Bağlantıyı gizli tutun. Abone takvimlerin yenilenme zamanını Google belirler.",
 		OfflineUpdating:      "Namaz vakitleri güncelleniyor…", OfflineUpdatingHelp: "Yeni veriler yüklenirken kayıtlı takvim gösteriliyor.",
 		OfflineTitle: "Çevrimdışı takvim", OfflineHelp: "{time} saatinde kaydedilen takvim gösteriliyor. Değişiklikler bağlantı gelince açılır.",
-		HomeTitle: "Hızlı erişim", HomeHelp: "Namaz vakitlerini Telegram ana ekranına ekleyin.",
+		HomeTitle: "Hızlı erişim", HomeHelp: "Telegram mobilde kullanılabilir. Namaz vakitlerini ana ekrana ekleyin.", MobileFeature: "Mobil özellik",
 		HomeAdd: "Ana ekrana ekle", HomeAdded: "Ana ekrana eklendi",
 		ShareTitle: "Namaz kartını paylaş", ShareHelp: "Seçilen günün vakitleriyle güzel bir görsel oluşturun.",
 		ShareAction: "Oluştur ve paylaş", SharePreparing: "Kart oluşturuluyor…",
@@ -1233,7 +1237,7 @@ var miniCopy = map[string]miniAppCopy{
 		LocationError:  "Joylashuv olinmadi. Telegram ruxsatini tekshirib, qayta urinib ko‘ring.",
 		OpenInTelegram: "Bu sahifani Telegram ichidagi botdan oching.", TemporaryFailure: "Xatolik yuz berdi. Qayta urinib ko‘ring.",
 		CalculatedLocally: "Saqlangan vaqt mintaqangiz uchun mahalliy hisoblandi", Companion: "Namoz yordamchisi", UpdateLocation: "Joylashuvni yangilash",
-		Tools: "Vositalar", QiblaTitle: "Qibla yo‘nalishi", QiblaHelp: "Ko‘rsatkich shimoldan Ka’ba tomon yo‘naladi.",
+		Tools: "Vositalar", QiblaTitle: "Qibla yo‘nalishi", QiblaHelp: "Yo‘nalish burchagi barcha qurilmalarda ishlaydi. Jonli kompas uchun Telegram mobil va mos sensor kerak.",
 		QiblaBearing: "Shimoldan {bearing}°", QiblaDistance: "Ka’bagacha taxminan {distance} km",
 		CompassStart: "Jonli kompasni yoqish", CompassActive: "Jonli kompas faol",
 		CompassUnavailable: "Bu qurilmada mutlaq kompas mavjud emas. Yuqoridagi burchakdan foydalaning.",
@@ -1244,7 +1248,7 @@ var miniCopy = map[string]miniAppCopy{
 		CalendarPrivate:      "Havolani maxfiy saqlang. Obuna taqvimini qachon yangilashni Google belgilaydi.",
 		OfflineUpdating:      "Namoz vaqtlari yangilanmoqda…", OfflineUpdatingHelp: "Yangi ma’lumot yuklanayotganda saqlangan jadval ko‘rsatiladi.",
 		OfflineTitle: "Oflayn jadval", OfflineHelp: "{time} da saqlangan jadval ko‘rsatilmoqda. O‘zgarishlar ulanish qaytgach ishlaydi.",
-		HomeTitle: "Tezkor kirish", HomeHelp: "Namoz vaqtlarini Telegram bosh ekraniga qo‘shing.",
+		HomeTitle: "Tezkor kirish", HomeHelp: "Telegram mobilida mavjud. Namoz vaqtlarini bosh ekranga qo‘shing.", MobileFeature: "Mobil funksiya",
 		HomeAdd: "Bosh ekranga qo‘shish", HomeAdded: "Bosh ekranga qo‘shildi",
 		ShareTitle: "Namoz kartasini ulashish", ShareHelp: "Tanlangan kun vaqtlari bilan chiroyli rasm yarating.",
 		ShareAction: "Yaratish va ulashish", SharePreparing: "Karta yaratilmoqda…",
@@ -1267,7 +1271,7 @@ var miniCopy = map[string]miniAppCopy{
 		LocationError:  "Урынны алып булмады. Telegram рөхсәтен тикшереп, кабатлап карагыз.",
 		OpenInTelegram: "Бу битне Telegram эчендәге боттан ачыгыз.", TemporaryFailure: "Хата чыкты. Кабатлап карагыз.",
 		CalculatedLocally: "Сакланган сәгать поясы өчен җирле исәпләнде", Companion: "Намаз ярдәмчесе", UpdateLocation: "Урынны яңарту",
-		Tools: "Кораллар", QiblaTitle: "Кыйбла юнәлеше", QiblaHelp: "Ук төньяктан Кәгъбә ягына юнәлешне күрсәтә.",
+		Tools: "Кораллар", QiblaTitle: "Кыйбла юнәлеше", QiblaHelp: "Юнәлеш почмагы һәр җайланмада эшли. Тере компас өчен Telegram мобиль кушымтасы һәм туры килгән сенсор кирәк.",
 		QiblaBearing: "Төньяктан {bearing}°", QiblaDistance: "Кәгъбәгә якынча {distance} км",
 		CompassStart: "Тере компасны кабызу", CompassActive: "Тере компас эшли",
 		CompassUnavailable: "Бу җайланмада абсолют компас юк. Өстәге почмакны кулланыгыз.",
@@ -1278,7 +1282,7 @@ var miniCopy = map[string]miniAppCopy{
 		CalendarPrivate:      "Сылтаманы яшерен саклагыз. Яңарту вакытын Google билгели.",
 		OfflineUpdating:      "Намаз вакытлары яңартыла…", OfflineUpdatingHelp: "Яңа мәгълүмат йөкләнгәндә сакланган җәдвәл күрсәтелә.",
 		OfflineTitle: "Офлайн җәдвәл", OfflineHelp: "{time} сәгатьтә сакланган җәдвәл күрсәтелә. Үзгәрешләр элемтә кайткач эшләячәк.",
-		HomeTitle: "Тиз керү", HomeHelp: "Намаз вакытларын Telegram төп экранына өстәгез.",
+		HomeTitle: "Тиз керү", HomeHelp: "Telegram мобиль кушымтасында бар. Намаз вакытларын төп экранга өстәгез.", MobileFeature: "Мобиль функция",
 		HomeAdd: "Төп экранга өстәү", HomeAdded: "Төп экранга өстәлде",
 		ShareTitle: "Намаз карточкасын бүлешү", ShareHelp: "Сайланган көн вакытлары белән матур рәсем ясагыз.",
 		ShareAction: "Ясау һәм бүлешү", SharePreparing: "Карточка ясала…",

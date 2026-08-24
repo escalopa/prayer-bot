@@ -399,6 +399,10 @@
     window.alert(message);
   }
 
+  function showFastingReminderInfo() {
+    showFeatureNotice(state.labels.occasion_fasting_reminders_help);
+  }
+
   function renderReminders() {
     byId("prayer-reminders").checked = state.reminders.prayer;
     fillSelect("pre-prayer-minutes", state.options.pre_reminders, state.reminders.pre_prayer_minutes);
@@ -1322,6 +1326,7 @@
   byId("copy-calendar-link").addEventListener("click", copyCalendarLink);
   byId("disconnect-calendar").addEventListener("click", disconnectCalendar);
   byId("add-home-screen").addEventListener("click", addToHomeScreen);
+  byId("occasion-fasting-info").addEventListener("click", showFastingReminderInfo);
   byId("share-prayer-card").addEventListener("click", sharePrayerCard);
   byId("save-preferences").addEventListener("click", savePreferences);
   byId("retry-app").addEventListener("click", bootstrapApp);

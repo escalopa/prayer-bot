@@ -90,6 +90,7 @@ func TestStaticMiniAppIsEmbeddedWithSecurityHeaders(t *testing.T) {
 		!strings.Contains(html, "occasion-observed-reminders") ||
 		!strings.Contains(html, "reminder-occasions-title") ||
 		!strings.Contains(html, "occasion-fasting-info") ||
+		!strings.Contains(string(script), "showFastingReminderInfo") ||
 		!strings.Contains(string(script), "renderOccasions") {
 		t.Fatal("Mini App is missing Islamic occasion cards or opt-in reminder controls")
 	}

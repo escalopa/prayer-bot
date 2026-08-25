@@ -95,11 +95,17 @@ func TestStaticMiniAppIsEmbeddedWithSecurityHeaders(t *testing.T) {
 	}
 	if !strings.Contains(html, "occasion-list") ||
 		!strings.Contains(html, "occasion-observed-reminders") ||
+		!strings.Contains(html, "occasion-observed-info") ||
+		!strings.Contains(html, "places-method") ||
 		!strings.Contains(html, "reminder-occasions-title") ||
 		!strings.Contains(html, "occasion-fasting-info") ||
-		!strings.Contains(string(script), "showFastingReminderInfo") ||
+		!strings.Contains(string(script), "showFastingReminderInfo") || !strings.Contains(string(script), "showObservedReminderInfo") ||
 		!strings.Contains(string(script), "renderOccasions") {
 		t.Fatal("Mini App is missing Islamic occasion cards or opt-in reminder controls")
+	}
+	if strings.Contains(html, `id="occasions-title"`) || strings.Contains(string(script), "occasion-category") ||
+		!strings.Contains(string(script), "method: placesMethod") {
+		t.Fatal("Mini App dates must avoid redundant labels and Places must support a transient calculation method")
 	}
 	serviceWorker, err := embeddedStatic.ReadFile("static/sw.js")
 	if err != nil {

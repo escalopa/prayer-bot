@@ -657,6 +657,10 @@
   }
 
   async function updateLocation(button) {
+    if (!isTelegramMobile()) {
+      showFeatureNotice(state.labels.home_help);
+      return;
+    }
     button.disabled = true;
     try {
       let location;

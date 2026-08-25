@@ -399,6 +399,10 @@
     window.alert(message);
   }
 
+  function isTelegramMobile() {
+    return telegram && ["android", "android_x", "ios"].includes(telegram.platform);
+  }
+
   function showFastingReminderInfo() {
     showFeatureNotice(state.labels.occasion_fasting_reminders_help);
   }
@@ -816,6 +820,10 @@
   }
 
   function startCompass() {
+    if (!isTelegramMobile()) {
+      showFeatureNotice(state.labels.qibla_help);
+      return;
+    }
     const sensor = telegram && telegram.DeviceOrientation;
     // iOS only permits this permission request during the button click. Keep
     // the result for a later fallback if Telegram starts in relative mode.

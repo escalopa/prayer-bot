@@ -68,6 +68,10 @@ func TestStaticMiniAppIsEmbeddedWithSecurityHeaders(t *testing.T) {
 	if strings.Contains(html, "mobile-feature-badge") || !strings.Contains(string(script), "showFeatureNotice") {
 		t.Fatal("Mini App must clearly explain and safely handle mobile-only tool actions without a redundant badge")
 	}
+	if !strings.Contains(string(script), "isTelegramMobile") ||
+		!strings.Contains(string(script), "showFeatureNotice(state.labels.qibla_help)") {
+		t.Fatal("Mini App live compass must explain its mobile requirement before starting sensors")
+	}
 	// Google's render?cid= flow requires the webcal:// scheme: an https:// URL
 	// inside cid adds a calendar whose events are never fetched.
 	if !strings.Contains(string(script), `"webcal://"`) ||

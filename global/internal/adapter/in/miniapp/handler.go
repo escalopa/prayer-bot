@@ -211,9 +211,10 @@ func (h *Handler) updateLocation(w http.ResponseWriter, r *http.Request, identit
 }
 
 type lookupRequest struct {
-	Latitude  *float64 `json:"latitude"`
-	Longitude *float64 `json:"longitude"`
-	Day       string   `json:"day"`
+	Latitude  *float64      `json:"latitude"`
+	Longitude *float64      `json:"longitude"`
+	Day       string        `json:"day"`
+	Method    domain.Method `json:"method"`
 }
 
 type lookupResponse struct {
@@ -235,6 +236,9 @@ func (h *Handler) lookup(w http.ResponseWriter, r *http.Request, identity Identi
 		*request.Longitude < -180 || *request.Longitude > 180 {
 		return badRequest("invalid_location")
 	}
+	if request.Method != "" && !request.Method.Valid() {
+		return badRequest("invalid_method")
+	}
 	resolved, err := h.resolver.Resolve(r.Context(), *request.Latitude, *request.Longitude)
 	if err != nil {
 		return fmt.Errorf("resolve lookup location: %w", err)
@@ -255,6 +259,9 @@ func (h *Handler) lookup(w http.ResponseWriter, r *http.Request, identity Identi
 		profile.HijriAdjustment = current.HijriAdjustment
 	} else if !domain.IsNotFound(err) {
 		return fmt.Errorf("load profile: %w", err)
+	}
+	if request.Method != "" {
+		profile.Method = request.Method
 	}
 	locale := i18n.Resolve(identity.LanguageCode)
 	if chat, err := h.store.Chat(r.Context(), identity.UserID); err == nil {

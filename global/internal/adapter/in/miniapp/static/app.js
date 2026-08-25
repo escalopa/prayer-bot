@@ -16,6 +16,7 @@
   let zakatCurrency = "";
   let activeView = "prayer";
   let placesDay = "today";
+  let placesMethod = "";
   let placesLookupTimer = null;
   const places = { z: 5, lat: 21.4225, lng: 39.8262, initialized: false, lastKey: "" };
   const troyOunceGrams = 31.1035;
@@ -201,8 +202,6 @@
     setText("fasting-schedule", labels.fasting_schedule);
     setText("white-days-schedule", labels.white_days_schedule);
     setText("kahf-schedule", labels.kahf_schedule);
-    setText("occasions-title", labels.occasions_title);
-    setText("occasions-help", labels.occasions_help);
     setText("occasions-disclaimer", labels.occasions_disclaimer);
     setText("reminder-occasions-title", labels.occasions_title);
     setText("reminder-occasions-help", labels.occasions_help);
@@ -211,8 +210,8 @@
     setText("occasion-observed-reminders-label", labels.occasion_observed_reminders);
     setText("occasion-major-help", labels.occasion_major_reminders_help);
     setText("occasion-fasting-help", labels.occasion_fasting_reminders_help);
-    setText("occasion-observed-help", labels.occasion_observed_reminders_help);
     byId("occasion-fasting-info").setAttribute("aria-label", labels.occasion_fasting_reminders);
+    byId("occasion-observed-info").setAttribute("aria-label", labels.occasion_observed_reminders);
     ["occasion-major-schedule", "occasion-fasting-schedule", "occasion-observed-schedule"]
       .forEach((id) => setText(id, labels.occasion_schedule));
     setText("language-label", labels.language);
@@ -253,6 +252,7 @@
     setText("tab-settings", labels.nav_settings);
     setText("places-title", labels.places_title);
     setText("places-help", labels.places_help);
+    setText("places-method-label", labels.method);
     setText("places-today-tab", labels.today);
     setText("places-tomorrow-tab", labels.tomorrow);
     setText("places-note", labels.calculated_locally);
@@ -407,6 +407,10 @@
     showFeatureNotice(state.labels.occasion_fasting_reminders_help);
   }
 
+  function showObservedReminderInfo() {
+    showFeatureNotice(state.labels.occasion_observed_reminders_help);
+  }
+
   function renderReminders() {
     byId("prayer-reminders").checked = state.reminders.prayer;
     fillSelect("pre-prayer-minutes", state.options.pre_reminders, state.reminders.pre_prayer_minutes);
@@ -449,15 +453,12 @@
       emoji.className = "occasion-emoji";
       emoji.textContent = occasion.emoji;
       const heading = document.createElement("div");
-      const category = document.createElement("span");
-      category.className = `occasion-category occasion-category-${occasion.category}`;
-      category.textContent = occasion.category_label;
       const title = document.createElement("h3");
       title.textContent = occasion.title;
       const dates = document.createElement("p");
       dates.className = "occasion-dates";
       dates.textContent = `${occasion.hijri} · ${occasion.gregorian}`;
-      heading.append(category, title, dates);
+      heading.append(title, dates);
       header.append(emoji, heading);
 
       const summary = document.createElement("p");
@@ -583,6 +584,7 @@
     renderZakat();
     renderReminders();
     renderSettings();
+    renderPlacesMethod();
     selectView(activeView);
     setDirty(false);
   }
@@ -1229,6 +1231,11 @@
     if (!places.lastKey) schedulePlacesLookup();
   }
 
+  function renderPlacesMethod() {
+    if (!placesMethod) placesMethod = state.profile.method;
+    fillSelect("places-method", state.options.methods, placesMethod);
+  }
+
   function schedulePlacesLookup() {
     clearTimeout(placesLookupTimer);
     setText("places-location", "…");
@@ -1238,11 +1245,11 @@
   async function runPlacesLookup() {
     const lat = Number(places.lat.toFixed(4));
     const lng = Number(places.lng.toFixed(4));
-    const key = `${lat},${lng},${placesDay}`;
+    const key = `${lat},${lng},${placesDay},${placesMethod}`;
     if (key === places.lastKey) return;
     places.lastKey = key;
     try {
-      const data = await request("/api/miniapp/lookup", "POST", { latitude: lat, longitude: lng, day: placesDay });
+      const data = await request("/api/miniapp/lookup", "POST", { latitude: lat, longitude: lng, day: placesDay, method: placesMethod });
       setText("places-location", data.location_name || "");
       renderPlacesSchedule(data.schedule);
     } catch (_) {
@@ -1339,6 +1346,7 @@
   byId("disconnect-calendar").addEventListener("click", disconnectCalendar);
   byId("add-home-screen").addEventListener("click", addToHomeScreen);
   byId("occasion-fasting-info").addEventListener("click", showFastingReminderInfo);
+  byId("occasion-observed-info").addEventListener("click", showObservedReminderInfo);
   byId("share-prayer-card").addEventListener("click", sharePrayerCard);
   byId("save-preferences").addEventListener("click", savePreferences);
   byId("retry-app").addEventListener("click", bootstrapApp);
@@ -1354,6 +1362,11 @@
     renderZakatResult();
   });
   byId("zakat-holdings").addEventListener("input", renderZakatResult);
+  byId("places-method").addEventListener("change", (event) => {
+    placesMethod = event.currentTarget.value;
+    places.lastKey = "";
+    schedulePlacesLookup();
+  });
   window.addEventListener("pageshow", (event) => {
     if (event.persisted) bootstrapApp();
   });

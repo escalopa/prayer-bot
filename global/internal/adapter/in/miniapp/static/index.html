@@ -91,13 +91,6 @@
 
         <div class="view hidden" id="view-dates">
           <section class="panel occasions-panel">
-            <div class="panel-heading occasions-heading">
-              <div>
-                <h2 id="occasions-title">Upcoming Islamic dates</h2>
-                <p id="occasions-help" class="panel-help">Calculated from your corrected Hijri calendar.</p>
-              </div>
-              <span class="section-icon" aria-hidden="true">🌙</span>
-            </div>
             <div id="occasion-list" class="occasion-list"></div>
             <p id="occasions-disclaimer" class="occasion-disclaimer"></p>
           </section>
@@ -122,6 +115,10 @@
               <span class="places-attribution">© OpenStreetMap</span>
             </div>
             <p id="places-location" class="places-location"></p>
+            <label class="places-method-control">
+              <span id="places-method-label">Calculation method</span>
+              <select id="places-method"></select>
+            </label>
             <div class="segmented" role="tablist" aria-label="Lookup day">
               <button id="places-today-tab" class="segment active" type="button" role="tab" aria-selected="true">Today</button>
               <button id="places-tomorrow-tab" class="segment" type="button" role="tab" aria-selected="false">Tomorrow</button>
@@ -294,11 +291,19 @@
                   <span class="toggle" aria-hidden="true"></span>
                 </label>
               </div>
-              <label class="toggle-row">
-                <span><strong id="occasion-observed-reminders-label">Community observances</strong><small id="occasion-observed-help"></small><small id="occasion-observed-schedule"></small></span>
-                <input id="occasion-observed-reminders" type="checkbox">
-                <span class="toggle" aria-hidden="true"></span>
-              </label>
+              <div class="toggle-row reminder-row-with-info">
+                <span>
+                  <span class="reminder-label-with-info">
+                    <strong id="occasion-observed-reminders-label">Community observances</strong>
+                    <button id="occasion-observed-info" class="reminder-info-button" type="button" aria-label="About community observances">ⓘ</button>
+                  </span>
+                  <small id="occasion-observed-schedule"></small>
+                </span>
+                <label class="toggle-control" aria-labelledby="occasion-observed-reminders-label">
+                  <input id="occasion-observed-reminders" type="checkbox">
+                  <span class="toggle" aria-hidden="true"></span>
+                </label>
+              </div>
             </div>
           </section>
 

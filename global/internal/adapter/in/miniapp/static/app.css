@@ -154,7 +154,6 @@ button { -webkit-tap-highlight-color: transparent; }
 .section-icon { font-size: 25px; }
 
 .occasions-panel { padding-bottom: 16px; }
-.occasions-heading { align-items: flex-start; margin-bottom: 15px; }
 .occasion-list { display: grid; gap: 11px; }
 .occasion-card {
   padding: 15px;
@@ -175,19 +174,7 @@ button { -webkit-tap-highlight-color: transparent; }
   font-size: 19px;
   box-shadow: 0 5px 15px rgba(25, 57, 45, .07);
 }
-.occasion-category {
-  display: inline-flex;
-  padding: 4px 7px;
-  border-radius: 999px;
-  color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-  font-size: 9px;
-  font-weight: 850;
-  letter-spacing: .02em;
-}
-.occasion-category-fasting { color: #8a6117; background: rgba(196, 147, 48, .13); }
-.occasion-category-observed { color: var(--app-muted); background: color-mix(in srgb, var(--app-muted) 10%, transparent); }
-.occasion-card h3 { margin: 7px 0 3px; font-size: 15px; letter-spacing: -.01em; }
+.occasion-card h3 { margin: 0 0 3px; font-size: 15px; letter-spacing: -.01em; }
 .occasion-dates { margin: 0; color: var(--app-muted); font-size: 10px; }
 .occasion-summary, .occasion-recommendation { margin: 11px 0 0; font-size: 11px; line-height: 1.55; }
 .occasion-recommendation {
@@ -467,6 +454,8 @@ select:focus, input[type="number"]:focus { border-color: var(--accent); box-shad
 .places-zoom button { width: 34px; height: 34px; border: 1px solid var(--line); border-radius: 10px; background: color-mix(in srgb, var(--surface) 92%, transparent); color: var(--app-text); font-size: 20px; font-weight: 700; line-height: 1; cursor: pointer; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
 .places-attribution { position: absolute; left: 8px; bottom: 6px; z-index: 2; padding: 1px 6px; border-radius: 6px; color: var(--app-muted); background: color-mix(in srgb, var(--surface) 75%, transparent); font-size: 9px; }
 .places-location { margin: 12px 0 8px; min-height: 20px; font-size: 15px; font-weight: 750; text-align: center; }
+.places-method-control { display: grid; gap: 5px; margin: 0 0 10px; color: var(--app-muted); font-size: 11px; font-weight: 700; }
+.places-method-control select { width: 100%; }
 .places-schedule { margin-top: 10px; }
 
 .toast { position: fixed; z-index: 10; right: 16px; bottom: calc(18px + env(safe-area-inset-bottom)); left: 16px; max-width: 520px; margin: auto; padding: 14px 16px; border-radius: 15px; color: var(--accent-text); background: var(--accent); box-shadow: 0 12px 34px rgba(0,0,0,.2); font-size: 13px; font-weight: 700; text-align: center; }

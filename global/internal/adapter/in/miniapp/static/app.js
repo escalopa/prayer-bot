@@ -206,8 +206,8 @@
     setText("occasion-major-reminders-label", labels.occasion_major_reminders);
     setText("occasion-fasting-reminders-label", labels.occasion_fasting_reminders);
     setText("occasion-observed-reminders-label", labels.occasion_observed_reminders);
-    setText("occasion-major-help", labels.occasion_major_reminders_help);
     setText("occasion-fasting-help", labels.occasion_fasting_reminders_help);
+    byId("occasion-major-info").setAttribute("aria-label", labels.occasion_major_reminders);
     byId("occasion-fasting-info").setAttribute("aria-label", labels.occasion_fasting_reminders);
     byId("occasion-observed-info").setAttribute("aria-label", labels.occasion_observed_reminders);
     ["occasion-major-schedule", "occasion-fasting-schedule", "occasion-observed-schedule"]
@@ -403,6 +403,10 @@
 
   function showFastingReminderInfo() {
     showFeatureNotice(state.labels.occasion_fasting_reminders_help);
+  }
+
+  function showMajorReminderInfo() {
+    showFeatureNotice(state.labels.occasion_major_reminders_help);
   }
 
   function showObservedReminderInfo() {
@@ -1343,6 +1347,7 @@
   byId("copy-calendar-link").addEventListener("click", copyCalendarLink);
   byId("disconnect-calendar").addEventListener("click", disconnectCalendar);
   byId("add-home-screen").addEventListener("click", addToHomeScreen);
+  byId("occasion-major-info").addEventListener("click", showMajorReminderInfo);
   byId("occasion-fasting-info").addEventListener("click", showFastingReminderInfo);
   byId("occasion-observed-info").addEventListener("click", showObservedReminderInfo);
   byId("share-prayer-card").addEventListener("click", sharePrayerCard);

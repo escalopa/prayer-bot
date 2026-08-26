@@ -203,8 +203,6 @@
     setText("white-days-schedule", labels.white_days_schedule);
     setText("kahf-schedule", labels.kahf_schedule);
     setText("occasions-disclaimer", labels.occasions_disclaimer);
-    setText("reminder-occasions-title", labels.occasions_title);
-    setText("reminder-occasions-help", labels.occasions_help);
     setText("occasion-major-reminders-label", labels.occasion_major_reminders);
     setText("occasion-fasting-reminders-label", labels.occasion_fasting_reminders);
     setText("occasion-observed-reminders-label", labels.occasion_observed_reminders);

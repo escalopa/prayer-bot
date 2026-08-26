@@ -346,13 +346,8 @@ button { -webkit-tap-highlight-color: transparent; }
 [dir="rtl"] .toggle::after { left: auto; right: 3px; }
 [dir="rtl"] .toggle-row input:checked + .toggle::after { transform: translateX(-19px); }
 
-.reminder-group { margin-top: 0; }
-.reminder-group-heading { padding: 14px 0 2px; }
-.reminder-group-heading strong, .reminder-group-heading small { display: block; }
-.reminder-group-heading strong { font-size: 14px; }
-.reminder-group-heading small { margin-top: 4px; color: var(--app-muted); font-size: 11px; }
-.reminder-row-with-info { align-items: flex-start; padding-top: 14px; padding-bottom: 14px; }
-.reminder-row-with-info > .toggle-control { display: flex; flex: 0 0 46px; min-height: 27px; margin-top: 6px; cursor: pointer; }
+.reminder-row-with-info { align-items: center; }
+.reminder-row-with-info > .toggle-control { display: flex; flex: 0 0 46px; min-height: 27px; cursor: pointer; }
 .reminder-label-with-info { display: flex; align-items: center; gap: 7px; }
 .reminder-info-button { width: 31px; height: 31px; padding: 0; border: 0; border-radius: 50%; color: var(--app-muted); background: transparent; font-size: 23px; line-height: 1; }
 .reminder-info-button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

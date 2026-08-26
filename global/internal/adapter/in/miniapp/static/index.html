@@ -268,42 +268,36 @@
               <input id="kahf-reminders" type="checkbox">
               <span class="toggle" aria-hidden="true"></span>
             </label>
-            <div class="reminder-group" aria-labelledby="reminder-occasions-title">
-              <div class="reminder-group-heading">
-                <strong id="reminder-occasions-title">Upcoming Islamic dates</strong>
-                <small id="reminder-occasions-help">Calculated from your corrected Hijri calendar.</small>
-              </div>
-              <label class="toggle-row">
-                <span><strong id="occasion-major-reminders-label">Major Islamic occasions</strong><small id="occasion-major-help"></small><small id="occasion-major-schedule"></small></span>
-                <input id="occasion-major-reminders" type="checkbox">
+            <label class="toggle-row">
+              <span><strong id="occasion-major-reminders-label">Major Islamic occasions</strong><small id="occasion-major-help"></small><small id="occasion-major-schedule"></small></span>
+              <input id="occasion-major-reminders" type="checkbox">
+              <span class="toggle" aria-hidden="true"></span>
+            </label>
+            <div class="toggle-row reminder-row-with-info">
+              <span>
+                <span class="reminder-label-with-info">
+                  <strong id="occasion-fasting-reminders-label">Special fasting days</strong>
+                  <button id="occasion-fasting-info" class="reminder-info-button" type="button" aria-label="About special fasting days">ⓘ</button>
+                </span>
+                <small id="occasion-fasting-schedule"></small>
+              </span>
+              <label class="toggle-control" aria-labelledby="occasion-fasting-reminders-label">
+                <input id="occasion-fasting-reminders" type="checkbox">
                 <span class="toggle" aria-hidden="true"></span>
               </label>
-              <div class="toggle-row reminder-row-with-info">
-                <span>
-                  <span class="reminder-label-with-info">
-                    <strong id="occasion-fasting-reminders-label">Special fasting days</strong>
-                    <button id="occasion-fasting-info" class="reminder-info-button" type="button" aria-label="About special fasting days">ⓘ</button>
-                  </span>
-                  <small id="occasion-fasting-schedule"></small>
+            </div>
+            <div class="toggle-row reminder-row-with-info">
+              <span>
+                <span class="reminder-label-with-info">
+                  <strong id="occasion-observed-reminders-label">Community observances</strong>
+                  <button id="occasion-observed-info" class="reminder-info-button" type="button" aria-label="About community observances">ⓘ</button>
                 </span>
-                <label class="toggle-control" aria-labelledby="occasion-fasting-reminders-label">
-                  <input id="occasion-fasting-reminders" type="checkbox">
-                  <span class="toggle" aria-hidden="true"></span>
-                </label>
-              </div>
-              <div class="toggle-row reminder-row-with-info">
-                <span>
-                  <span class="reminder-label-with-info">
-                    <strong id="occasion-observed-reminders-label">Community observances</strong>
-                    <button id="occasion-observed-info" class="reminder-info-button" type="button" aria-label="About community observances">ⓘ</button>
-                  </span>
-                  <small id="occasion-observed-schedule"></small>
-                </span>
-                <label class="toggle-control" aria-labelledby="occasion-observed-reminders-label">
-                  <input id="occasion-observed-reminders" type="checkbox">
-                  <span class="toggle" aria-hidden="true"></span>
-                </label>
-              </div>
+                <small id="occasion-observed-schedule"></small>
+              </span>
+              <label class="toggle-control" aria-labelledby="occasion-observed-reminders-label">
+                <input id="occasion-observed-reminders" type="checkbox">
+                <span class="toggle" aria-hidden="true"></span>
+              </label>
             </div>
           </section>
 

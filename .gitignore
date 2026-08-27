@@ -19,6 +19,6 @@ _config
 iam.json
 key.json
 gcp-sa.json
-config.json
+legacy/config.json
 graphify-out/
-_scripts/city/*.csv
+legacy/_scripts/city/*.csv

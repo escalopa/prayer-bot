@@ -2,6 +2,9 @@
 set -euo pipefail
 
 REPO="github.com/escalopa/prayer-bot"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LEGACY_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$LEGACY_ROOT"
 HASH=$(git rev-parse HEAD)
 echo "Using commit hash: $HASH"
 

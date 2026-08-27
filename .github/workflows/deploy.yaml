@@ -1,4 +1,4 @@
-name: Deploy to GCP
+name: Deploy legacy city bots to GCP
 
 on:
   pull_request:
@@ -7,36 +7,14 @@ on:
     paths:
       - '.github/workflows/deploy.yaml'
       - '.github/actions/load-config/**'
-      - '_scripts/**'
-      - 'config/**'
-      - 'domain/**'
-      - 'infra/gcp/**'
-      - 'internal/**'
-      - 'log/**'
-      - 'migrations/**'
-      - 'serverless/**'
-      - 'go.mod'
-      - 'go.sum'
-      - 'Makefile'
-      - 'revive.toml'
+      - 'legacy/**'
   push:
     branches:
       - main
     paths:
       - '.github/workflows/deploy.yaml'
       - '.github/actions/load-config/**'
-      - '_scripts/**'
-      - 'config/**'
-      - 'domain/**'
-      - 'infra/gcp/**'
-      - 'internal/**'
-      - 'log/**'
-      - 'migrations/**'
-      - 'serverless/**'
-      - 'go.mod'
-      - 'go.sum'
-      - 'Makefile'
-      - 'revive.toml'
+      - 'legacy/**'
   workflow_dispatch:
     inputs:
       environment:
@@ -55,7 +33,7 @@ env:
   TERRAFORM_VERSION: 1.6.3
   GOOSE_VERSION: 3.26.0
   GO_VERSION: 1.25
-  APP_CONFIG_PATH: config.json
+  APP_CONFIG_PATH: legacy/config.json
   GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
   GCP_TFSTATE_BUCKET: ${{ secrets.GCP_TFSTATE_BUCKET }}
@@ -102,7 +80,7 @@ jobs:
           path: |
             ~/.cache/go-build
             ~/go/pkg/mod
-          key: ${{ runner.os }}-${{ github.ref_name }}-go-${{ hashFiles('**/go.sum') }}
+          key: ${{ runner.os }}-${{ github.ref_name }}-legacy-go-${{ hashFiles('legacy/**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-${{ github.ref_name }}-go-
 
@@ -110,22 +88,24 @@ jobs:
         run: go install github.com/mgechev/revive@latest
 
       - name: Run revive
+        working-directory: legacy
         run: revive -config revive.toml -formatter friendly ./...
 
-      - name: Test root module (domain, config, log, internal/db)
+      - name: Test legacy shared module
+        working-directory: legacy
         run: go test ./...
 
       - name: Test dispatcher
         run: go test ./...
-        working-directory: serverless/dispatcher
+        working-directory: legacy/serverless/dispatcher
 
       - name: Test reminder
         run: go test ./...
-        working-directory: serverless/reminder
+        working-directory: legacy/serverless/reminder
 
       - name: Test loader
         run: go test ./...
-        working-directory: serverless/loader
+        working-directory: legacy/serverless/loader
 
   validate:
     name: Terraform Validate
@@ -151,10 +131,11 @@ jobs:
         run: echo '${{ env.GCP_SA_KEY }}' > gcp-sa.json
 
       - name: Terraform Format Check
+        working-directory: legacy/infra/gcp
         run: terraform fmt -check -recursive
 
       - name: Terraform Init
-        working-directory: infra/gcp
+        working-directory: legacy/infra/gcp
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-sa.json
         run: |
@@ -163,7 +144,7 @@ jobs:
             -backend-config="prefix=prayer-bot/infra-${{ needs.setup.outputs.workspace }}"
 
       - name: Terraform Validate
-        working-directory: infra/gcp
+        working-directory: legacy/infra/gcp
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-sa.json
         run: terraform validate
@@ -199,11 +180,11 @@ jobs:
       - name: Prepare GCP function modules
         run: |
           for fn in dispatcher reminder loader; do
-            (cd "serverless/${fn}" && go mod tidy && go mod vendor)
+            (cd "legacy/serverless/${fn}" && go mod tidy && go mod vendor)
           done
 
       - name: Terraform Init
-        working-directory: infra/gcp
+        working-directory: legacy/infra/gcp
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-sa.json
         run: |
@@ -212,7 +193,7 @@ jobs:
             -backend-config="prefix=prayer-bot/infra-${{ needs.setup.outputs.workspace }}"
 
       - name: Terraform Plan
-        working-directory: infra/gcp
+        working-directory: legacy/infra/gcp
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-sa.json
           TF_VAR_project_id: ${{ env.GCP_PROJECT_ID }}
@@ -273,11 +254,11 @@ jobs:
           GOOSE_DBSTRING: ${{ secrets.SUPABASE_DB_DIRECT_URL }}
         run: |
           export PATH="$HOME/.goose:$PATH"
-          cd migrations
+          cd legacy/migrations
           goose up
 
   deploy-gcp:
-    name: Deploy GCP Infrastructure
+    name: Deploy legacy GCP infrastructure
     runs-on: ubuntu-latest
     needs: [setup, lint, validate, plan, migrate-schema]
     if: |
@@ -318,11 +299,11 @@ jobs:
       - name: Prepare GCP function modules
         run: |
           for fn in dispatcher reminder loader; do
-            (cd "serverless/${fn}" && go mod tidy && go mod vendor)
+            (cd "legacy/serverless/${fn}" && go mod tidy && go mod vendor)
           done
 
       - name: Terraform Init
-        working-directory: infra/gcp
+        working-directory: legacy/infra/gcp
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-sa.json
         run: |
@@ -331,7 +312,7 @@ jobs:
             -backend-config="prefix=prayer-bot/infra-${{ needs.setup.outputs.workspace }}"
 
       - name: Terraform Apply
-        working-directory: infra/gcp
+        working-directory: legacy/infra/gcp
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-sa.json
           TF_VAR_project_id: ${{ env.GCP_PROJECT_ID }}
@@ -345,7 +326,7 @@ jobs:
 
       - name: Export outputs
         id: outputs
-        working-directory: infra/gcp
+        working-directory: legacy/infra/gcp
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-sa.json
         run: |
@@ -380,8 +361,8 @@ jobs:
 
       - name: Execute webhook setup script
         run: |
-          chmod +x _scripts/hook.sh
-          bash _scripts/hook.sh
+          chmod +x legacy/_scripts/hook.sh
+          bash legacy/_scripts/hook.sh
 
   profile:
     name: Sync Telegram Profiles
@@ -406,7 +387,7 @@ jobs:
           path: |
             ~/.cache/go-build
             ~/go/pkg/mod
-          key: ${{ runner.os }}-${{ github.ref_name }}-go-${{ hashFiles('**/go.sum') }}
+          key: ${{ runner.os }}-${{ github.ref_name }}-legacy-go-${{ hashFiles('legacy/**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-${{ github.ref_name }}-go-
 
@@ -418,10 +399,10 @@ jobs:
 
       - name: Sync Telegram bot profiles
         id: sync
-        working-directory: serverless/dispatcher
+        working-directory: legacy/serverless/dispatcher
         run: |
           set +e
-          PROFILE_OUTPUT="$(go run ./cmd/syncprofile -config "${{ github.workspace }}/config.json" 2>&1)"
+          PROFILE_OUTPUT="$(go run ./cmd/syncprofile -config "${{ github.workspace }}/legacy/config.json" 2>&1)"
           PROFILE_EXIT=$?
           set -e
           printf '%s\n' "$PROFILE_OUTPUT"

@@ -2,8 +2,8 @@
 # Push GCP deploy credentials to GitHub environment secrets.
 #
 # Usage:
-#   ./_scripts/set-gcp-github-secrets.sh              # dev environment (default)
-#   ENV=prod ./_scripts/set-gcp-github-secrets.sh
+#   ./legacy/_scripts/set-gcp-github-secrets.sh              # dev environment (default)
+#   ENV=prod ./legacy/_scripts/set-gcp-github-secrets.sh
 #
 # Optional env:
 #   PROJECT_ID=prayer-bot-infra
@@ -20,7 +20,7 @@ ENV="${ENV:-dev}"
 command -v gh >/dev/null || { echo "gh CLI not found"; exit 1; }
 
 if [[ ! -f "$KEY_FILE" ]]; then
-  echo "Missing $KEY_FILE — run ./_scripts/setup-gcp-deploy.sh first"
+  echo "Missing $KEY_FILE — run ./legacy/_scripts/setup-gcp-deploy.sh first"
   exit 1
 fi
 

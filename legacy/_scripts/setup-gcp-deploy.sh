@@ -2,8 +2,8 @@
 # Bootstrap GCP deploy service account + Terraform state bucket for CI/CD.
 #
 # Usage:
-#   ./_scripts/setup-gcp-deploy.sh
-#   ./_scripts/setup-gcp-deploy.sh other-project-id
+#   ./legacy/_scripts/setup-gcp-deploy.sh
+#   ./legacy/_scripts/setup-gcp-deploy.sh other-project-id
 #
 # Optional env:
 #   PROJECT_ID=prayer-bot-infra   (default)
@@ -88,7 +88,7 @@ if [[ -f "$KEY_FILE" && "${NONINTERACTIVE:-}" != "1" && "${FORCE_KEY:-}" != "1" 
   read -r -p "$KEY_FILE already exists. Overwrite? [y/N] " confirm
   if [[ "${confirm,,}" != "y" ]]; then
     echo "Skipped key creation."
-    echo "Run ./_scripts/set-gcp-github-secrets.sh to update GitHub secrets with an existing key."
+    echo "Run ./legacy/_scripts/set-gcp-github-secrets.sh to update GitHub secrets with an existing key."
     exit 0
   fi
 fi
@@ -100,4 +100,4 @@ gcloud iam service-accounts keys create "$KEY_FILE" \
 
 echo ""
 echo "✅ GCP bootstrap complete."
-echo "Next: ./_scripts/set-gcp-github-secrets.sh"
+echo "Next: ./legacy/_scripts/set-gcp-github-secrets.sh"

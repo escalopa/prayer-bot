@@ -122,6 +122,49 @@ func TestStaticMiniAppIsEmbeddedWithSecurityHeaders(t *testing.T) {
 	}
 }
 
+func TestOccasionReminderInfoControlsAreAccessibleAndWired(t *testing.T) {
+	html, err := embeddedStatic.ReadFile("static/index.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	script, err := embeddedStatic.ReadFile("static/app.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	controls := map[string]string{
+		"occasion-major-info":    "showMajorReminderInfo",
+		"occasion-fasting-info":  "showFastingReminderInfo",
+		"occasion-observed-info": "showObservedReminderInfo",
+	}
+	for id, handler := range controls {
+		if !strings.Contains(string(html), `id="`+id+`" class="reminder-info-button" type="button"`) {
+			t.Errorf("occasion info control %q is missing accessible button markup", id)
+		}
+		if !strings.Contains(string(script), `byId("`+id+`").addEventListener("click", `+handler+`)`) {
+			t.Errorf("occasion info control %q is not wired to %s", id, handler)
+		}
+	}
+}
+
+func TestMobileOnlyActionsShowAnAvailabilityNotice(t *testing.T) {
+	script, err := embeddedStatic.ReadFile("static/app.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	content := string(script)
+
+	for _, action := range []string{
+		"function startCompass() {\n    if (!isTelegramMobile()) {\n      showFeatureNotice(state.labels.qibla_help)",
+		"async function updateLocation(button) {\n    if (!isTelegramMobile()) {\n      showFeatureNotice(state.labels.home_help)",
+		"function addToHomeScreen() {\n    if (!telegram || !telegramVersionAtLeast(\"8.0\") || typeof telegram.addToHomeScreen !== \"function\") {\n      showFeatureNotice(state.labels.home_help)",
+	} {
+		if !strings.Contains(content, action) {
+			t.Errorf("mobile-only action is missing its Telegram mobile notice: %q", action)
+		}
+	}
+}
+
 func TestOfflineAndSharingLabelsExistForEveryLocale(t *testing.T) {
 	keys := []string{
 		"offline_updating", "offline_updating_help", "offline_title", "offline_help",

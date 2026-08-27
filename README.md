@@ -78,25 +78,24 @@ requirements, and rollout sequence are maintained in
 │   ├── migrations/      # Global bot Goose migrations
 │   ├── infra/gcp/       # Global Cloud Run, Tasks, Scheduler and Secret Manager Terraform
 │   └── docs/            # Global architecture and operating documentation
-├── serverless/          # Legacy city-bot Cloud Functions (maintenance only)
-├── domain/              # Shared legacy models and value types
-├── config/              # Legacy APP_CONFIG loader
-├── internal/db/         # Legacy Postgres repository
-├── migrations/          # Legacy database migrations
-├── infra/gcp/           # Legacy Cloud Functions Terraform
-└── _scripts/            # Legacy operational helpers
+├── legacy/              # City bots: source, infrastructure and maintenance docs
+│   ├── serverless/       # Legacy Cloud Functions
+│   ├── infra/gcp/        # Legacy Cloud Functions Terraform
+│   ├── migrations/       # Legacy database migrations
+│   └── _scripts/         # Legacy operational helpers
+└── docs/                # Public Global calculation methodology
 ```
 
 ## Legacy city bots (maintenance only)
 
 The original city-bot runtime remains available for the existing Kazan and
 Naples deployments. It uses the Cloud Functions architecture under
-[`serverless/`](serverless/) and shared root packages. Keep it operational and
+[`legacy/`](legacy/) and is fully isolated from the Global bot. Keep it operational and
 apply fixes when required, but do not add new product features there.
 
-- [Legacy runtime documentation](serverless/README.md)
-- [Legacy infrastructure documentation](infra/gcp/README.md)
-- [Legacy contribution notes](serverless/README.md#shared-conventions)
+- [Legacy city-bot documentation](legacy/README.md)
+- [Legacy runtime documentation](legacy/serverless/README.md)
+- [Legacy infrastructure documentation](legacy/infra/gcp/README.md)
 
 ## Contributing
 

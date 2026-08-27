@@ -6,7 +6,7 @@ Guidance for working in this repository. Read this first, then the doc it points
 
 Two independent prayer-time Telegram bots share one Git repository but **not** one runtime:
 
-1. **Legacy city bots** (repo root: `serverless/`, `domain/`, `config/`, `internal/db/`, `log/`, `migrations/`, `infra/gcp/`). One codebase, one bot per city, keyed by `bot_id`. GCP Cloud Functions + Supabase Postgres (`public.chats`, `public.prayers`) + GCS CSV schedules. Documented in the root [`README.md`](README.md).
+1. **Legacy city bots** ([`legacy/`](legacy/): `serverless/`, `domain/`, `config/`, `internal/db/`, `log/`, `migrations/`, `infra/gcp/`). One codebase, one bot per city, keyed by `bot_id`. GCP Cloud Functions + Supabase Postgres (`public.chats`, `public.prayers`) + GCS CSV schedules. Documented in [`legacy/README.md`](legacy/README.md).
 2. **Global worldwide bot** ([`global/`](global/)). A **separate Go module** with its own container image, Cloud Run services, Terraform state, Telegram token, Secret Manager entries, and Postgres schemas. **Nothing under `global/` imports or changes the legacy runtime, and vice-versa.**
 
 **Active work is on the global bot.** Unless a task is explicitly about the legacy city bots, you are working in `global/`.
@@ -48,7 +48,7 @@ make check    # gofmt -w cmd internal && go vet ./... && go test ./...
 make build    # go build ./cmd/...
 ```
 
-Run `make check` before finishing a change. The legacy root module has its own `Makefile`.
+Run `make check` before finishing a change. The legacy root module has its own [`legacy/Makefile`](legacy/Makefile).
 
 ## Non-obvious constraints (don't relearn these the hard way)
 

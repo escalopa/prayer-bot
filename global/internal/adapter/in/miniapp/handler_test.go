@@ -240,7 +240,7 @@ func TestPlacesLookupMarkupAndLabels(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, hook := range []string{"runPlacesLookup", "tile.openstreetmap.org", "/api/miniapp/lookup", "bindPlacesMap"} {
+	for _, hook := range []string{"runPlacesLookup", "basemaps.cartocdn.com", "/api/miniapp/lookup", "bindPlacesMap"} {
 		if !strings.Contains(string(script), hook) {
 			t.Errorf("app.js is missing places lookup logic %q", hook)
 		}

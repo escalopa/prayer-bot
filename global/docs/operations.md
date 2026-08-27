@@ -2,6 +2,24 @@
 
 ## Health and logs
 
+## Monitoring alerts
+
+Terraform creates one alert for sustained 5xx responses from each Global Cloud
+Run service and one for repeated failed notification-task attempts. Incidents
+are always visible in Cloud Monitoring. To deliver them to the on-call channel,
+create the notification channel in the selected GCP project and set the GitHub
+environment secret `GLOBAL_ALERT_NOTIFICATION_CHANNELS` to a JSON list of its
+full resource names, for example:
+
+```json
+["projects/example-project/notificationChannels/1234567890"]
+```
+
+The alert policies intentionally use the existing channel rather than creating
+an email channel in Terraform: Google requires a human to verify a new email
+address. Cloud Tasks retries failed HTTP tasks up to the queue's configured
+limit; investigate the queue and sender logs when the retry alert opens.
+
 All services expose `GET /health` (use this for external checks) and
 `GET /healthz` (container-internal only: Google Front End intercepts `/healthz`
 on `run.app` domains and returns its own 404 before the request reaches the

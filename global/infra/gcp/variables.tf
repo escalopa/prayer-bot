@@ -57,3 +57,9 @@ variable "max_instances" {
   type    = number
   default = 10
 }
+
+variable "alert_notification_channels" {
+  type        = list(string)
+  default     = []
+  description = "Existing Cloud Monitoring notification channel resource names for Global-bot alerts. Empty keeps incidents visible in Cloud Monitoring without sending notifications."
+}

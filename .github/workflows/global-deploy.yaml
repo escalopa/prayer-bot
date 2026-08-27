@@ -213,8 +213,10 @@ jobs:
           for service in webhook dispatch sender; do
             gcloud run services describe "global-prayer-${{ needs.setup.outputs.target_environment == 'production' && 'prod' || 'test' }}-${service}" \
               --region="$GCP_REGION" --project="$GCP_PROJECT_ID" \
-              --format='value(status.conditions[0].type,status.conditions[0].state,status.latestReadyRevisionName)' | \
-              grep -E '^Ready[[:space:]]+CONDITION_SUCCEEDED[[:space:]]+.+'
+              --format=json | jq -e '
+                (.status.latestReadyRevisionName | type == "string" and length > 0) and
+                any(.status.conditions[]; .type == "Ready" and .status == "True")
+              ' >/dev/null
           done
 
       - name: Write deployment summary

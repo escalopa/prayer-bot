@@ -155,7 +155,7 @@ func TestMobileOnlyActionsShowAnAvailabilityNotice(t *testing.T) {
 	content := string(script)
 
 	for _, action := range []string{
-		"async function startCompass() {\n    if (!isTelegramMobile()) {\n      showFeatureNotice(state.labels.qibla_help)",
+		"function startCompass() {\n    if (!isTelegramMobile()) {\n      showFeatureNotice(state.labels.qibla_help)",
 		"async function updateLocation(button) {\n    if (!isTelegramMobile()) {\n      showFeatureNotice(state.labels.home_help)",
 		"function addToHomeScreen() {\n    if (!telegram || !telegramVersionAtLeast(\"8.0\") || typeof telegram.addToHomeScreen !== \"function\") {\n      showFeatureNotice(state.labels.home_help)",
 	} {

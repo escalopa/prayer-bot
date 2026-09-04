@@ -1171,7 +1171,7 @@
     if (view === "places") ensurePlacesMap();
   }
 
-  // --- "Prayer times anywhere" map lookup (dependency-free OSM slippy map) ---
+  // --- "Prayer times anywhere" map lookup (dependency-free CARTO slippy map) ---
 
   function lngToTileX(lng, z) { return (lng + 180) / 360 * Math.pow(2, z); }
   function latToTileY(lat, z) {
@@ -1204,7 +1204,7 @@
       for (let tx = firstCol; tx <= lastCol; tx += 1) {
         const wx = ((tx % world) + world) % world;
         const img = document.createElement("img");
-        img.src = `https://tile.openstreetmap.org/${z}/${wx}/${ty}.png`;
+        img.src = `https://basemaps.cartocdn.com/rastertiles/voyager/${z}/${wx}/${ty}.png`;
         img.alt = "";
         img.style.left = `${tx * 256 - originX}px`;
         img.style.top = `${ty * 256 - originY}px`;

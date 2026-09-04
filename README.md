@@ -1,5 +1,9 @@
 # Global prayer bot 🙏
 
+<p align="center">
+  <img src="global/internal/assets/profile.jpg" alt="Global prayer bot profile image" width="180">
+</p>
+
 **Prayer times, reminders, Qibla, Hijri dates, and Islamic occasions in one
 Telegram experience — for any location in the world.**
 

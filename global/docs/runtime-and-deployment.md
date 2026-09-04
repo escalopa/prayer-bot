@@ -45,14 +45,13 @@ HTTP APIs and caches them in one PostgreSQL row. Both calls use default Cloud
 Run egress and run at most once a day regardless of user volume. The refresh is
 best-effort and never blocks retention cleanup.
 
-The "prayer times anywhere" Mini App map loads OpenStreetMap raster tiles
+The "prayer times anywhere" Mini App map loads CARTO Voyager raster tiles
 directly in the browser (allowed by the existing `img-src https:` policy — no
-CSP change, no Maps key). **Caveat:** the public `tile.openstreetmap.org`
-service is intended for light use and its usage policy discourages heavy or
-commercial traffic. Before this feature scales, switch the tile source to a
-provider that permits application traffic (self-hosted tiles or a keyed provider
-such as MapTiler/Carto). The ad-hoc lookup endpoint itself calls the same Google
-timezone/geocoding APIs as a location change.
+CSP change, no Maps key). This replaces the OpenStreetMap community tile
+endpoint, which is not suitable for application traffic. If usage exceeds the
+provider's public-basemap allowance, move the URL behind a paid CARTO plan,
+MapTiler key, or self-hosted tiles. The ad-hoc lookup endpoint itself calls the
+same Google timezone/geocoding APIs as a location change.
 
 ## Secrets
 

@@ -1,6 +1,16 @@
 name: Deploy global prayer bot
 
 on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'global/**'
+      - '.github/workflows/global-*.yaml'
+  push:
+    branches: [main]
+    paths:
+      - 'global/**'
+      - '.github/workflows/global-*.yaml'
   workflow_dispatch:
     inputs:
       environment:
@@ -10,8 +20,8 @@ on:
         options: [testing, production]
 
 concurrency:
-  group: global-prayer-bot-${{ inputs.environment }}
-  cancel-in-progress: false
+  group: global-prayer-bot-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || (github.event_name == 'workflow_dispatch' && inputs.environment || 'production') }}
+  cancel-in-progress: ${{ github.event_name != 'pull_request' }}
 
 permissions:
   contents: read
@@ -22,13 +32,36 @@ env:
   GCP_TFSTATE_BUCKET: ${{ secrets.GCP_TFSTATE_BUCKET }}
   TF_VAR_project_id: ${{ secrets.GCP_PROJECT_ID }}
   TF_VAR_region: europe-west1
-  TF_VAR_environment: ${{ inputs.environment }}
   TF_VAR_supabase_db_url: ${{ secrets.SUPABASE_DB_URL }}
+  TF_VAR_alert_notification_channels: ${{ secrets.GLOBAL_ALERT_NOTIFICATION_CHANNELS || '[]' }}
 
 jobs:
-  deploy:
+  setup:
+    name: Select deployment environment
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment == 'testing' && 'dev' || 'prod' }}
+    outputs:
+      target_environment: ${{ steps.target.outputs.environment }}
+      github_environment: ${{ steps.target.outputs.github_environment }}
+    steps:
+      - id: target
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "environment=testing" >> "$GITHUB_OUTPUT"
+            echo "github_environment=dev" >> "$GITHUB_OUTPUT"
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "environment=${{ inputs.environment }}" >> "$GITHUB_OUTPUT"
+            echo "github_environment=${{ inputs.environment == 'testing' && 'dev' || 'prod' }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "environment=production" >> "$GITHUB_OUTPUT"
+            echo "github_environment=prod" >> "$GITHUB_OUTPUT"
+          fi
+
+  deploy:
+    needs: setup
+    runs-on: ubuntu-latest
+    environment: ${{ needs.setup.outputs.github_environment }}
+    env:
+      TF_VAR_environment: ${{ needs.setup.outputs.target_environment }}
     steps:
       - uses: actions/checkout@v7
 
@@ -58,7 +91,7 @@ jobs:
         run: |
           terraform init \
             -backend-config="bucket=${GCP_TFSTATE_BUCKET}" \
-            -backend-config="prefix=prayer-bot/global-${{ inputs.environment }}"
+            -backend-config="prefix=prayer-bot/global-${{ needs.setup.outputs.target_environment }}"
 
       - name: Bootstrap APIs and image repository
         id: bootstrap
@@ -94,9 +127,9 @@ jobs:
             printf '%s' "$secret_value" | gcloud secrets versions add "$secret_name" --data-file=- --project="$GCP_PROJECT_ID"
           }
 
-          sync_secret "global-prayer-bot-token-${{ inputs.environment }}" "$GLOBAL_BOT_TOKEN"
-          sync_secret "global-prayer-bot-webhook-secret-${{ inputs.environment }}" "$GLOBAL_WEBHOOK_SECRET"
-          sync_secret "global-prayer-bot-owner-id-${{ inputs.environment }}" "$GLOBAL_OWNER_ID"
+          sync_secret "global-prayer-bot-token-${{ needs.setup.outputs.target_environment }}" "$GLOBAL_BOT_TOKEN"
+          sync_secret "global-prayer-bot-webhook-secret-${{ needs.setup.outputs.target_environment }}" "$GLOBAL_WEBHOOK_SECRET"
+          sync_secret "global-prayer-bot-owner-id-${{ needs.setup.outputs.target_environment }}" "$GLOBAL_OWNER_ID"
 
       - name: Build and push immutable image
         id: image
@@ -118,7 +151,7 @@ jobs:
         id: migrate
         env:
           DATABASE_URL: ${{ secrets.SUPABASE_DB_DIRECT_URL }}
-          GLOBAL_DB_SCHEMA: global_bot_${{ inputs.environment }}
+          GLOBAL_DB_SCHEMA: global_bot_${{ needs.setup.outputs.target_environment }}
         run: |
           (cd global && go run ./cmd/bootstrapdb)
           /tmp/goose -dir global/migrations -table="${GLOBAL_DB_SCHEMA}.goose_db_version" postgres "$DATABASE_URL" up
@@ -134,8 +167,8 @@ jobs:
         id: telegram
         working-directory: global
         run: |
-          export GLOBAL_BOT_TOKEN="$(gcloud secrets versions access latest --secret=global-prayer-bot-token-${{ inputs.environment }} --project="$GCP_PROJECT_ID")"
-          export GLOBAL_WEBHOOK_SECRET="$(gcloud secrets versions access latest --secret=global-prayer-bot-webhook-secret-${{ inputs.environment }} --project="$GCP_PROJECT_ID")"
+          export GLOBAL_BOT_TOKEN="$(gcloud secrets versions access latest --secret=global-prayer-bot-token-${{ needs.setup.outputs.target_environment }} --project="$GCP_PROJECT_ID")"
+          export GLOBAL_WEBHOOK_SECRET="$(gcloud secrets versions access latest --secret=global-prayer-bot-webhook-secret-${{ needs.setup.outputs.target_environment }} --project="$GCP_PROJECT_ID")"
           export WEBHOOK_URL="$(terraform -chdir=infra/gcp output -raw webhook_url)"
           export MINI_APP_URL="${WEBHOOK_URL}/app/"
           export SENDER_URL="$(terraform -chdir=infra/gcp output -raw sender_url)"
@@ -164,13 +197,35 @@ jobs:
           echo "mini_app_url=$MINI_APP_URL" >> "$GITHUB_OUTPUT"
           echo "sender_url=$SENDER_URL" >> "$GITHUB_OUTPUT"
 
+      - name: Verify deployed Global bot
+        id: smoke
+        run: |
+          WEBHOOK_URL="${{ steps.telegram.outputs.webhook_url }}"
+          MINI_APP_URL="${{ steps.telegram.outputs.mini_app_url }}"
+          for attempt in 1 2 3 4 5; do
+            if curl --fail --silent --show-error --max-time 20 "${WEBHOOK_URL}/health" >/dev/null && \
+              curl --fail --silent --show-error --max-time 20 "${MINI_APP_URL}" >/dev/null; then
+              break
+            fi
+            if [[ "$attempt" == "5" ]]; then exit 1; fi
+            sleep 10
+          done
+          for service in webhook dispatch sender; do
+            gcloud run services describe "global-prayer-${{ needs.setup.outputs.target_environment == 'production' && 'prod' || 'test' }}-${service}" \
+              --region="$GCP_REGION" --project="$GCP_PROJECT_ID" \
+              --format=json | jq -e '
+                (.status.latestReadyRevisionName | type == "string" and length > 0) and
+                any(.status.conditions[]; .type == "Ready" and .status == "True")
+              ' >/dev/null
+          done
+
       - name: Write deployment summary
         if: always()
         run: |
           {
             echo "## Global prayer bot deployment"
             echo
-            echo "- Environment: \`${{ inputs.environment }}\`"
+            echo "- Environment: \`${{ needs.setup.outputs.target_environment }}\`"
             echo "- Commit: \`${GITHUB_SHA}\`"
             echo
             echo "| Stage | Result |"
@@ -183,6 +238,7 @@ jobs:
             echo "| Database migration | ${{ steps.migrate.outcome }} |"
             echo "| Infrastructure apply | ${{ steps.infrastructure.outcome }} |"
             echo "| Telegram configuration | ${{ steps.telegram.outcome }} |"
+            echo "| Post-deployment smoke checks | ${{ steps.smoke.outcome }} |"
             echo "| Telegram profile | ${{ steps.telegram.outputs.profile_status || 'not reached' }} |"
             echo
             if [[ -n "${{ steps.telegram.outputs.webhook_url }}" ]]; then

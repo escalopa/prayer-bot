@@ -177,7 +177,7 @@ resource "google_cloudfunctions2_function" "dispatcher" {
   location = var.region
 
   build_config {
-    runtime     = "go125"
+    runtime     = "go126"
     entry_point = "DispatcherHTTP"
 
     source {
@@ -216,7 +216,7 @@ resource "google_cloudfunctions2_function" "reminder" {
   location = var.region
 
   build_config {
-    runtime     = "go125"
+    runtime     = "go126"
     entry_point = "ReminderHTTP"
 
     source {
@@ -283,7 +283,7 @@ resource "google_cloudfunctions2_function" "loader" {
   location = var.region
 
   build_config {
-    runtime     = "go125"
+    runtime     = "go126"
     entry_point = "LoaderCloudEvent"
 
     source {

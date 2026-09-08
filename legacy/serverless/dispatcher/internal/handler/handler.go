@@ -30,6 +30,7 @@ type (
 		SetReminderOffset(ctx context.Context, botID int64, chatID int64, reminderType domain.ReminderType, offset time.Duration) error
 		SetJamaatEnabled(ctx context.Context, botID int64, chatID int64, enabled bool) error
 		SetJamaatDelay(ctx context.Context, botID int64, chatID int64, prayerID domain.PrayerID, delay time.Duration) error
+		SetPrayerOverride(ctx context.Context, botID int64, chatID int64, prayerID domain.PrayerID, clock string) error
 	}
 
 	Handler struct {
@@ -71,6 +72,8 @@ func (h *Handler) opts() []bot.Option {
 		bot.WithMessageTextHandler(dateCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.date))),
 		bot.WithMessageTextHandler(nextCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.next))),
 		bot.WithMessageTextHandler(remindCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.remind))),
+		bot.WithMessageTextHandler(setTimeCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.setTime))),
+		bot.WithMessageTextHandler(resetTimeCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.resetTime))),
 		bot.WithMessageTextHandler(bugCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.bug))),
 		bot.WithMessageTextHandler(feedbackCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.feedback))),
 		bot.WithMessageTextHandler(languageCommand.String(), bot.MatchTypeCommand, h.errorH(h.chatH(h.language))),

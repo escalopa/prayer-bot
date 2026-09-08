@@ -32,7 +32,7 @@ concurrency:
 env:
   TERRAFORM_VERSION: 1.6.3
   GOOSE_VERSION: 3.26.0
-  GO_VERSION: 1.25
+  GO_VERSION: "1.26"
   APP_CONFIG_PATH: legacy/config.json
   GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}

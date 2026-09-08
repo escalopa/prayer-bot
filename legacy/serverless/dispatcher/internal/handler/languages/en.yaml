@@ -75,6 +75,8 @@ help: |
   📅 /date – Times for a chosen day
   ⏳ /next – When's the next prayer?
   📨 /remind – Configure reminders
+  🕰 /settime dhuhr 13:00 – Fix a prayer time daily for this chat
+  ↩️ /resettime dhuhr – Use the calculated time again \(or use `all`\)
 
   *Settings:*
 

@@ -1,6 +1,6 @@
 module github.com/escalopa/prayer-bot/scripts
 
-go 1.24.0
+go 1.26.0
 
 require (
 	github.com/antchfx/htmlquery v1.3.4

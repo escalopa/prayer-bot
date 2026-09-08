@@ -99,3 +99,33 @@ func FormatDuration(d time.Duration) string {
 func DateUTC(day int, month time.Month, year int) time.Time {
 	return time.Date(year, month, day, 0, 0, 0, 0, time.UTC)
 }
+
+// WithOverrides returns an independent copy with fixed daily clock times applied.
+// It never mutates the database-backed schedule because one schedule is shared by
+// many chats in the reminder worker.
+func (p *PrayerDay) WithOverrides(overrides *PrayerOverrideConfig) *PrayerDay {
+	if p == nil || overrides == nil {
+		return p
+	}
+	copy := *p
+	copy.Fajr = overrideTime(p.Fajr, overrides.Get(PrayerIDFajr))
+	copy.Dhuhr = overrideTime(p.Dhuhr, overrides.Get(PrayerIDDhuhr))
+	copy.Asr = overrideTime(p.Asr, overrides.Get(PrayerIDAsr))
+	copy.Maghrib = overrideTime(p.Maghrib, overrides.Get(PrayerIDMaghrib))
+	copy.Isha = overrideTime(p.Isha, overrides.Get(PrayerIDIsha))
+	if p.NextDay != nil {
+		copy.NextDay = p.NextDay.WithOverrides(overrides)
+	}
+	return &copy
+}
+
+func overrideTime(original time.Time, clock string) time.Time {
+	if original.IsZero() || clock == "" {
+		return original
+	}
+	hour, minute, err := ParsePrayerClock(clock)
+	if err != nil {
+		return original
+	}
+	return time.Date(original.Year(), original.Month(), original.Day(), hour, minute, 0, 0, original.Location())
+}

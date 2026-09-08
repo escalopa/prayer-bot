@@ -88,6 +88,10 @@ func (s *Store) SetJamaatDelay(
 	return s.postgres.SetJamaatDelay(ctx, botID, chatID, prayerID, delay)
 }
 
+func (s *Store) SetPrayerOverride(ctx context.Context, botID int64, chatID int64, prayerID domain.PrayerID, clock string) error {
+	return s.postgres.SetPrayerOverride(ctx, botID, chatID, prayerID, clock)
+}
+
 func (s *Store) UpdateReminder(
 	ctx context.Context,
 	botID int64,

@@ -243,6 +243,8 @@ func Sync(ctx context.Context, b *bot.Bot, ownerID int64) error {
 		{Command: "date", Description: "Pick a date on the calendar"},
 		{Command: "next", Description: "Time until the next prayer"},
 		{Command: "remind", Description: "Reminder and jamaat settings"},
+		{Command: "settime", Description: "Fix a prayer time daily for this chat"},
+		{Command: "resettime", Description: "Use calculated prayer time again"},
 		{Command: "language", Description: "Choose bot language"},
 		{Command: "bug", Description: "Report a bug"},
 		{Command: "feedback", Description: "Send feedback"},

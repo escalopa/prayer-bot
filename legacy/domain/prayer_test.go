@@ -77,7 +77,7 @@ func TestPrayerDayWithOverrides(t *testing.T) {
 	next.Fajr = next.Fajr.AddDate(0, 0, 1)
 	day.NextDay = &next
 
-	effective := day.WithOverrides(&PrayerOverrideConfig{Dhuhr: "13:00", Fajr: "05:30"})
+	effective := day.WithOverrides(&PrayerOverrideConfig{Dhuhr: "13:00", Fajr: "05:30"}, loc)
 	if got := effective.Dhuhr.Format("15:04"); got != "13:00" {
 		t.Fatalf("Dhuhr = %s, want 13:00", got)
 	}
@@ -86,6 +86,17 @@ func TestPrayerDayWithOverrides(t *testing.T) {
 	}
 	if got := day.Dhuhr.Format("15:04"); got != "12:15" {
 		t.Fatalf("original prayer day was mutated: %s", got)
+	}
+}
+
+func TestPrayerDayWithOverridesUsesBotTimezone(t *testing.T) {
+	t.Parallel()
+	botLoc := time.FixedZone("bot", 3*60*60)
+	// PostgreSQL returns timestamp-with-time-zone values in UTC on this connection.
+	day := NewPrayerDay(time.Time{}, time.Date(2026, time.September, 8, 9, 15, 0, 0, time.UTC), time.Time{}, time.Date(2026, time.September, 8, 9, 15, 0, 0, time.UTC), time.Time{}, time.Time{}, time.Time{})
+	effective := day.WithOverrides(&PrayerOverrideConfig{Dhuhr: "13:00"}, botLoc)
+	if got := effective.Dhuhr.In(botLoc).Format("15:04"); got != "13:00" {
+		t.Fatalf("Dhuhr in bot timezone = %s, want 13:00", got)
 	}
 }
 

@@ -1,6 +1,6 @@
 module github.com/escalopa/prayer-bot/reminder
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/GoogleCloudPlatform/functions-framework-go v1.9.2

@@ -43,7 +43,9 @@ const (
 	tomorrowCommand    command = "tomorrow"
 	dateCommand        command = "date" // 2 stages
 	nextCommand        command = "next"
-	remindCommand      command = "remind"   // 1 stage
+	remindCommand      command = "remind" // 1 stage
+	setTimeCommand     command = "settime"
+	resetTimeCommand   command = "resettime"
 	bugCommand         command = "bug"      // 1 stage
 	feedbackCommand    command = "feedback" // 1 stage
 	languageCommand    command = "language" // 1 stage
@@ -82,6 +84,57 @@ func (h *Handler) help(ctx context.Context, b *bot.Bot, _ *models.Update) error 
 	return nil
 }
 
+// setTime fixes one obligatory prayer to a daily local clock time for this chat.
+// It deliberately works in both private chats and groups: the configuration is
+// stored against the chat, not against an individual Telegram user.
+func (h *Handler) setTime(ctx context.Context, b *bot.Bot, update *models.Update) error {
+	chat := getContextChat(ctx)
+	parts := strings.Fields(update.Message.Text)
+	if len(parts) != 3 {
+		_, _ = b.SendMessage(ctx, markdownMessage(chat.ChatID, "Usage: `/settime <fajr|dhuhr|asr|maghrib|isha> <HH:MM>`\nExample: `/settime dhuhr 13:00`"))
+		return nil
+	}
+	prayerID := domain.ParsePrayerID(strings.ToLower(parts[1]))
+	if prayerID == domain.PrayerIDUnknown || prayerID == domain.PrayerIDShuruq {
+		_, _ = b.SendMessage(ctx, markdownMessage(chat.ChatID, "Choose one of: fajr, dhuhr, asr, maghrib, isha."))
+		return nil
+	}
+	if _, _, err := domain.ParsePrayerClock(parts[2]); err != nil {
+		_, _ = b.SendMessage(ctx, markdownMessage(chat.ChatID, "Use a 24-hour clock in `HH:MM` format, for example `13:00`."))
+		return nil
+	}
+	if err := h.db.SetPrayerOverride(ctx, chat.BotID, chat.ChatID, prayerID, parts[2]); err != nil {
+		logCommand("setTime: save override", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
+		return domain.ErrInternal
+	}
+	_, err := b.SendMessage(ctx, markdownMessage(chat.ChatID, fmt.Sprintf("%s is now fixed at %s every day for this chat. It will be used in schedules and reminders.", strings.Title(prayerID.String()), parts[2])))
+	return err
+}
+
+func (h *Handler) resetTime(ctx context.Context, b *bot.Bot, update *models.Update) error {
+	chat := getContextChat(ctx)
+	parts := strings.Fields(update.Message.Text)
+	if len(parts) != 2 {
+		_, _ = b.SendMessage(ctx, markdownMessage(chat.ChatID, "Usage: `/resettime <fajr|dhuhr|asr|maghrib|isha|all>`"))
+		return nil
+	}
+	ids := []domain.PrayerID{domain.ParsePrayerID(strings.ToLower(parts[1]))}
+	if strings.EqualFold(parts[1], "all") {
+		ids = []domain.PrayerID{domain.PrayerIDFajr, domain.PrayerIDDhuhr, domain.PrayerIDAsr, domain.PrayerIDMaghrib, domain.PrayerIDIsha}
+	}
+	for _, prayerID := range ids {
+		if prayerID == domain.PrayerIDUnknown || prayerID == domain.PrayerIDShuruq {
+			_, _ = b.SendMessage(ctx, markdownMessage(chat.ChatID, "Choose a prayer or `all`."))
+			return nil
+		}
+		if err := h.db.SetPrayerOverride(ctx, chat.BotID, chat.ChatID, prayerID, ""); err != nil {
+			return domain.ErrInternal
+		}
+	}
+	_, err := b.SendMessage(ctx, markdownMessage(chat.ChatID, "The calculated prayer time is active again for this chat."))
+	return err
+}
+
 func (h *Handler) today(ctx context.Context, b *bot.Bot, _ *models.Update) error {
 	chat := getContextChat(ctx)
 
@@ -91,7 +144,7 @@ func (h *Handler) today(ctx context.Context, b *bot.Bot, _ *models.Update) error
 		return domain.ErrInternal
 	}
 
-	_, err = b.SendMessage(ctx, markdownMessage(chat.ChatID, h.formatPrayerDay(chat.BotID, prayerDay, chat.LanguageCode)))
+	_, err = b.SendMessage(ctx, markdownMessage(chat.ChatID, h.formatPrayerDay(chat.BotID, prayerDay.WithOverrides(chat.Reminder.Overrides), chat.LanguageCode)))
 	if err != nil {
 		logCommand("today: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
@@ -111,7 +164,7 @@ func (h *Handler) tomorrow(ctx context.Context, b *bot.Bot, _ *models.Update) er
 		return domain.ErrInternal
 	}
 
-	_, err = b.SendMessage(ctx, markdownMessage(chat.ChatID, h.formatPrayerDay(chat.BotID, prayerDay, chat.LanguageCode)))
+	_, err = b.SendMessage(ctx, markdownMessage(chat.ChatID, h.formatPrayerDay(chat.BotID, prayerDay.WithOverrides(chat.Reminder.Overrides), chat.LanguageCode)))
 	if err != nil {
 		logCommand("tomorrow: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
@@ -151,6 +204,7 @@ func (h *Handler) next(ctx context.Context, b *bot.Bot, _ *models.Update) error 
 		logCommand("next: get prayer day", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
+	prayerDay = prayerDay.WithOverrides(chat.Reminder.Overrides)
 
 	var prayerTime time.Time
 	prayerID, duration := domain.PrayerIDUnknown, time.Duration(0)

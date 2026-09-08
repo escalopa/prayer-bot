@@ -303,6 +303,15 @@ func (p *Postgres) SetJamaatDelay(ctx context.Context, botID int64, chatID int64
 	})
 }
 
+func (p *Postgres) SetPrayerOverride(ctx context.Context, botID int64, chatID int64, prayerID domain.PrayerID, clock string) error {
+	return p.updateReminder(ctx, botID, chatID, func(reminder *domain.Reminder) {
+		if reminder.Overrides == nil {
+			reminder.Overrides = &domain.PrayerOverrideConfig{}
+		}
+		reminder.Overrides.Set(prayerID, clock)
+	})
+}
+
 func (p *Postgres) SetState(ctx context.Context, botID int64, chatID int64, state string) error {
 	_, err := p.pool.Exec(ctx, `
 		UPDATE chats

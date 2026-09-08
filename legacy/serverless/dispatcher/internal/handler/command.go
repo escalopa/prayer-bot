@@ -107,7 +107,10 @@ func (h *Handler) setTime(ctx context.Context, b *bot.Bot, update *models.Update
 		logCommand("setTime: save override", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
-	_, err := b.SendMessage(ctx, markdownMessage(chat.ChatID, fmt.Sprintf("%s is now fixed at %s every day for this chat. It will be used in schedules and reminders.", strings.Title(prayerID.String()), parts[2])))
+	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
+		ChatID: chat.ChatID,
+		Text:   fmt.Sprintf("%s is now fixed at %s every day for this chat. It will be used in schedules and reminders.", strings.Title(prayerID.String()), parts[2]),
+	})
 	return err
 }
 
@@ -144,7 +147,7 @@ func (h *Handler) today(ctx context.Context, b *bot.Bot, _ *models.Update) error
 		return domain.ErrInternal
 	}
 
-	_, err = b.SendMessage(ctx, markdownMessage(chat.ChatID, h.formatPrayerDay(chat.BotID, prayerDay.WithOverrides(chat.Reminder.Overrides), chat.LanguageCode)))
+	_, err = b.SendMessage(ctx, markdownMessage(chat.ChatID, h.formatPrayerDay(chat.BotID, prayerDay.WithOverrides(chat.Reminder.Overrides, h.cfg[chat.BotID].Location.V()), chat.LanguageCode)))
 	if err != nil {
 		logCommand("today: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
@@ -164,7 +167,7 @@ func (h *Handler) tomorrow(ctx context.Context, b *bot.Bot, _ *models.Update) er
 		return domain.ErrInternal
 	}
 
-	_, err = b.SendMessage(ctx, markdownMessage(chat.ChatID, h.formatPrayerDay(chat.BotID, prayerDay.WithOverrides(chat.Reminder.Overrides), chat.LanguageCode)))
+	_, err = b.SendMessage(ctx, markdownMessage(chat.ChatID, h.formatPrayerDay(chat.BotID, prayerDay.WithOverrides(chat.Reminder.Overrides, h.cfg[chat.BotID].Location.V()), chat.LanguageCode)))
 	if err != nil {
 		logCommand("tomorrow: send message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
@@ -204,7 +207,7 @@ func (h *Handler) next(ctx context.Context, b *bot.Bot, _ *models.Update) error 
 		logCommand("next: get prayer day", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
 		return domain.ErrInternal
 	}
-	prayerDay = prayerDay.WithOverrides(chat.Reminder.Overrides)
+	prayerDay = prayerDay.WithOverrides(chat.Reminder.Overrides, h.cfg[chat.BotID].Location.V())
 
 	var prayerTime time.Time
 	prayerID, duration := domain.PrayerIDUnknown, time.Duration(0)

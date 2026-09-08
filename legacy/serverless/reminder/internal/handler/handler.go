@@ -133,7 +133,7 @@ func (h *Handler) Handle(ctx context.Context, botID int64) error {
 			if chat.Reminder == nil { // cannot happen but just in case
 				return nil
 			}
-			effectivePrayerDay := prayerDay.WithOverrides(chat.Reminder.Overrides)
+			effectivePrayerDay := prayerDay.WithOverrides(chat.Reminder.Overrides, h.cfg[chat.BotID].Location.V())
 
 			for _, reminder := range reminders {
 				shouldSend, prayerID := reminder.ShouldTrigger(ctx, chat, effectivePrayerDay, now)

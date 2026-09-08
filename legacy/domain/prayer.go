@@ -103,23 +103,26 @@ func DateUTC(day int, month time.Month, year int) time.Time {
 // WithOverrides returns an independent copy with fixed daily clock times applied.
 // It never mutates the database-backed schedule because one schedule is shared by
 // many chats in the reminder worker.
-func (p *PrayerDay) WithOverrides(overrides *PrayerOverrideConfig) *PrayerDay {
+func (p *PrayerDay) WithOverrides(overrides *PrayerOverrideConfig, loc *time.Location) *PrayerDay {
 	if p == nil || overrides == nil {
 		return p
 	}
+	if loc == nil {
+		loc = time.UTC
+	}
 	copy := *p
-	copy.Fajr = overrideTime(p.Fajr, overrides.Get(PrayerIDFajr))
-	copy.Dhuhr = overrideTime(p.Dhuhr, overrides.Get(PrayerIDDhuhr))
-	copy.Asr = overrideTime(p.Asr, overrides.Get(PrayerIDAsr))
-	copy.Maghrib = overrideTime(p.Maghrib, overrides.Get(PrayerIDMaghrib))
-	copy.Isha = overrideTime(p.Isha, overrides.Get(PrayerIDIsha))
+	copy.Fajr = overrideTime(p.Fajr, overrides.Get(PrayerIDFajr), loc)
+	copy.Dhuhr = overrideTime(p.Dhuhr, overrides.Get(PrayerIDDhuhr), loc)
+	copy.Asr = overrideTime(p.Asr, overrides.Get(PrayerIDAsr), loc)
+	copy.Maghrib = overrideTime(p.Maghrib, overrides.Get(PrayerIDMaghrib), loc)
+	copy.Isha = overrideTime(p.Isha, overrides.Get(PrayerIDIsha), loc)
 	if p.NextDay != nil {
-		copy.NextDay = p.NextDay.WithOverrides(overrides)
+		copy.NextDay = p.NextDay.WithOverrides(overrides, loc)
 	}
 	return &copy
 }
 
-func overrideTime(original time.Time, clock string) time.Time {
+func overrideTime(original time.Time, clock string, loc *time.Location) time.Time {
 	if original.IsZero() || clock == "" {
 		return original
 	}
@@ -127,5 +130,6 @@ func overrideTime(original time.Time, clock string) time.Time {
 	if err != nil {
 		return original
 	}
-	return time.Date(original.Year(), original.Month(), original.Day(), hour, minute, 0, 0, original.Location())
+	date := original.In(loc)
+	return time.Date(date.Year(), date.Month(), date.Day(), hour, minute, 0, 0, loc)
 }

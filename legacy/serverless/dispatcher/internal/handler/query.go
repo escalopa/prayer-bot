@@ -109,7 +109,7 @@ func (h *Handler) dayQuery(ctx context.Context, b *bot.Bot, update *models.Updat
 	_, err = b.EditMessageText(ctx, markdownEditMessage(
 		chat.ChatID,
 		update.CallbackQuery.Message.Message.ID,
-		h.formatPrayerDay(chat.BotID, prayerDay.WithOverrides(chat.Reminder.Overrides), chat.LanguageCode),
+		h.formatPrayerDay(chat.BotID, prayerDay.WithOverrides(chat.Reminder.Overrides, h.cfg[chat.BotID].Location.V()), chat.LanguageCode),
 	))
 	if err != nil {
 		logQuery("dayQuery: edit message", log.Err(err), log.BotID(chat.BotID), log.ChatID(chat.ChatID))
